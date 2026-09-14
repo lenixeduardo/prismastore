@@ -6,43 +6,35 @@
 
 - Servidor Node único.
 - SQLite em `data/prismastore.db`.
-- Produtos, clientes e pedidos no estado operacional.
 - Painel lê e grava via `/api/state`.
 
 ### Passo 2 — WhatsApp Web
 
-- `whatsapp-web.js`.
-- `LocalAuth` persistente.
+- `whatsapp-web.js` + `LocalAuth`.
 - QR Code e estado de conexão no painel.
-- Reconexão ao iniciar o PrismaStore.
+- Reconexão ao iniciar.
 
 ### Passo 3 — Atendimento automático
 
-- Evento real de mensagem do WhatsApp conectado ao chatbot.
-- Mensagens próprias e grupos ignorados.
-- Boas-vindas e cardápio visual.
-- Menu textual dinâmico.
-- Carrinho com validação de estoque.
-- Envio/Entrega no endereço.
-- Endereço salvo/novo.
-- Sessão persistida para retomar após reinício.
-- Fallback para texto se uma imagem não puder ser enviada.
-
-## Em andamento
+- Evento real de mensagem ligado ao chatbot.
+- Boas-vindas, cardápio, carrinho, modalidade e endereço.
+- Sessão persistida e fallback de mídia para texto.
 
 ### Passo 4 — Pedido e reserva de estoque
 
-Critério de conclusão:
+- Confirmação cria exatamente um pedido `PAYMENT_PENDING`.
+- Estoque é reservado atomicamente.
+- Repetição da confirmação não duplica pedido nem reserva.
+- Estoque é revalidado no instante da confirmação.
+- Sessões antigas do Passo 3 ganham `checkoutId` automaticamente.
+- Pedido aparece no painel por atualização automática a cada 2 segundos.
+- Fila `Aguardando Pix` identifica pedidos recém-confirmados.
+- Estoque disponível reflete reservas e alerta abaixo de 3 unidades.
 
-- confirmação do WhatsApp cria exatamente um pedido `PAYMENT_PENDING`;
-- estoque do carrinho é reservado atomicamente;
-- repetição da confirmação não duplica pedido nem reserva;
-- pedido aparece imediatamente no painel;
-- estoque disponível reflete a reserva e alerta abaixo de 3 unidades.
+## Em andamento
 
-## Depois
+### Passo 5 — Pix dinâmico + webhook
 
-- Passo 5: Pix dinâmico + webhook.
-- Passo 6: operação pós-pagamento e tracker.
-- Passo 7: relatórios reais.
-- Passo 8: backup/restauração e instalação final.
+- Criar cobrança no Asaas Sandbox.
+- Enviar QR e copia-e-cola.
+- Confirmar pagamento somente por webhook.

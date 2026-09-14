@@ -29,11 +29,14 @@
 
 ## Próximos passos
 
-- [ ] **Passo 4 — Pedido e estoque**
-  - [ ] Ao confirmar no WhatsApp, criar o pedido real no painel.
-  - [ ] Reservar estoque do carrinho.
-  - [ ] Exibir pedido como aguardando pagamento.
-  - [ ] Alertar itens com menos de 3 unidades disponíveis.
+- [x] **Passo 4 — Pedido e estoque**
+  - [x] Ao confirmar no WhatsApp, criar exatamente um pedido real no painel.
+  - [x] Reservar estoque do carrinho atomicamente.
+  - [x] Exibir pedido como aguardando pagamento.
+  - [x] Impedir confirmação duplicada e reserva duplicada.
+  - [x] Revalidar estoque no momento da confirmação.
+  - [x] Atualizar o painel automaticamente sem recarregar a página.
+  - [x] Alertar itens com menos de 3 unidades disponíveis.
 
 - [ ] **Passo 5 — Pix**
   - [ ] Asaas Sandbox.
