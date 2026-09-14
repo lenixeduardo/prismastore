@@ -4,7 +4,7 @@ export const DEFAULT_CHATBOT_MESSAGES = Object.freeze({
   catalogInstruction: 'Responda somente com o *número do item* que deseja.',
   invalidProduct: 'Não encontrei essa opção.',
   quantityPrompt: 'Você escolheu *{produto}*.\nQuantas unidades deseja? Restam {estoque} disponível(is) para este pedido.',
-  invalidQuantity: 'Você pode adicionar de *1 até {estoque}* unidade(s).',
+  invalidQuantity: 'Você pode adicionar de 1 até {estoque} unidade(s).',
   cartActions: '1 — Adicionar outro item\n2 — Finalizar pedido\n0 — Cancelar',
   deliveryPrompt: 'Como deseja receber?\n\n1 — Envio\n2 — Entrega no endereço',
   savedAddressPrompt: 'Seu último endereço é:\n*{endereco}*\n\n1 — Usar este endereço\n2 — Informar outro endereço',
