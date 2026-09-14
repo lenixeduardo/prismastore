@@ -43,11 +43,16 @@ export function confirmPayment(order, accountId, paidAt = new Date().toISOString
 }
 
 export function buildMonthlyReport(orders, monthKey) {
-  const paid = orders.filter((order) => order.status === 'PAID' && String(order.paidAt ?? '').startsWith(monthKey));
+  const paid = orders.filter((order) => String(order.paidAt ?? '').startsWith(monthKey));
   const revenue = paid.reduce((sum, order) => sum + Number(order.total ?? 0), 0);
   const byAccount = paid.reduce((acc, order) => {
     const key = order.receivingAccountId || 'sem-conta';
     acc[key] = (acc[key] ?? 0) + Number(order.total ?? 0);
+    return acc;
+  }, {});
+  const byDay = paid.reduce((acc, order) => {
+    const day = String(order.paidAt).slice(0, 10);
+    acc[day] = (acc[day] ?? 0) + Number(order.total ?? 0);
     return acc;
   }, {});
   return {
@@ -55,6 +60,7 @@ export function buildMonthlyReport(orders, monthKey) {
     orderCount: paid.length,
     averageTicket: paid.length ? revenue / paid.length : 0,
     byAccount,
+    byDay,
   };
 }
 

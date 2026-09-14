@@ -156,3 +156,32 @@ test('order lifecycle endpoint advances with expectedStatus and returns the upda
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('monthly report API returns real report JSON and CSV export', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismastore-step7-api-'));
+  const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });
+  const calls = [];
+  const reportService = {
+    getMonthlyReport: (month) => { calls.push(['json', month]); return { month, revenue: 150, orderCount: 2, averageTicket: 75, accountCount: 1, accounts: [], daily: [], orders: [] }; },
+    exportMonthlyCsv: (month) => { calls.push(['csv', month]); return '\uFEFFPedido;Total\r\nPS-1;100,00'; },
+  };
+  const server = createAppServer({ stateStore: store, staticDir: process.cwd(), reportService });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  try {
+    let response = await fetch(`${baseUrl}/api/reports/monthly?month=2026-09`);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).revenue, 150);
+
+    response = await fetch(`${baseUrl}/api/reports/monthly.csv?month=2026-09`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /text\/csv/);
+    assert.match(response.headers.get('content-disposition'), /prismastore-2026-09\.csv/);
+    assert.match(await response.text(), /PS-1;100,00/);
+    assert.deepEqual(calls, [['json', '2026-09'], ['csv', '2026-09']]);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

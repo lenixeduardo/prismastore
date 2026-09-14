@@ -2,7 +2,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import whatsappWeb from 'whatsapp-web.js';
 import QRCode from 'qrcode';
-import { seedProducts, seedCustomers, seedOrders } from '../src/data.js';
+import { seedProducts, seedCustomers, seedOrders, receivingAccounts } from '../src/data.js';
 import { createStateStore } from './state-store.js';
 import { createChatbotEngine } from './chatbot.js';
 import { createWhatsAppChatAdapter } from './whatsapp-chat-adapter.js';
@@ -13,6 +13,7 @@ import { createPaymentService } from './payment-service.js';
 import { createPaymentChatbot } from './payment-chatbot.js';
 import { createOrderLifecycleService } from './order-lifecycle-service.js';
 import { ensureBase64Asset } from './asset-loader.js';
+import { createReportService } from './report-service.js';
 
 const { Client, LocalAuth, MessageMedia } = whatsappWeb;
 const here = dirname(fileURLToPath(import.meta.url));
@@ -39,6 +40,7 @@ const asaasClient = createAsaasClient({
   baseUrl: process.env.ASAAS_BASE_URL || 'https://api-sandbox.asaas.com/v3',
 });
 const paymentService = createPaymentService({ stateStore, asaasClient });
+const reportService = createReportService({ stateStore, receivingAccounts });
 
 const baseChatbot = createChatbotEngine({
   stateStore,
@@ -89,6 +91,7 @@ const server = createAppServer({
   whatsappManager,
   paymentService,
   orderLifecycleService,
+  reportService,
   asaasWebhookToken: process.env.ASAAS_WEBHOOK_TOKEN || '',
 });
 

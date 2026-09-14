@@ -35,3 +35,9 @@ test('runtime wires order lifecycle tracker and approved finalization artwork', 
   assert.match(source, /orderLifecycleService/);
   assert.equal(existsSync(new URL('../assets/prismastore-order-finished.b64', import.meta.url)), true);
 });
+
+test('runtime wires real monthly reports into the same local server', () => {
+  assert.match(source, /createReportService/);
+  assert.match(source, /receivingAccounts/);
+  assert.match(source, /reportService/);
+});

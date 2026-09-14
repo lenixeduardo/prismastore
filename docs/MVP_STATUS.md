@@ -51,10 +51,20 @@
 - Entrega local: `PACKING → OUT_FOR_DELIVERY → DELIVERED`.
 - Envio: `PACKING → SHIPPED → DELIVERED`.
 - Cada mudança dispara um tracker de quatro etapas no WhatsApp.
-- Finalização envia a arte padrão versionada em `assets/prismastore-order-finished.b64`, reconstruída como PNG local ao iniciar.
+- Finalização envia a arte padrão `assets/prismastore-order-finished.b64 (reconstruída como PNG local ao iniciar)`.
 - `statusHistory` registra as transições operacionais.
 - Confirmação do Asaas também usa o tracker do ciclo do pedido.
 
+### Passo 7 — Relatórios reais
+
+- Faturamento mensal calculado a partir de `paidAt`, independentemente do status operacional atual.
+- Pedidos pagos e ticket médio reais.
+- Faturamento diário do mês selecionado.
+- Totais agrupados pela conta recebedora registrada no pagamento.
+- Seleção de mês no painel.
+- JSON em `GET /api/reports/monthly?month=YYYY-MM`.
+- CSV em `GET /api/reports/monthly.csv?month=YYYY-MM`.
+
 ## Próximo
 
-### Passo 7 — Relatórios reais
+### Passo 8 — Backup e instalação
