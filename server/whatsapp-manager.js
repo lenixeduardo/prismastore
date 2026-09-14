@@ -24,6 +24,7 @@ export function createWhatsAppManager({
   maxSeenMessageIds = 1000,
 }) {
   let socket = null;
+  let connectPromise = null;
   let reconnectTimer = null;
   let manualDisconnect = false;
   let status = { status: 'disconnected', qrDataUrl: null, account: null, error: null };
@@ -66,64 +67,82 @@ export function createWhatsAppManager({
     }, reconnectDelayMs);
   }
 
-  async function connect() {
-    if (socket && ['connecting', 'qr', 'authenticated', 'connected'].includes(status.status)) {
-      return getStatus();
-    }
-
+  async function performConnect() {
     manualDisconnect = false;
     clearReconnect();
     setStatus({ status: 'connecting', qrDataUrl: null, account: null, error: null });
 
-    const { state, saveCreds } = await authStateLoader();
-    const activeSocket = await socketFactory({ auth: state });
-    socket = activeSocket;
+    try {
+      const { state, saveCreds } = await authStateLoader();
+      const activeSocket = await socketFactory({ auth: state });
+      socket = activeSocket;
 
-    activeSocket.ev.on('creds.update', saveCreds);
+      activeSocket.ev.on('creds.update', saveCreds);
 
-    activeSocket.ev.on('connection.update', async (update = {}) => {
-      const { connection, lastDisconnect, qr } = update;
+      activeSocket.ev.on('connection.update', async (update = {}) => {
+        const { connection, lastDisconnect, qr } = update;
 
-      if (qr) {
-        try {
-          const qrDataUrl = await qrEncoder(qr);
-          setStatus({ status: 'qr', qrDataUrl, account: null, error: null });
-        } catch (error) {
-          setStatus({ status: 'error', qrDataUrl: null, account: null, error: error instanceof Error ? error.message : 'Falha ao gerar QR Code' });
+        if (qr) {
+          try {
+            const qrDataUrl = await qrEncoder(qr);
+            setStatus({ status: 'qr', qrDataUrl, account: null, error: null });
+          } catch (error) {
+            setStatus({ status: 'error', qrDataUrl: null, account: null, error: error instanceof Error ? error.message : 'Falha ao gerar QR Code' });
+          }
         }
-      }
 
-      if (connection === 'open') {
-        clearReconnect();
-        setStatus({ status: 'connected', qrDataUrl: null, account: accountFromSocket(activeSocket), error: null });
-      }
+        if (connection === 'open') {
+          clearReconnect();
+          setStatus({ status: 'connected', qrDataUrl: null, account: accountFromSocket(activeSocket), error: null });
+        }
 
-      if (connection === 'close') {
-        if (socket === activeSocket) socket = null;
-        const loggedOut = disconnectStatusCode(lastDisconnect) === disconnectReasonLoggedOut;
-        setStatus({
-          status: 'disconnected',
-          qrDataUrl: null,
-          account: null,
-          error: loggedOut ? 'Sessão do WhatsApp encerrada.' : null,
-        });
-        if (!loggedOut) scheduleReconnectOnce();
-      }
+        if (connection === 'close') {
+          if (socket === activeSocket) socket = null;
+          const loggedOut = disconnectStatusCode(lastDisconnect) === disconnectReasonLoggedOut;
+          setStatus({
+            status: 'disconnected',
+            qrDataUrl: null,
+            account: null,
+            error: loggedOut ? 'Sessão do WhatsApp encerrada.' : null,
+          });
+          if (!loggedOut) scheduleReconnectOnce();
+        }
+      });
+
+      activeSocket.ev.on('messages.upsert', async ({ messages, type } = {}) => {
+        if (type !== 'notify') return;
+        for (const message of messages ?? []) {
+          if (message?.key?.fromMe) continue;
+          if (!message?.message) continue;
+          const jid = message?.key?.remoteJid ?? '';
+          if (!classifyInboundJid(jid).supported) continue;
+          if (!markSeen(message?.key?.id)) continue;
+          if (messageHandler) await messageHandler({ message, socket: activeSocket });
+        }
+      });
+
+      return getStatus();
+    } catch (error) {
+      socket = null;
+      setStatus({
+        status: 'error',
+        qrDataUrl: null,
+        account: null,
+        error: error instanceof Error ? error.message : 'Falha ao conectar WhatsApp',
+      });
+      throw error;
+    }
+  }
+
+  function connect() {
+    if (socket && ['connecting', 'qr', 'authenticated', 'connected'].includes(status.status)) {
+      return Promise.resolve(getStatus());
+    }
+    if (connectPromise) return connectPromise;
+    connectPromise = performConnect().finally(() => {
+      connectPromise = null;
     });
-
-    activeSocket.ev.on('messages.upsert', async ({ messages, type } = {}) => {
-      if (type !== 'notify') return;
-      for (const message of messages ?? []) {
-        if (message?.key?.fromMe) continue;
-        if (!message?.message) continue;
-        const jid = message?.key?.remoteJid ?? '';
-        if (!classifyInboundJid(jid).supported) continue;
-        if (!markSeen(message?.key?.id)) continue;
-        if (messageHandler) await messageHandler({ message, socket: activeSocket });
-      }
-    });
-
-    return getStatus();
+    return connectPromise;
   }
 
   async function disconnect() {
