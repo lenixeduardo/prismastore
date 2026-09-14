@@ -27,8 +27,6 @@
   - [x] Continua por texto se uma arte não puder ser enviada.
   - [x] Comandos de recuperação: `MENU`, `INICIO`, `REINICIAR` e `CANCELAR`.
 
-## Próximos passos
-
 - [x] **Passo 4 — Pedido e estoque**
   - [x] Ao confirmar no WhatsApp, criar exatamente um pedido real no painel.
   - [x] Reservar estoque do carrinho atomicamente.
@@ -62,7 +60,11 @@
   - [x] Seleção de mês no painel.
   - [x] Exportação CSV pelo mesmo cálculo do relatório.
 
-- [ ] **Passo 8 — Backup e instalação**
-  - [ ] Backup de `data/prismastore.db`.
-  - [ ] Backup seguro de `.wwebjs_auth/`.
-  - [ ] Rotina simples de backup/restauração.
+- [x] **Passo 8 — Backup e instalação**
+  - [x] Snapshot consistente de `data/prismastore.db` com `node:sqlite.backup`.
+  - [x] Backup seguro de `.wwebjs_auth/` quando existente.
+  - [x] Manifesto com SHA-256 e validação antes da restauração.
+  - [x] Backup de segurança automático antes de restaurar.
+  - [x] Painel para criar, listar e restaurar backups.
+  - [x] `INSTALAR_PRISMASTORE.bat` e inicializador na Área de Trabalho.
+  - [x] `backups/`, banco, sessão WhatsApp e `.env` fora do Git.
