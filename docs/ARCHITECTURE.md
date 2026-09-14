@@ -17,7 +17,9 @@ Node.js — server/index.js
 ├── whatsapp-manager.js       sessão, QR e status
 ├── whatsapp-chat-adapter.js  converte mensagens em eventos do chatbot
 ├── chatbot.js                fluxo determinístico + criação de pedido
-├── app-server.js             API local + arquivos do painel
+├── app-server.js             API local + webhook Asaas
+├── asaas-client.js           chamadas REST do Asaas
+├── payment-service.js        Pix + conciliação + baixa de estoque
 └── state-store.js            persistência SQLite
        │
        ▼
@@ -51,3 +53,12 @@ data/*.db
 ```
 
 O diretório `data/` é versionado apenas com `.gitkeep`.
+
+
+## Pagamentos
+
+- Sandbox por padrão: `https://api-sandbox.asaas.com/v3`.
+- Segredos ficam somente em `.env`.
+- O Asaas autentica o webhook pelo header `asaas-access-token`.
+- O webhook precisa de uma URL HTTPS pública; isso é requisito de rede, não um novo serviço interno do PrismaStore.
+- O pagamento só libera o pedido quando o ID da cobrança e o valor conferem.

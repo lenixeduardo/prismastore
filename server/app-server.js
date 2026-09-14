@@ -46,7 +46,7 @@ function serveStatic(staticDir, pathname, res) {
   createReadStream(filePath).pipe(res);
 }
 
-export function createAppServer({ stateStore, staticDir, whatsappManager = null }) {
+export function createAppServer({ stateStore, staticDir, whatsappManager = null, paymentService = null, asaasWebhookToken = '' }) {
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
@@ -77,6 +77,28 @@ export function createAppServer({ stateStore, staticDir, whatsappManager = null 
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/disconnect') {
         if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, account: null, error: 'WhatsApp não configurado' });
         sendJson(res, 200, await whatsappManager.disconnect());
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/api/payments/status') {
+        if (!paymentService) return sendJson(res, 503, { provider: 'asaas', environment: 'sandbox', configured: false });
+        sendJson(res, 200, { ...paymentService.getStatus(), webhookConfigured: Boolean(asaasWebhookToken) });
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/api/webhooks/asaas') {
+        if (!paymentService || !asaasWebhookToken) return sendJson(res, 503, { error: 'Webhook Asaas não configurado' });
+        if (req.headers['asaas-access-token'] !== asaasWebhookToken) return sendJson(res, 401, { error: 'Token de webhook inválido' });
+        const payload = await readJson(req);
+        const result = await paymentService.handleAsaasEvent(payload);
+        if (result.handled && !result.duplicate && result.order?.status === 'PAID' && whatsappManager?.sendText) {
+          try {
+            await whatsappManager.sendText(result.order.phone, `✅ Pagamento confirmado para o pedido *${result.order.id}*. Seu pedido entrou na fila de separação e embalagem.`);
+          } catch (error) {
+            console.error('Pagamento confirmado, mas falhou a notificação no WhatsApp:', error);
+          }
+        }
+        sendJson(res, 200, result);
         return;
       }
 

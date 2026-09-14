@@ -12,6 +12,14 @@ if errorlevel 1 (
   exit /b 1
 )
 
+if not exist .env (
+  copy /Y .env.example .env >nul
+  echo.
+  echo Arquivo .env criado. Para ativar o Pix, preencha ASAAS_API_KEY e ASAAS_WEBHOOK_TOKEN.
+  echo O painel pode iniciar sem essas credenciais, mas o Pix ficara desativado.
+  echo.
+)
+
 if not exist node_modules (
   echo Primeira inicializacao: instalando dependencias...
   call npm install

@@ -38,10 +38,14 @@
   - [x] Atualizar o painel automaticamente sem recarregar a página.
   - [x] Alertar itens com menos de 3 unidades disponíveis.
 
-- [ ] **Passo 5 — Pix**
-  - [ ] Asaas Sandbox.
-  - [ ] Pix dinâmico.
-  - [ ] Webhook de pagamento.
+- [x] **Passo 5 — Pix**
+  - [x] Asaas Sandbox via `.env`.
+  - [x] Cliente/pagador Asaas reutilizável sem persistir CPF/CNPJ bruto.
+  - [x] Pix dinâmico com QR Code e Copia e Cola no WhatsApp.
+  - [x] Webhook autenticado (`asaas-access-token`).
+  - [x] `PAYMENT_CONFIRMED`/`PAYMENT_RECEIVED` → `PAID` / Pago · Embalar.
+  - [x] Baixa definitiva do estoque reservado após pagamento.
+  - [x] Notificação automática de pagamento confirmado no WhatsApp.
 
 - [ ] **Passo 6 — Operação**
   - [ ] Pago → embalar → enviado/em entrega → finalizado.

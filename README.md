@@ -1,6 +1,6 @@
 # PrismaStore — MVP local
 
-MVP operacional simplificado para rodar sempre no mesmo computador/servidor. Painel, SQLite, atendimento automatizado e conexão com WhatsApp Web ficam no mesmo processo Node.js.
+MVP operacional simplificado para rodar no mesmo computador/servidor: painel, SQLite, chatbot, WhatsApp Web e integração Pix ficam em um único processo Node.js.
 
 ## Arquitetura
 
@@ -8,96 +8,88 @@ MVP operacional simplificado para rodar sempre no mesmo computador/servidor. Pai
 Cliente no WhatsApp
         │
         ▼
- WhatsApp Web / LocalAuth
+WhatsApp Web + LocalAuth
         │
         ▼
-     Node.js único
-     ├─ Chatbot determinístico
-     ├─ API local
-     ├─ Painel web
-     └─ SQLite
+      Node.js único
+      ├─ chatbot
+      ├─ painel/API
+      ├─ Asaas Pix
+      └─ SQLite
+        │
+        └── POST /api/webhooks/asaas ← Asaas (HTTPS público)
 ```
 
-Sem PostgreSQL, Redis, BullMQ, microsserviços, ORM ou IA generativa no MVP.
+Sem PostgreSQL, Redis, filas, microsserviços, ORM ou IA generativa no MVP.
 
 ## Requisitos
 
-- Node.js 22.5 ou superior.
-- Internet no computador que executa o WhatsApp Web.
-- `data/` e `.wwebjs_auth/` em disco persistente.
+- Node.js 22.5+ (recomendado Node.js 24 LTS).
+- Internet no computador que executa WhatsApp Web e Asaas.
+- `data/`, `.wwebjs_auth/` e `.env` persistentes no servidor.
 
-## Instalação no Windows
-
-Depois de instalar Node.js 24 LTS, dê dois cliques em `INICIAR_PRISMASTORE.bat`.
-Na primeira execução ele instala as dependências e abre o painel.
-
-### Terminal
+## Instalação
 
 ```bash
 npm install
+cp .env.example .env
 npm start
 ```
 
-Painel:
+No Windows, `INICIAR_PRISMASTORE.bat` instala dependências e abre `http://localhost:4173`.
+
+## WhatsApp
+
+Em **Configurações → WhatsApp Web**, clique em **Conectar WhatsApp** e leia o QR com **Aparelhos conectados**. A sessão fica em `.wwebjs_auth/` e é restaurada ao reiniciar.
+
+## Fluxo atual — Passos 1 a 5
 
 ```text
-http://localhost:4173
+mensagem
+→ boas-vindas + cardápio
+→ item + quantidade
+→ envio/entrega + endereço
+→ confirmação
+→ pedido PAYMENT_PENDING + reserva de estoque
+→ CPF/CNPJ do pagador (somente para o Asaas; não é persistido no PrismaStore)
+→ Pix dinâmico + QR + Copia e Cola
+→ webhook Asaas
+→ PAID / Pago · Embalar
 ```
 
-## Conectar o WhatsApp
+O `checkoutId` impede duplicidade de pedido e a cobrança Asaas é reutilizada em retentativas. O webhook valida o ID da cobrança e o valor antes de liberar o pedido. Ao confirmar o pagamento, a reserva vira baixa de estoque físico e o cliente recebe uma mensagem automática no WhatsApp.
 
-1. Abra **Configurações** no PrismaStore.
-2. Clique em **Conectar WhatsApp** caso a conexão ainda não tenha iniciado automaticamente.
-3. No celular: WhatsApp → **Aparelhos conectados** → **Conectar aparelho**.
-4. Escaneie o QR exibido no painel.
-5. Quando aparecer **Conectado**, a sessão estará salva localmente.
+## Configurar Asaas Sandbox
 
-## Atendimento automático — Passo 3
+1. Crie uma conta separada no Sandbox do Asaas.
+2. Copie `.env.example` para `.env`.
+3. Preencha `ASAAS_API_KEY` com a chave Sandbox.
+4. Gere `ASAAS_WEBHOOK_TOKEN` com 32–255 caracteres, sem espaços.
+5. Configure no Asaas um webhook para `PAYMENT_CONFIRMED` e `PAYMENT_RECEIVED`, usando o mesmo token.
+6. A URL do webhook deve ser HTTPS pública e terminar em `/api/webhooks/asaas`.
 
-A primeira mensagem recebida em uma conversa individual inicia o atendimento automaticamente.
-
-Fluxo atual:
+Exemplo:
 
 ```text
-Mensagem do cliente
-  → arte de boas-vindas
-  → arte do cardápio
-  → escolha do item
-  → quantidade
-  → adicionar outro / finalizar
-  → Envio ou Entrega no endereço
-  → endereço salvo ou novo endereço
-  → revisão
-  → confirmação
+https://pagamentos.seudominio.com/api/webhooks/asaas
 ```
 
-O cliente não precisa aprender comandos. Na maior parte do fluxo basta responder com `1`, `2`, quantidade ou o endereço solicitado.
+O painel mostra **Asaas · Sandbox · CONFIGURADO** quando API key e token local estão presentes.
 
-Comandos opcionais de recuperação:
+> O PrismaStore pode continuar rodando no computador/servidor local, mas o Asaas precisa conseguir alcançar o endpoint do webhook pela internet. Use um domínio/reverse proxy HTTPS ou um túnel seguro durante a homologação.
 
-- `MENU`, `INICIO` ou `REINICIAR`: começa um novo carrinho.
-- `CANCELAR`: cancela o carrinho atual e volta ao cardápio.
+## Persistência e segurança
 
-### Artes
+Não entram no Git:
 
-- `assets/prismastore-welcome.png`: enviada primeiro no início de uma nova conversa.
-- `assets/prismastore-catalog.png`: cardápio visual.
+```text
+.env
+node_modules/
+data/*.db
+.wwebjs_auth/
+```
 
-O catálogo em texto é enviado junto e usa os produtos/preços/estoque atuais do SQLite. Portanto ele continua sendo a referência operacional mesmo que a arte visual ainda não tenha sido atualizada.
-
-## Persistência
-
-- Operação: `data/prismastore.db`
-- Sessão WhatsApp: `.wwebjs_auth/`
-- Etapa de cada conversa: tabela `chat_sessions` dentro do mesmo SQLite.
-
-Se o servidor reiniciar no meio de um atendimento, a etapa da conversa permanece salva.
-
-## Estado desta versão — Passo 4
-
-Ao confirmar o pedido no WhatsApp, o PrismaStore cria um pedido real `PAYMENT_PENDING`, reserva o estoque atomicamente e o mostra no painel na fila **Aguardando Pix**. A confirmação é idempotente: repetir a mesma etapa não duplica o pedido nem a reserva.
-
-O próximo passo é o **Passo 5 — Pix dinâmico + webhook**.
+O CPF/CNPJ recebido pelo WhatsApp é usado imediatamente para criar/reutilizar o pagador no Asaas; o PrismaStore persiste somente o `asaasCustomerId` retornado.
 
 ## Testes
 
