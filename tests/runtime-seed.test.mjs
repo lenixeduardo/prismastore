@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { createStartupState } from '../server/startup-config.js';
 
-const source = readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
-
-test('runtime database starts without demo products customers or orders', () => {
-  assert.doesNotMatch(source, /seedProducts/);
-  assert.doesNotMatch(source, /seedCustomers/);
-  assert.doesNotMatch(source, /seedOrders/);
-  assert.match(source, /products:\s*\[\]/);
-  assert.match(source, /customers:\s*\[\]/);
-  assert.match(source, /orders:\s*\[\]/);
+test('runtime database starts empty unless demo mode is explicitly enabled', () => {
+  const seedState = {
+    products: [{ id: 'demo' }],
+    customers: [{ id: 'demo-customer' }],
+    orders: [{ id: 'demo-order' }],
+  };
+  assert.deepEqual(createStartupState({ useDemoData: false, seedState }), {
+    products: [], customers: [], orders: [],
+  });
+  assert.deepEqual(createStartupState({ useDemoData: true, seedState }), seedState);
 });
