@@ -1,0 +1,28 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const indexSource = readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
+const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+
+test('runtime composes PrismaStore with Baileys instead of whatsapp-web.js', () => {
+  assert.match(indexSource, /@whiskeysockets\/baileys/);
+  assert.doesNotMatch(indexSource, /whatsapp-web\.js/);
+  assert.match(indexSource, /useMultiFileAuthState/);
+  assert.match(indexSource, /fetchLatestBaileysVersion/);
+  assert.match(indexSource, /dataDir, 'whatsapp-auth'/);
+  assert.match(indexSource, /DisconnectReason\.loggedOut/);
+});
+
+test('runtime dependencies use Baileys and pino only for WhatsApp transport', () => {
+  assert.match(packageJson.dependencies['@whiskeysockets/baileys'], /^\^/);
+  assert.ok(packageJson.dependencies.pino);
+  assert.equal(packageJson.dependencies['whatsapp-web.js'], undefined);
+  assert.equal(packageJson.dependencies.qrcode, '1.5.4');
+});
+
+test('runtime passes the Baileys adapter handler into the WhatsApp manager', () => {
+  assert.match(indexSource, /messageHandler:\s*messageHandler\.handleMessage/);
+  assert.match(indexSource, /authStateLoader/);
+  assert.match(indexSource, /socketFactory/);
+});
