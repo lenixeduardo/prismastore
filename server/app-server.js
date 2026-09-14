@@ -1,3 +1,4 @@
+import { createBackupService } from './backup-service.js';
 import { createServer } from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
@@ -55,7 +56,15 @@ function serveStatic(staticDir, pathname, res) {
   createReadStream(filePath).pipe(res);
 }
 
-export function createAppServer({ stateStore, staticDir, whatsappManager = null, paymentService = null, orderLifecycleService = null, reportService = null, asaasWebhookToken = '' }) {
+export function createAppServer({ stateStore, staticDir, whatsappManager = null, paymentService = null, orderLifecycleService = null, reportService = null, backupService = null, asaasWebhookToken = '' }) {
+  const resolvedBackupService = backupService ?? createBackupService({
+    stateStore,
+    whatsappManager,
+    authPath: join(staticDir, '.wwebjs_auth'),
+    backupsDir: join(staticDir, 'backups'),
+    appVersion: '0.8.0',
+  });
+
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
@@ -112,6 +121,22 @@ export function createAppServer({ stateStore, staticDir, whatsappManager = null,
         if (!reportService) return sendJson(res, 503, { error: 'Relatórios não configurados' });
         const month = url.searchParams.get('month') || '';
         sendCsv(res, `prismastore-${month}.csv`, reportService.exportMonthlyCsv(month));
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/api/backups') {
+        sendJson(res, 200, { backups: resolvedBackupService.listBackups() });
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/api/backups') {
+        sendJson(res, 200, await resolvedBackupService.createBackup({ reason: 'manual' }));
+        return;
+      }
+
+      const restoreBackupMatch = url.pathname.match(/^\/api\/backups\/([^/]+)\/restore$/);
+      if (req.method === 'POST' && restoreBackupMatch) {
+        sendJson(res, 200, await resolvedBackupService.restoreBackup(decodeURIComponent(restoreBackupMatch[1])));
         return;
       }
 
