@@ -20,7 +20,7 @@ test('manifest has installable identity and 192/512 icons', () => {
 
 test('service worker caches only static shell and bypasses API', () => {
   const sw = read('service-worker.js');
-  assert.match(sw, /prismastore-shell-v0\.9\.0/);
+  assert.match(sw, /prismastore-shell-v0\.9\.2/);
   assert.match(sw, /url\.pathname\.startsWith\('\/api\/'\)/);
   const shell = sw.match(/const APP_SHELL = \[[\s\S]*?\n\];/)?.[0] || '';
   assert.doesNotMatch(shell, /['"]\/api\//);
@@ -60,10 +60,10 @@ test('index references manifest and PWA progressive enhancement assets', () => {
   assert.match(html, /viewport-fit=cover/);
 });
 
-test('server serves webmanifest with manifest MIME and package version is 0.9.0', () => {
+test('server serves webmanifest with manifest MIME and package version matches shell', () => {
   const server = read('server/app-server.js');
   const pkg = JSON.parse(read('package.json'));
   assert.match(server, /'\.webmanifest': 'application\/manifest\+json; charset=utf-8'/);
-  assert.match(server, /appVersion: '0\.9\.0'/);
-  assert.equal(pkg.version, '0.9.0');
+  assert.match(server, /appVersion: '0\.9\.2'/);
+  assert.equal(pkg.version, '0.9.2');
 });
