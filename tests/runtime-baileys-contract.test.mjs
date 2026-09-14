@@ -26,3 +26,9 @@ test('runtime passes the Baileys adapter handler into the WhatsApp manager', () 
   assert.match(indexSource, /authStateLoader/);
   assert.match(indexSource, /socketFactory/);
 });
+
+test('runtime enables the WhatsApp dev allowlist only when explicitly requested', () => {
+  assert.match(indexSource, /PRISMASTORE_DEV_WHATSAPP_ONLY/);
+  assert.match(indexSource, /PRISMASTORE_DEV_WHATSAPP_PHONE/);
+  assert.match(indexSource, /devAllowedPhone:/);
+});
