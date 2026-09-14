@@ -6,7 +6,7 @@ function accountFromInfo(info) {
   };
 }
 
-export function createWhatsAppManager({ clientFactory, qrEncoder, messageHandler = null }) {
+export function createWhatsAppManager({ clientFactory, qrEncoder, messageHandler = null, mediaFactory = null }) {
   let client = null;
   let status = {
     status: 'disconnected',
@@ -89,12 +89,22 @@ export function createWhatsAppManager({ clientFactory, qrEncoder, messageHandler
     return getStatus();
   }
 
-  async function sendText(phone, text) {
-    if (!client || status.status !== 'connected') throw new Error('WhatsApp não conectado.');
+  function recipient(phone) {
     const raw = String(phone ?? '');
-    const to = raw.includes('@') ? raw : `${raw.replace(/\D/g, '')}@c.us`;
-    return client.sendMessage(to, text);
+    return raw.includes('@') ? raw : `${raw.replace(/\D/g, '')}@c.us`;
   }
 
-  return { connect, disconnect, getStatus, sendText };
+  async function sendText(phone, text) {
+    if (!client || status.status !== 'connected') throw new Error('WhatsApp não conectado.');
+    return client.sendMessage(recipient(phone), text);
+  }
+
+  async function sendMedia(phone, source) {
+    if (!client || status.status !== 'connected') throw new Error('WhatsApp não conectado.');
+    if (!mediaFactory?.fromFilePath) throw new Error('Envio de mídia não configurado.');
+    const media = typeof source === 'string' ? mediaFactory.fromFilePath(source) : source;
+    return client.sendMessage(recipient(phone), media);
+  }
+
+  return { connect, disconnect, getStatus, sendText, sendMedia };
 }

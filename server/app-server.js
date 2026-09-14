@@ -46,7 +46,7 @@ function serveStatic(staticDir, pathname, res) {
   createReadStream(filePath).pipe(res);
 }
 
-export function createAppServer({ stateStore, staticDir, whatsappManager = null, paymentService = null, asaasWebhookToken = '' }) {
+export function createAppServer({ stateStore, staticDir, whatsappManager = null, paymentService = null, orderLifecycleService = null, asaasWebhookToken = '' }) {
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
@@ -80,6 +80,18 @@ export function createAppServer({ stateStore, staticDir, whatsappManager = null,
         return;
       }
 
+      const advanceMatch = url.pathname.match(/^\/api\/orders\/([^/]+)\/advance$/);
+      if (req.method === 'POST' && advanceMatch) {
+        if (!orderLifecycleService) return sendJson(res, 503, { error: 'Fluxo operacional não configurado' });
+        const body = await readJson(req);
+        const result = await orderLifecycleService.advanceOrder({
+          orderId: decodeURIComponent(advanceMatch[1]),
+          expectedStatus: body.expectedStatus || null,
+        });
+        sendJson(res, 200, result);
+        return;
+      }
+
       if (req.method === 'GET' && url.pathname === '/api/payments/status') {
         if (!paymentService) return sendJson(res, 503, { provider: 'asaas', environment: 'sandbox', configured: false });
         sendJson(res, 200, { ...paymentService.getStatus(), webhookConfigured: Boolean(asaasWebhookToken) });
@@ -91,9 +103,10 @@ export function createAppServer({ stateStore, staticDir, whatsappManager = null,
         if (req.headers['asaas-access-token'] !== asaasWebhookToken) return sendJson(res, 401, { error: 'Token de webhook inválido' });
         const payload = await readJson(req);
         const result = await paymentService.handleAsaasEvent(payload);
-        if (result.handled && !result.duplicate && result.order?.status === 'PAID' && whatsappManager?.sendText) {
+        if (result.handled && !result.duplicate && result.order?.status === 'PAID') {
           try {
-            await whatsappManager.sendText(result.order.phone, `✅ Pagamento confirmado para o pedido *${result.order.id}*. Seu pedido entrou na fila de separação e embalagem.`);
+            if (orderLifecycleService?.notifyOrderStatus) await orderLifecycleService.notifyOrderStatus(result.order);
+            else if (whatsappManager?.sendText) await whatsappManager.sendText(result.order.phone, `✅ Pagamento confirmado para o pedido *${result.order.id}*. Seu pedido entrou na fila de separação e embalagem.`);
           } catch (error) {
             console.error('Pagamento confirmado, mas falhou a notificação no WhatsApp:', error);
           }

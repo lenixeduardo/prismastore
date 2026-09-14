@@ -100,3 +100,24 @@ test('sendText uses the connected WhatsApp client and normalizes a phone number'
   await manager.sendText('+55 (11) 99999-9999', 'Pagamento confirmado');
   assert.deepEqual(sent, [{ to: '5511999999999@c.us', text: 'Pagamento confirmado' }]);
 });
+
+test('sendMedia uses MessageMedia factory and sends a local file to the connected phone', async () => {
+  const listeners = new Map();
+  const sent = [];
+  const client = {
+    info: { pushname: 'Prisma', wid: { user: '5511000000000' } },
+    on: (event, handler) => listeners.set(event, handler),
+    initialize: async () => {},
+    destroy: async () => {},
+    sendMessage: async (to, media) => sent.push({ to, media }),
+  };
+  const manager = createWhatsAppManager({
+    clientFactory: () => client,
+    qrEncoder: async () => null,
+    mediaFactory: { fromFilePath: (filePath) => ({ kind: 'media', filePath }) },
+  });
+  await manager.connect();
+  listeners.get('ready')();
+  await manager.sendMedia('+55 (11) 99999-9999', '/tmp/final.png');
+  assert.deepEqual(sent, [{ to: '5511999999999@c.us', media: { kind: 'media', filePath: '/tmp/final.png' } }]);
+});

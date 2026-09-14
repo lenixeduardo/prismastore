@@ -43,6 +43,18 @@
 - O estoque reservado é baixado do estoque físico apenas uma vez.
 - Cliente é notificado pelo WhatsApp após confirmação.
 
+### Passo 6 — Operação e tracker
+
+- Painel avança pedidos por API, sem alterar status diretamente no navegador.
+- `expectedStatus` impede avanço duplicado em retentativas.
+- `PAID → PACKING`.
+- Entrega local: `PACKING → OUT_FOR_DELIVERY → DELIVERED`.
+- Envio: `PACKING → SHIPPED → DELIVERED`.
+- Cada mudança dispara um tracker de quatro etapas no WhatsApp.
+- Finalização envia a arte padrão versionada em `assets/prismastore-order-finished.b64`, reconstruída como PNG local ao iniciar.
+- `statusHistory` registra as transições operacionais.
+- Confirmação do Asaas também usa o tracker do ciclo do pedido.
+
 ## Próximo
 
-### Passo 6 — Operação e tracker
+### Passo 7 — Relatórios reais

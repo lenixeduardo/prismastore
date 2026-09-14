@@ -27,3 +27,11 @@ test('runtime wires Asaas client, payment service and webhook token into the sin
   assert.match(source, /ASAAS_WEBHOOK_TOKEN/);
   assert.match(source, /paymentService/);
 });
+
+test('runtime wires order lifecycle tracker and approved finalization artwork', () => {
+  assert.match(source, /createOrderLifecycleService/);
+  assert.match(source, /prismastore-order-finished\.b64/);
+  assert.match(source, /ensureBase64Asset/);
+  assert.match(source, /orderLifecycleService/);
+  assert.equal(existsSync(new URL('../assets/prismastore-order-finished.b64', import.meta.url)), true);
+});
