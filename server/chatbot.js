@@ -1,4 +1,5 @@
-import { availableStock, calculateCart, formatCurrencyBRL } from '../src/domain.js';
+import { randomUUID } from 'node:crypto';
+import { availableStock, calculateCart, formatCurrencyBRL, reserveCartStock } from '../src/domain.js';
 
 function digits(value = '') {
   return String(value).replace(/\D/g, '');
@@ -11,6 +12,7 @@ function isPrivateChat(chatId = '') {
 function newSession(now) {
   const timestamp = now().toISOString();
   return {
+    checkoutId: randomUUID(),
     step: 'catalog',
     cart: {},
     selectedProductId: null,
@@ -134,6 +136,68 @@ function latestAddress(customer) {
   return customer?.addresses?.length ? customer.addresses[customer.addresses.length - 1] : null;
 }
 
+function nextOrderId(orders) {
+  const max = orders.reduce((highest, order) => {
+    const match = String(order?.id ?? '').match(/^PS-(\d+)$/);
+    return match ? Math.max(highest, Number(match[1])) : highest;
+  }, 1000);
+  return `PS-${max + 1}`;
+}
+
+function createPendingOrder(stateStore, phone, session, now) {
+  let order = null;
+  stateStore.updateState((state) => {
+    const existing = state.orders.find((candidate) => candidate.sourceCheckoutId === session.checkoutId);
+    if (existing) {
+      order = structuredClone(existing);
+      return state;
+    }
+
+    const customer = state.customers.find((candidate) => customerPhoneMatches(candidate, phone));
+    if (!customer) throw new Error('Cliente não encontrado para criar o pedido.');
+
+    const items = Object.entries(session.cart)
+      .filter(([, quantity]) => Number(quantity) > 0)
+      .map(([productId, quantity]) => {
+        const product = state.products.find((candidate) => candidate.id === productId);
+        if (!product) throw new Error(`Produto ${productId} não encontrado.`);
+        return {
+          productId,
+          name: product.name,
+          quantity: Number(quantity),
+          unitPrice: Number(product.price),
+        };
+      });
+    if (!items.length) throw new Error('Carrinho vazio.');
+
+    state.products = reserveCartStock(state.products, session.cart);
+    const totals = calculateCart(state.products, session.cart);
+    const createdAt = now().toISOString();
+    order = {
+      id: nextOrderId(state.orders),
+      customerId: customer.id,
+      customerName: customer.name,
+      phone: `+${phone}`,
+      status: 'PAYMENT_PENDING',
+      deliveryType: session.deliveryType,
+      total: totals.subtotal,
+      createdAt,
+      paidAt: null,
+      receivingAccountId: null,
+      items,
+      address: structuredClone(session.address),
+      newAddress: Boolean(session.newAddress),
+      deliveryFee: 0,
+      source: 'whatsapp',
+      sourceCheckoutId: session.checkoutId,
+      reservedAt: createdAt,
+    };
+    state.orders.unshift(order);
+    return state;
+  });
+  return order;
+}
+
 function storeConfirmedAddress(stateStore, phone, session, now) {
   if (!session.newAddress || !session.address) return;
   stateStore.updateState((state) => {
@@ -194,6 +258,10 @@ export function createChatbotEngine({
     if (!session) {
       await startConversation({ phone, contactName, sendText, sendMedia, includeWelcome: true });
       return { handled: true, step: 'catalog' };
+    }
+    if (!session.checkoutId) {
+      session.checkoutId = randomUUID();
+      saveSession(stateStore, phone, session, now);
     }
 
     upsertCustomer(stateStore, phone, contactName);
@@ -344,12 +412,20 @@ export function createChatbotEngine({
 
     if (session.step === 'confirm') {
       if (input === '1') {
-        storeConfirmedAddress(stateStore, phone, session, now);
-        session.step = 'confirmed';
-        session.confirmedAt = now().toISOString();
-        saveSession(stateStore, phone, session, now);
-        await sendText(`✅ *Pedido confirmado!*\n\n${cartSummary(stateStore, session.cart)}\n\nSeus dados estão confirmados e o pedido está pronto para seguir para pagamento.`);
-        return { handled: true, step: session.step };
+        try {
+          const order = createPendingOrder(stateStore, phone, session, now);
+          storeConfirmedAddress(stateStore, phone, session, now);
+          session.step = 'confirmed';
+          session.confirmedAt = now().toISOString();
+          session.orderId = order.id;
+          saveSession(stateStore, phone, session, now);
+          await sendText(`✅ *Pedido confirmado!*\nCódigo: *${order.id}*\n\n${cartSummary(stateStore, session.cart)}\n\nO estoque foi reservado e o pedido está aguardando pagamento.`);
+          return { handled: true, step: session.step, orderId: order.id };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível reservar o estoque.';
+          await sendText(`O estoque mudou antes da confirmação e não consegui reservar seu pedido. ${message}\n\nRevise o pedido ou digite *MENU* para montar novamente.`);
+          return { handled: true, step: session.step, error: 'stock-changed' };
+        }
       }
       if (input === '2') {
         session.step = 'address_input';

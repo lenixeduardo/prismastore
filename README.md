@@ -93,9 +93,11 @@ O catálogo em texto é enviado junto e usa os produtos/preços/estoque atuais d
 
 Se o servidor reiniciar no meio de um atendimento, a etapa da conversa permanece salva.
 
-## Limite desta versão
+## Estado desta versão — Passo 4
 
-O Passo 3 termina com os dados do pedido confirmados. A criação do pedido administrativo e a reserva do estoque entram no **Passo 4**. Pix entra no **Passo 5**.
+Ao confirmar o pedido no WhatsApp, o PrismaStore cria um pedido real `PAYMENT_PENDING`, reserva o estoque atomicamente e o mostra no painel na fila **Aguardando Pix**. A confirmação é idempotente: repetir a mesma etapa não duplica o pedido nem a reserva.
+
+O próximo passo é o **Passo 5 — Pix dinâmico + webhook**.
 
 ## Testes
 
