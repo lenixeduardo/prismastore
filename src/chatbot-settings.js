@@ -13,7 +13,7 @@ export const CHATBOT_MESSAGE_DEFAULTS = Object.freeze({
   cancelled: 'Pedido cancelado. Voltamos ao cardápio.',
   paymentPending: 'Pedido *{pedido}* criado. Aguardando pagamento.',
   paymentConfirmed: '✅ Pagamento confirmado para o pedido *{pedido}*.',
-  orderFinished: '✅ Pedido *{pedido}* finalizado.',
+  orderFinished: '✅ *Seu pedido foi finalizado!*\nPedido: *{pedido}*\nObrigado por comprar com a Prisma Store.',
 });
 
 export const CHATBOT_MESSAGE_FIELDS = Object.freeze([
