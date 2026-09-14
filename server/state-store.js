@@ -1,14 +1,23 @@
 import { DatabaseSync, backup as sqliteBackup } from 'node:sqlite';
 import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { normalizeChatbotMessages } from './chatbot-messages.js';
 
 const STATE_KEY = 'main';
 
-function sanitizeState(state = {}) {
+function sanitizeState(state = {}, fallbackSettings = null) {
+  const fallbackMessages = fallbackSettings?.chatbotMessages ?? {};
+  const suppliedMessages = state?.settings?.chatbotMessages;
+  const chatbotMessages = normalizeChatbotMessages({
+    ...fallbackMessages,
+    ...(suppliedMessages && typeof suppliedMessages === 'object' ? suppliedMessages : {}),
+  });
+
   return {
     products: Array.isArray(state.products) ? state.products : [],
     customers: Array.isArray(state.customers) ? state.customers : [],
     orders: Array.isArray(state.orders) ? state.orders : [],
+    settings: { chatbotMessages },
   };
 }
 
@@ -83,13 +92,15 @@ export function createStateStore({ dbPath, seedState }) {
     const row = getStatement.get(STATE_KEY);
     if (row?.payload) return sanitizeState(JSON.parse(row.payload));
     const initial = sanitizeState(structuredClone(seedState ?? {}));
-    save(initial);
+    upsertStatement.run(STATE_KEY, JSON.stringify(initial), new Date().toISOString());
     return initial;
   }
 
   function save(state) {
     ensureOpen();
-    const clean = sanitizeState(state);
+    const row = getStatement.get(STATE_KEY);
+    const current = row?.payload ? sanitizeState(JSON.parse(row.payload)) : sanitizeState(seedState ?? {});
+    const clean = sanitizeState(state, current.settings);
     upsertStatement.run(STATE_KEY, JSON.stringify(clean), new Date().toISOString());
     return clean;
   }
