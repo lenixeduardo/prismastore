@@ -5,12 +5,14 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createStateStore } from '../server/state-store.js';
 import { createAppServer } from '../server/app-server.js';
+import { DEFAULT_CHATBOT_MESSAGES } from '../server/chatbot-messages.js';
 
 function fixture() {
   return {
     products: [{ id: 'p1', name: 'Produto', stock: 4, reserved: 0 }],
     customers: [],
     orders: [],
+    settings: { chatbotMessages: { ...DEFAULT_CHATBOT_MESSAGES } },
   };
 }
 
@@ -29,7 +31,7 @@ async function withServer(run) {
   }
 }
 
-test('GET /api/state returns persisted operational state', async () => {
+test('GET /api/state returns persisted operational state including chatbot settings', async () => {
   await withServer(async ({ baseUrl }) => {
     const response = await fetch(`${baseUrl}/api/state`);
     assert.equal(response.status, 200);
