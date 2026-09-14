@@ -1,6 +1,6 @@
 import { createBackupService } from './backup-service.js';
 import { createServer } from 'node:http';
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 
 const MIME = {
@@ -14,6 +14,14 @@ const MIME = {
   '.jpeg': 'image/jpeg',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
+};
+
+const BRAND_ICON_SOURCES = {
+  '/icons/favicon-16.png': 'icons/generated/favicon-16.b64',
+  '/icons/favicon-32.png': 'icons/generated/favicon-32.b64',
+  '/icons/apple-touch-icon.png': 'icons/generated/apple-touch-icon.b64',
+  '/icons/icon-192.png': 'icons/generated/icon-192.b64',
+  '/icons/icon-512.png': 'icons/generated/icon-512.b64',
 };
 
 function sendJson(res, statusCode, value) {
@@ -40,6 +48,24 @@ async function readJson(req) {
   return JSON.parse(body);
 }
 
+function serveGeneratedIcon(staticDir, pathname, method, res) {
+  const source = BRAND_ICON_SOURCES[pathname];
+  if (!source) return false;
+  const sourcePath = resolve(join(staticDir, source));
+  if (!existsSync(sourcePath)) {
+    sendJson(res, 404, { error: 'Ícone da marca não encontrado' });
+    return true;
+  }
+  const buffer = Buffer.from(readFileSync(sourcePath, 'utf8').trim(), 'base64');
+  res.writeHead(200, {
+    'content-type': 'image/png',
+    'content-length': buffer.length,
+    'cache-control': 'public, max-age=3600',
+  });
+  res.end(method === 'HEAD' ? undefined : buffer);
+  return true;
+}
+
 function serveStatic(staticDir, pathname, res) {
   const root = resolve(staticDir);
   const requested = pathname === '/' ? '/index.html' : pathname;
@@ -63,7 +89,7 @@ export function createAppServer({ stateStore, staticDir, whatsappManager = null,
     whatsappManager,
     authPath: join(staticDir, '.wwebjs_auth'),
     backupsDir: join(staticDir, 'backups'),
-    appVersion: '0.9.0',
+    appVersion: '0.9.2',
   });
 
   return createServer(async (req, res) => {
@@ -174,6 +200,7 @@ export function createAppServer({ stateStore, staticDir, whatsappManager = null,
         return;
       }
 
+      if (serveGeneratedIcon(staticDir, url.pathname, req.method, res)) return;
       serveStatic(staticDir, url.pathname, res);
     } catch (error) {
       sendJson(res, 400, { error: error instanceof Error ? error.message : 'Erro inesperado' });
