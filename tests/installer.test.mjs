@@ -25,8 +25,8 @@ test('daily starter preserves local folders and backup directory is ignored by G
   assert.match(gitignore, /^data\/prismastore-order-finished\.png$/m);
 });
 
-test('Passo 8 documentation and package version are ready for customer installation', () => {
-  assert.equal(pkg.version, '0.8.0');
+test('customer installation documentation tracks the current package release', () => {
+  assert.equal(pkg.version, '0.9.2');
   assert.match(readme, /Backup e recuperação/);
   assert.match(readme, /INSTALAR_PRISMASTORE\.bat/);
   assert.match(readme, /SHA-256/);
