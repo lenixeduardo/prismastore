@@ -1,0 +1,71 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createWhatsAppManager } from '../server/whatsapp-manager.js';
+
+function createEventBus() {
+  const handlers = new Map();
+  return {
+    on(event, handler) { handlers.set(event, handler); },
+    async emit(event, payload) { return handlers.get(event)?.(payload); },
+  };
+}
+
+function createSocket() {
+  const ev = createEventBus();
+  const sent = [];
+  return {
+    ev,
+    sent,
+    user: { id: '5511000000000@s.whatsapp.net', name: 'Prisma Store' },
+    async sendMessage(jid, payload) { sent.push({ jid, payload }); },
+    async end() {},
+  };
+}
+
+function harness() {
+  const socket = createSocket();
+  const handled = [];
+  const manager = createWhatsAppManager({
+    socketFactory: async () => socket,
+    authStateLoader: async () => ({ state: { creds: {} }, saveCreds: async () => {} }),
+    qrEncoder: async (value) => value,
+    messageHandler: async ({ message }) => handled.push(message.key.remoteJid),
+    disconnectReasonLoggedOut: 401,
+    devAllowedPhone: '11984477950',
+  });
+  return { manager, socket, handled };
+}
+
+const msg = (jid, id) => ({
+  key: { remoteJid: jid, id, fromMe: false },
+  message: { conversation: 'oi' },
+});
+
+test('dev mode accepts inbound only from configured phone', async () => {
+  const { manager, socket, handled } = harness();
+  await manager.connect();
+
+  await socket.ev.emit('messages.upsert', {
+    type: 'notify',
+    messages: [
+      msg('5511984477950@s.whatsapp.net', 'SELF-TEST'),
+      msg('5511999999999@s.whatsapp.net', 'OTHER'),
+    ],
+  });
+
+  assert.deepEqual(handled, ['5511984477950@s.whatsapp.net']);
+});
+
+test('dev mode blocks outbound messages to any other phone', async () => {
+  const { manager, socket } = harness();
+  await manager.connect();
+  await socket.ev.emit('connection.update', { connection: 'open' });
+
+  await manager.sendText('11984477950', 'permitido');
+  await manager.sendMedia('5511984477950@s.whatsapp.net', '/tmp/ok.png');
+  await assert.rejects(() => manager.sendText('11999999999', 'bloqueado'), /Modo DEV/);
+  await assert.rejects(() => manager.sendMedia('5511999999999@s.whatsapp.net', '/tmp/no.png'), /Modo DEV/);
+
+  assert.equal(socket.sent.length, 2);
+  assert.ok(socket.sent.every(({ jid }) => jid === '5511984477950@s.whatsapp.net'));
+});
