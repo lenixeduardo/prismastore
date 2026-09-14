@@ -14,7 +14,7 @@ import { createPaymentChatbot } from './payment-chatbot.js';
 import { createOrderLifecycleService } from './order-lifecycle-service.js';
 import { ensureBase64Asset } from './asset-loader.js';
 import { createReportService } from './report-service.js';
-import { createStartupState, createTerminalQrEncoder } from './startup-config.js';
+import { createStartupState, createTerminalQrEncoder, clearLegacyDemoState } from './startup-config.js';
 
 const { Client, LocalAuth, MessageMedia } = whatsappWeb;
 const here = dirname(fileURLToPath(import.meta.url));
@@ -26,20 +26,22 @@ const assetsDir = join(root, 'assets');
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || '0.0.0.0';
 const useDemoData = process.env.PRISMASTORE_DEMO_DATA === 'true';
+const legacySeedState = {
+  products: seedProducts,
+  customers: seedCustomers,
+  orders: seedOrders,
+};
 
 const startupState = createStartupState({
   useDemoData,
-  seedState: {
-    products: seedProducts,
-    customers: seedCustomers,
-    orders: seedOrders,
-  },
+  seedState: legacySeedState,
 });
 
 const stateStore = createStateStore({
   dbPath: join(dataDir, 'prismastore.db'),
   seedState: startupState,
 });
+clearLegacyDemoState({ stateStore, seedState: legacySeedState, useDemoData });
 
 const asaasClient = createAsaasClient({
   apiKey: process.env.ASAAS_API_KEY || '',
