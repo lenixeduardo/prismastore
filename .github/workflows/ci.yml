@@ -6,6 +6,7 @@ on:
       - main
       - 'feat/**'
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -16,7 +17,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-        continue-on-error: true
       - run: npm install --ignore-scripts
       - run: npm test
