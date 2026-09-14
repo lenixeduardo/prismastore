@@ -20,11 +20,11 @@ function harness({ connected = true, withAuth = true } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'prismastore-backup-'));
   const dataDir = join(root, 'data');
   const backupsDir = join(root, 'backups');
-  const authPath = join(root, '.wwebjs_auth');
+  const authPath = join(dataDir, 'whatsapp-auth');
   mkdirSync(dataDir, { recursive: true });
   if (withAuth) {
-    mkdirSync(join(authPath, 'session-prismastore-main'), { recursive: true });
-    writeFileSync(join(authPath, 'session-prismastore-main', 'session.json'), 'auth-v1');
+    mkdirSync(authPath, { recursive: true });
+    writeFileSync(join(authPath, 'creds.json'), 'auth-v1');
   }
   const stateStore = createStateStore({ dbPath: join(dataDir, 'prismastore.db'), seedState: seed() });
   let status = connected ? 'connected' : 'disconnected';
@@ -40,6 +40,7 @@ function harness({ connected = true, withAuth = true } = {}) {
     authPath,
     backupsDir,
     appVersion: '0.8.0',
+    whatsappAuthProvider: 'baileys',
     now: () => new Date('2026-09-14T12:34:56.789Z'),
     suffix: () => 'a1b2',
   });
@@ -51,7 +52,7 @@ function cleanup(h) {
   rmSync(h.root, { recursive: true, force: true });
 }
 
-test('creates a validated backup with sqlite, LocalAuth manifest and reconnects WhatsApp', async () => {
+test('creates a validated backup with sqlite, Baileys auth manifest and reconnects WhatsApp', async () => {
   const h = harness();
   try {
     h.stateStore.saveChatSession('5511999999999', { step: 'awaiting_payment', orderId: 'PS-1001' });
@@ -59,18 +60,20 @@ test('creates a validated backup with sqlite, LocalAuth manifest and reconnects 
     assert.match(backup.id, /^backup-20260914-123456-789-a1b2$/);
     assert.equal(backup.reason, 'manual');
     assert.equal(backup.hasWhatsAppSession, true);
+    assert.equal(backup.whatsappAuthProvider, 'baileys');
     assert.deepEqual(h.calls, ['disconnect', 'connect']);
     const folder = join(h.backupsDir, backup.id);
     assert.equal(existsSync(join(folder, 'prismastore.db')), true);
-    assert.equal(readFileSync(join(folder, 'whatsapp-auth', 'session-prismastore-main', 'session.json'), 'utf8'), 'auth-v1');
+    assert.equal(readFileSync(join(folder, 'whatsapp-auth', 'creds.json'), 'utf8'), 'auth-v1');
     const manifest = JSON.parse(readFileSync(join(folder, 'manifest.json'), 'utf8'));
     assert.equal(manifest.appVersion, '0.8.0');
+    assert.equal(manifest.whatsappAuthProvider, 'baileys');
     assert.equal(manifest.files.some((file) => file.path === 'prismastore.db' && /^[a-f0-9]{64}$/.test(file.sha256)), true);
     assert.equal((await h.service.validateBackup(backup.id)).valid, true);
   } finally { cleanup(h); }
 });
 
-test('creates backup without WhatsApp session when LocalAuth does not exist', async () => {
+test('creates backup without WhatsApp session when Baileys auth does not exist', async () => {
   const h = harness({ connected: false, withAuth: false });
   try {
     const backup = await h.service.createBackup();
@@ -90,7 +93,7 @@ test('rejects path traversal and corrupted backup before restoration', async () 
   } finally { cleanup(h); }
 });
 
-test('restores sqlite and LocalAuth and creates a pre-restore safety backup', async () => {
+test('restores sqlite and Baileys auth and creates a pre-restore safety backup', async () => {
   const h = harness();
   try {
     h.stateStore.saveChatSession('5511999999999', { step: 'paid', orderId: 'PS-1001' });
@@ -100,7 +103,7 @@ test('restores sqlite and LocalAuth and creates a pre-restore safety backup', as
     changed.orders[0].status = 'DELIVERED';
     h.stateStore.save(changed);
     h.stateStore.saveChatSession('5511999999999', { step: 'catalog' });
-    writeFileSync(join(h.authPath, 'session-prismastore-main', 'session.json'), 'auth-v2');
+    writeFileSync(join(h.authPath, 'creds.json'), 'auth-v2');
     const result = await h.service.restoreBackup(original.id);
     assert.equal(result.restored, true);
     assert.equal(result.backupId, original.id);
@@ -108,7 +111,7 @@ test('restores sqlite and LocalAuth and creates a pre-restore safety backup', as
     assert.notEqual(result.safetyBackupId, original.id);
     assert.deepEqual(h.stateStore.load(), seed());
     assert.deepEqual(h.stateStore.getChatSession('5511999999999'), { step: 'paid', orderId: 'PS-1001' });
-    assert.equal(readFileSync(join(h.authPath, 'session-prismastore-main', 'session.json'), 'utf8'), 'auth-v1');
+    assert.equal(readFileSync(join(h.authPath, 'creds.json'), 'utf8'), 'auth-v1');
     assert.equal(h.service.listBackups().some((item) => item.reason === 'pre-restore'), true);
   } finally { cleanup(h); }
 });
