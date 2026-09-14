@@ -47,6 +47,55 @@ test('ignores messages sent by the connected account itself', async () => {
   assert.equal(calls, 0);
 });
 
+test('ignores stale private messages replayed after the PrismaStore process starts', async () => {
+  let calls = 0;
+  const nowMs = Date.UTC(2026, 8, 14, 21, 0, 0);
+  const adapter = createWhatsAppChatAdapter({
+    chatbot: { handleIncoming: async () => { calls += 1; } },
+    mediaFactory: { fromFilePath: () => ({}) },
+    now: () => nowMs,
+  });
+
+  const result = await adapter({
+    message: {
+      from: '5511888888888@c.us',
+      body: 'Mensagem antiga',
+      fromMe: false,
+      timestamp: Math.floor((nowMs - 60_000) / 1000),
+      id: { _serialized: 'stale-message-1' },
+    },
+    activeClient: { sendMessage: async () => { throw new Error('não deveria enviar'); } },
+  });
+
+  assert.equal(calls, 0);
+  assert.deepEqual(result, { handled: false, reason: 'stale-message' });
+});
+
+test('processes the same WhatsApp message id only once', async () => {
+  let calls = 0;
+  const nowMs = Date.UTC(2026, 8, 14, 21, 0, 0);
+  const adapter = createWhatsAppChatAdapter({
+    chatbot: { handleIncoming: async () => { calls += 1; return { handled: true }; } },
+    mediaFactory: { fromFilePath: () => ({}) },
+    now: () => nowMs,
+  });
+  const message = {
+    from: '5511777777777@c.us',
+    body: 'Oi',
+    fromMe: false,
+    timestamp: Math.floor(nowMs / 1000),
+    id: { _serialized: 'same-message-1' },
+  };
+  const activeClient = { sendMessage: async () => {} };
+
+  const first = await adapter({ message, activeClient });
+  const second = await adapter({ message, activeClient });
+
+  assert.equal(calls, 1);
+  assert.deepEqual(first, { handled: true });
+  assert.deepEqual(second, { handled: false, reason: 'duplicate-message' });
+});
+
 test('adapts in-memory base64 media such as Asaas Pix QR code', async () => {
   const sent = [];
   const activeClient = { sendMessage: async (to, payload) => sent.push({ to, payload }) };
