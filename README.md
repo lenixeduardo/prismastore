@@ -1,6 +1,6 @@
 # PrismaStore — MVP local
 
-MVP operacional simplificado para rodar no mesmo computador/servidor: painel, SQLite, chatbot, WhatsApp Web e integração Pix ficam em um único processo Node.js.
+MVP operacional simplificado para rodar no mesmo computador/servidor: painel, SQLite, chatbot, integração WhatsApp via Baileys e Pix Asaas ficam em um único processo Node.js.
 
 ## Arquitetura
 
@@ -8,7 +8,7 @@ MVP operacional simplificado para rodar no mesmo computador/servidor: painel, SQ
 Cliente no WhatsApp
         │
         ▼
-WhatsApp Web + LocalAuth
+Baileys (multi-device)
         │
         ▼
       Node.js único
@@ -25,8 +25,8 @@ Sem PostgreSQL, Redis, filas, microsserviços, ORM ou IA generativa no MVP.
 ## Requisitos
 
 - Node.js 22.5+ (recomendado Node.js 24 LTS).
-- Internet no computador que executa WhatsApp Web e Asaas.
-- `data/`, `.wwebjs_auth/` e `.env` persistentes no servidor.
+- Internet no computador que executa a integração WhatsApp e o Asaas.
+- `data/`, `data/whatsapp-auth/` e `.env` persistentes no servidor.
 
 ## Instalação
 
@@ -40,7 +40,11 @@ No Windows, `INICIAR_PRISMASTORE.bat` instala dependências e abre `http://local
 
 ## WhatsApp
 
-Em **Configurações → WhatsApp Web**, clique em **Conectar WhatsApp** e leia o QR com **Aparelhos conectados**. A sessão fica em `.wwebjs_auth/` e é restaurada ao reiniciar.
+Em **Configurações → WhatsApp**, clique em **Conectar WhatsApp** e leia o QR com **Aparelhos conectados**. A sessão Baileys fica em `data/whatsapp-auth/` e é restaurada ao reiniciar.
+
+A integração anterior usava `whatsapp-web.js` e `.wwebjs_auth/`. Esse formato não é compatível com Baileys. Na primeira execução depois da migração será necessário ler um novo QR Code. A pasta `.wwebjs_auth/` antiga não é utilizada pelo runtime novo e pode ser mantida temporariamente apenas para rollback manual.
+
+O PrismaStore processa somente eventos novos (`messages.upsert` do tipo `notify`), ignora mensagens próprias, grupos, status/broadcast e histórico sincronizado, e mantém cada resposta vinculada ao `remoteJid` que originou a mensagem.
 
 ## Fluxo atual — Passos 1 a 9
 
@@ -60,7 +64,7 @@ mensagem
 → Finalizado + arte final
 ```
 
-O `checkoutId` impede duplicidade de pedido e a cobrança Asaas é reutilizada em retentativas. O webhook valida o ID da cobrança e o valor antes de liberar o pedido. Ao confirmar o pagamento, a reserva vira baixa de estoque físico e o cliente recebe uma mensagem automática no WhatsApp.
+O `checkoutId` impede duplicidade de pedido e a cobrança Asaas é reutilizada em retentativas. O webhook valida o ID da cobrança e o valor antes de liberar o pedido. Ao confirmar o pagamento, a reserva vira baixa de estoque físico e o cliente recebe uma mensagem automática no WhatsApp. O cliente não precisa enviar comprovante: a confirmação do Pix continua automática pelo webhook do Asaas.
 
 ## Operação e tracker — Passo 6
 
@@ -73,7 +77,7 @@ Depois do pagamento, o operador avança o pedido pelo painel. Cada transição p
 ✅/○ Finalizado
 ```
 
-O endpoint `POST /api/orders/:id/advance` recebe `expectedStatus`, impedindo que uma retentativa ou clique duplicado avance duas etapas. Para `local_delivery`, o fluxo é `PACKING → OUT_FOR_DELIVERY → DELIVERED`; para `shipping`, é `PACKING → SHIPPED → DELIVERED`. Ao chegar em `DELIVERED`, o WhatsApp envia `assets/prismastore-order-finished.b64 (reconstruída como PNG local ao iniciar)` antes da mensagem final.
+O endpoint `POST /api/orders/:id/advance` recebe `expectedStatus`, impedindo que uma retentativa ou clique duplicado avance duas etapas. Para `local_delivery`, o fluxo é `PACKING → OUT_FOR_DELIVERY → DELIVERED`; para `shipping`, é `PACKING → SHIPPED → DELIVERED`. Ao chegar em `DELIVERED`, o WhatsApp envia `assets/prismastore-order-finished.b64` (reconstruída como PNG local ao iniciar) antes da mensagem final.
 
 ## Relatórios reais — Passo 7
 
@@ -117,7 +121,8 @@ Não entram no Git:
 .env
 node_modules/
 data/*.db
-.wwebjs_auth/
+data/whatsapp-auth/
+.wwebjs_auth/   (legado, se ainda existir)
 backups/
 ```
 
@@ -129,11 +134,13 @@ Em **Configurações → Backup e recuperação**, o operador pode criar um snap
 
 ```text
 prismastore.db
-whatsapp-auth/   (quando existe uma sessão LocalAuth)
+whatsapp-auth/   (quando existe uma sessão Baileys)
 manifest.json
 ```
 
-O SQLite é copiado pela API de backup do próprio `node:sqlite`, mantendo consistência mesmo com WAL ativo. O `manifest.json` registra SHA-256 e tamanho de cada arquivo. Antes de restaurar, todos os hashes são verificados; se houver corrupção, nada é substituído.
+O `manifest.json` registra, além dos hashes SHA-256 e tamanhos, o provedor da sessão WhatsApp. Backups novos usam `whatsappAuthProvider: "baileys"`. Um backup antigo pode restaurar os dados SQLite, mas credenciais de `whatsapp-web.js` não são copiadas para `data/whatsapp-auth/`.
+
+O SQLite é copiado pela API de backup do próprio `node:sqlite`, mantendo consistência mesmo com WAL ativo. Antes de restaurar, todos os hashes são verificados; se houver corrupção, nada é substituído.
 
 Toda restauração cria primeiro um backup `pre-restore`. O WhatsApp é desconectado durante a troca dos arquivos e reconectado em seguida. O `.env`, a chave do Asaas e o token do webhook **não entram no backup**.
 
@@ -147,7 +154,7 @@ Endpoints locais:
 
 Na primeira instalação, dê duplo clique em `INSTALAR_PRISMASTORE.bat`. Ele verifica Node.js, abre a página oficial do Node LTS caso esteja ausente, executa `npm install`, cria `.env`, `data/`, `backups/` e um inicializador **PrismaStore.cmd** na Área de Trabalho.
 
-Depois disso, o uso diário é feito pelo atalho ou por `INICIAR_PRISMASTORE.bat`.
+Depois disso, o uso diário é feito pelo atalho ou por `INICIAR_PRISMASTORE.bat`. Na primeira inicialização com Baileys, conecte novamente o WhatsApp pelo QR Code do painel; as credenciais seguintes ficam em `data/whatsapp-auth/`.
 
 > Guarde a pasta `backups/` também em uma mídia ou armazenamento seguro externo periodicamente. Ela contém dados operacionais e pode conter a sessão do WhatsApp, portanto deve ser tratada como informação sensível.
 
@@ -179,4 +186,4 @@ No Android/Chromium, quando disponível, o PrismaStore oferece o botão **Instal
 npm test
 ```
 
-> `whatsapp-web.js` é uma integração não oficial. Valide as políticas comerciais aplicáveis antes do uso em produção.
+> Baileys é uma integração não oficial com o WhatsApp. Valide as políticas comerciais aplicáveis antes do uso em produção.
