@@ -86,6 +86,55 @@ test('maps qr and open connection state', async () => {
   assert.equal(manager.getStatus().status, 'connected');
 });
 
+test('concurrent connect calls create only one Baileys socket', async () => {
+  let authLoads = 0;
+  let socketCreates = 0;
+  let releaseAuth;
+  const authGate = new Promise((resolve) => { releaseAuth = resolve; });
+  const socket = createSocket();
+  const manager = createWhatsAppManager({
+    authStateLoader: async () => {
+      authLoads += 1;
+      await authGate;
+      return { state: { creds: {} }, saveCreds: async () => {} };
+    },
+    socketFactory: async () => {
+      socketCreates += 1;
+      return socket;
+    },
+    qrEncoder: async (value) => value,
+    disconnectReasonLoggedOut: 401,
+  });
+
+  const first = manager.connect();
+  const second = manager.connect();
+  releaseAuth();
+  await Promise.all([first, second]);
+
+  assert.equal(authLoads, 1);
+  assert.equal(socketCreates, 1);
+});
+
+test('connect failure exposes error state and a later retry is allowed', async () => {
+  let attempts = 0;
+  const socket = createSocket();
+  const manager = createWhatsAppManager({
+    authStateLoader: async () => ({ state: { creds: {} }, saveCreds: async () => {} }),
+    socketFactory: async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error('socket factory failed');
+      return socket;
+    },
+    qrEncoder: async (value) => value,
+    disconnectReasonLoggedOut: 401,
+  });
+
+  await assert.rejects(() => manager.connect(), /socket factory failed/);
+  assert.equal(manager.getStatus().status, 'error');
+  await manager.connect();
+  assert.equal(attempts, 2);
+});
+
 test('logged out close does not reconnect and recoverable close schedules once', async () => {
   const loggedOut = harness();
   await loggedOut.manager.connect();
