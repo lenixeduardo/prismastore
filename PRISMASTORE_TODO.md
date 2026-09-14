@@ -27,6 +27,8 @@
   - [x] Continua por texto se uma arte não puder ser enviada.
   - [x] Comandos de recuperação: `MENU`, `INICIO`, `REINICIAR` e `CANCELAR`.
 
+## Próximos passos
+
 - [x] **Passo 4 — Pedido e estoque**
   - [x] Ao confirmar no WhatsApp, criar exatamente um pedido real no painel.
   - [x] Reservar estoque do carrinho atomicamente.
@@ -52,12 +54,13 @@
   - [x] Transições idempotentes com `expectedStatus`.
   - [x] Histórico de status salvo no pedido.
 
-## Próximos passos
-
-- [ ] **Passo 7 — Relatórios**
-  - [ ] Faturamento mensal real.
-  - [ ] Pedidos e ticket médio.
-  - [ ] Conta que recebeu cada pagamento.
+- [x] **Passo 7 — Relatórios**
+  - [x] Faturamento mensal real baseado em `paidAt`.
+  - [x] Pedidos pagos e ticket médio.
+  - [x] Faturamento por dia.
+  - [x] Conta que recebeu cada pagamento.
+  - [x] Seleção de mês no painel.
+  - [x] Exportação CSV pelo mesmo cálculo do relatório.
 
 - [ ] **Passo 8 — Backup e instalação**
   - [ ] Backup de `data/prismastore.db`.

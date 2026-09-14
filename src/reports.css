@@ -1,0 +1,8 @@
+.reports-mobile-toolbar { display:none; }
+.report-month-control { display:flex; align-items:center; gap:8px; border:1px solid var(--border); background:var(--panel); padding:7px 9px; border-radius:5px; color:var(--muted); font-size:11px; }
+.report-month-control input { border:0; outline:0; background:transparent; color:var(--text); font:inherit; color-scheme:dark; }
+@media (max-width: 820px) {
+  .reports-mobile-toolbar { display:flex; }
+  .bar-chart { overflow-x:auto; min-height:220px; }
+  .bar-col { min-width:28px; }
+}

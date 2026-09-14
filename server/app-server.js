@@ -19,6 +19,15 @@ function sendJson(res, statusCode, value) {
   res.end(JSON.stringify(value));
 }
 
+function sendCsv(res, filename, csv) {
+  res.writeHead(200, {
+    'content-type': 'text/csv; charset=utf-8',
+    'content-disposition': `attachment; filename="${filename}"`,
+    'cache-control': 'no-store',
+  });
+  res.end(csv);
+}
+
 async function readJson(req) {
   let body = '';
   for await (const chunk of req) {
@@ -46,7 +55,7 @@ function serveStatic(staticDir, pathname, res) {
   createReadStream(filePath).pipe(res);
 }
 
-export function createAppServer({ stateStore, staticDir, whatsappManager = null, paymentService = null, orderLifecycleService = null, asaasWebhookToken = '' }) {
+export function createAppServer({ stateStore, staticDir, whatsappManager = null, paymentService = null, orderLifecycleService = null, reportService = null, asaasWebhookToken = '' }) {
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
@@ -89,6 +98,20 @@ export function createAppServer({ stateStore, staticDir, whatsappManager = null,
           expectedStatus: body.expectedStatus || null,
         });
         sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/api/reports/monthly') {
+        if (!reportService) return sendJson(res, 503, { error: 'Relatórios não configurados' });
+        const month = url.searchParams.get('month') || '';
+        sendJson(res, 200, reportService.getMonthlyReport(month));
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/api/reports/monthly.csv') {
+        if (!reportService) return sendJson(res, 503, { error: 'Relatórios não configurados' });
+        const month = url.searchParams.get('month') || '';
+        sendCsv(res, `prismastore-${month}.csv`, reportService.exportMonthlyCsv(month));
         return;
       }
 

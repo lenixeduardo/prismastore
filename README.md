@@ -42,7 +42,7 @@ No Windows, `INICIAR_PRISMASTORE.bat` instala dependências e abre `http://local
 
 Em **Configurações → WhatsApp Web**, clique em **Conectar WhatsApp** e leia o QR com **Aparelhos conectados**. A sessão fica em `.wwebjs_auth/` e é restaurada ao reiniciar.
 
-## Fluxo atual — Passos 1 a 6
+## Fluxo atual — Passos 1 a 7
 
 ```text
 mensagem
@@ -62,6 +62,7 @@ mensagem
 
 O `checkoutId` impede duplicidade de pedido e a cobrança Asaas é reutilizada em retentativas. O webhook valida o ID da cobrança e o valor antes de liberar o pedido. Ao confirmar o pagamento, a reserva vira baixa de estoque físico e o cliente recebe uma mensagem automática no WhatsApp.
 
+
 ## Operação e tracker — Passo 6
 
 Depois do pagamento, o operador avança o pedido pelo painel. Cada transição passa pela API local e notifica o cliente no WhatsApp com um tracker simples:
@@ -73,7 +74,22 @@ Depois do pagamento, o operador avança o pedido pelo painel. Cada transição p
 ✅/○ Finalizado
 ```
 
-O endpoint `POST /api/orders/:id/advance` recebe `expectedStatus`, impedindo que uma retentativa ou clique duplicado avance duas etapas. Para `local_delivery`, o fluxo é `PACKING → OUT_FOR_DELIVERY → DELIVERED`; para `shipping`, é `PACKING → SHIPPED → DELIVERED`. Ao chegar em `DELIVERED`, o WhatsApp envia a arte versionada em `assets/prismastore-order-finished.b64`, reconstruída como PNG local ao iniciar, antes da mensagem final.
+O endpoint `POST /api/orders/:id/advance` recebe `expectedStatus`, impedindo que uma retentativa ou clique duplicado avance duas etapas. Para `local_delivery`, o fluxo é `PACKING → OUT_FOR_DELIVERY → DELIVERED`; para `shipping`, é `PACKING → SHIPPED → DELIVERED`. Ao chegar em `DELIVERED`, o WhatsApp envia `assets/prismastore-order-finished.b64 (reconstruída como PNG local ao iniciar)` antes da mensagem final.
+
+## Relatórios reais — Passo 7
+
+A tela **Relatórios** usa os pedidos persistidos no SQLite e considera `paidAt` como fonte de verdade financeira. Isso significa que um pedido continua no faturamento mesmo depois de avançar para `PACKING`, `SHIPPED`, `OUT_FOR_DELIVERY` ou `DELIVERED`.
+
+O painel permite selecionar o mês e exibe:
+
+- faturamento total do período;
+- quantidade de pedidos pagos;
+- ticket médio;
+- faturamento por dia;
+- total recebido por conta (`receivingAccountId`);
+- tabela dos pagamentos considerados.
+
+A exportação usa `GET /api/reports/monthly.csv?month=YYYY-MM` e gera CSV compatível com Excel. O JSON equivalente está em `GET /api/reports/monthly?month=YYYY-MM`.
 
 ## Configurar Asaas Sandbox
 
