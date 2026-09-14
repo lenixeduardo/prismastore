@@ -1,0 +1,86 @@
+[hidden] { display: none !important; }
+
+.hero-page {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: #020806;
+  z-index: 1000;
+}
+
+.hero-art {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center center;
+  opacity: 0;
+  transition: opacity .18s ease;
+}
+
+.hero-art.loaded { opacity: 1; }
+
+.hero-enter {
+  position: absolute;
+  left: 75.2%;
+  top: 71.1%;
+  transform: translate(-50%, -50%);
+  width: min(24vw, 390px);
+  height: clamp(58px, 5vw, 80px);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgba(13, 117, 69, .025);
+  color: transparent;
+  cursor: pointer;
+  font-size: 0;
+  z-index: 2;
+}
+
+.hero-enter:hover {
+  background: rgba(24, 197, 110, .07);
+  box-shadow: 0 0 30px rgba(34, 220, 126, .12);
+}
+
+.hero-enter:focus-visible {
+  outline: 2px solid #45db91;
+  outline-offset: 4px;
+}
+
+.hero-load-error::after {
+  content: 'Não foi possível carregar a apresentação da PrismaStore.';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #f4f6f2;
+  font: 600 15px/1.4 Inter, system-ui, sans-serif;
+}
+
+/* Substitui o placeholder “Pr” pelo ícone oficial da marca no dashboard. */
+.brand-mark {
+  background-image: url('/icons/apple-touch-icon.png') !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.brand-mark::after { content: none !important; }
+
+@media (max-aspect-ratio: 4/5) {
+  .hero-art {
+    object-fit: contain;
+    background: #020806;
+  }
+  .hero-enter {
+    left: 75%;
+    top: 69.8%;
+    width: 30vw;
+    min-width: 150px;
+    height: 54px;
+  }
+}
