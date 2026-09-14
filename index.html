@@ -16,9 +16,17 @@
   <link rel="stylesheet" href="./src/reports.css" />
   <link rel="stylesheet" href="./src/backup.css" />
   <link rel="stylesheet" href="./src/pwa.css" />
+  <link rel="stylesheet" href="./src/hero.css" />
 </head>
 <body>
-  <div id="app"></div>
+  <section id="hero-page" class="hero-page" aria-label="PrismaStore">
+    <img class="hero-art" data-hero-art alt="Apresentação PrismaStore" />
+    <button class="hero-enter" type="button" data-enter-dashboard aria-label="Acessar painel de controle">Acessar painel de controle</button>
+  </section>
+
+  <div id="app" hidden></div>
+
+  <script type="module" src="./src/hero.js"></script>
   <script type="module" src="./src/app.js"></script>
   <script type="module" src="./src/live-sync.js"></script>
   <script type="module" src="./src/payment-status.js"></script>
