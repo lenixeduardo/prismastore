@@ -1,10 +1,11 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.0';
+const CACHE_NAME = 'prismastore-shell-v0.9.1';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
   '/src/styles.css', '/src/reports.css', '/src/backup.css', '/src/pwa.css',
   '/src/app.js', '/src/data.js', '/src/domain.js', '/src/live-sync.js', '/src/payment-status.js',
   '/src/order-lifecycle-ui.js', '/src/reports-ui.js', '/src/backup-ui.js', '/src/pwa.js',
+  '/icons/favicon-16.png', '/icons/favicon-32.png', '/icons/apple-touch-icon.png',
   '/icons/icon-192.svg', '/icons/icon-512.svg'
 ];
 
