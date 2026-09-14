@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const root = new URL('..', import.meta.url);
 const source = readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
 
-test('runtime wires the persisted chatbot to incoming WhatsApp messages', () => {
+test('runtime wires the persisted chatbot to incoming Baileys WhatsApp messages', () => {
   assert.match(source, /createChatbotEngine/);
   assert.match(source, /createWhatsAppChatAdapter/);
-  assert.match(source, /messageHandler/);
-  assert.match(source, /MessageMedia/);
+  assert.match(source, /messageHandler:\s*messageHandler\.handleMessage/);
+  assert.match(source, /@whiskeysockets\/baileys/);
+  assert.doesNotMatch(source, /MessageMedia|LocalAuth|whatsapp-web\.js/);
 });
 
 test('approved welcome and catalog artwork are packaged as local chatbot assets', () => {
