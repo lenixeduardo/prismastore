@@ -1,0 +1,33 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { normalizeProductInput } from '../src/product-editor.js';
+
+test('normalizes a new real product with audit fields', () => {
+  const product = normalizeProductInput(
+    { name: ' Seda King ', category: 'Sedas', price: '7,50', stock: '12', active: true },
+    null,
+    () => new Date('2026-09-14T20:00:00.000Z'),
+    () => 'uuid-1',
+  );
+  assert.deepEqual(product, {
+    id: 'p-uuid-1', name: 'Seda King', category: 'Sedas', price: 7.5, stock: 12,
+    reserved: 0, active: true, createdAt: '2026-09-14T20:00:00.000Z', updatedAt: '2026-09-14T20:00:00.000Z',
+  });
+});
+
+test('editing preserves id reservation and creation timestamp', () => {
+  const existing = { id: 'p-1', name: 'Antigo', category: 'A', price: 4, stock: 5, reserved: 2, active: true, createdAt: '2026-09-01T00:00:00.000Z' };
+  const product = normalizeProductInput({ name: 'Novo', category: 'B', price: '8.9', stock: '9', active: false }, existing, () => new Date('2026-09-14T20:00:00.000Z'));
+  assert.equal(product.id, 'p-1');
+  assert.equal(product.reserved, 2);
+  assert.equal(product.createdAt, '2026-09-01T00:00:00.000Z');
+  assert.equal(product.updatedAt, '2026-09-14T20:00:00.000Z');
+  assert.equal(product.active, false);
+});
+
+test('rejects invalid real product input', () => {
+  assert.throws(() => normalizeProductInput({ name: '', category: '', price: '-1', stock: '-2' }), /Nome do produto/);
+  assert.throws(() => normalizeProductInput({ name: 'Produto', category: '', price: '-1', stock: '2' }), /Categoria/);
+  assert.throws(() => normalizeProductInput({ name: 'Produto', category: 'Cat', price: '-1', stock: '2' }), /Preço/);
+  assert.throws(() => normalizeProductInput({ name: 'Produto', category: 'Cat', price: '1', stock: '2.5' }), /Estoque/);
+});
