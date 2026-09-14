@@ -14,6 +14,7 @@ import { createPaymentChatbot } from './payment-chatbot.js';
 import { createOrderLifecycleService } from './order-lifecycle-service.js';
 import { ensureBase64Asset } from './asset-loader.js';
 import { createReportService } from './report-service.js';
+import { createStartupState, createTerminalQrEncoder } from './startup-config.js';
 
 const { Client, LocalAuth, MessageMedia } = whatsappWeb;
 const here = dirname(fileURLToPath(import.meta.url));
@@ -24,16 +25,21 @@ const authPath = join(root, '.wwebjs_auth');
 const assetsDir = join(root, 'assets');
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || '0.0.0.0';
+const useDemoData = process.env.PRISMASTORE_DEMO_DATA === 'true';
 
-const stateStore = createStateStore({
-  dbPath: join(dataDir, 'prismastore.db'),
+const startupState = createStartupState({
+  useDemoData,
   seedState: {
-    products: structuredClone(seedProducts),
-    customers: structuredClone(seedCustomers),
-    orders: structuredClone(seedOrders),
+    products: seedProducts,
+    customers: seedCustomers,
+    orders: seedOrders,
   },
 });
 
+const stateStore = createStateStore({
+  dbPath: join(dataDir, 'prismastore.db'),
+  seedState: startupState,
+});
 
 const asaasClient = createAsaasClient({
   apiKey: process.env.ASAAS_API_KEY || '',
@@ -68,11 +74,10 @@ const whatsappManager = createWhatsAppManager({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     },
   }),
-  qrEncoder: (qr) => QRCode.toDataURL(qr, { width: 320, margin: 1 }),
+  qrEncoder: createTerminalQrEncoder({ QRCode }),
   messageHandler,
   mediaFactory: { fromFilePath: (path) => MessageMedia.fromFilePath(path) },
 });
-
 
 const finalArtworkPath = ensureBase64Asset({
   base64Path: join(assetsDir, 'prismastore-order-finished.b64'),
@@ -97,6 +102,7 @@ const server = createAppServer({
 
 server.listen(port, host, () => {
   console.log(`PrismaStore disponível em http://localhost:${port}`);
+  console.log(useDemoData ? 'Dados demo: ATIVOS' : 'Dados demo: DESATIVADOS');
 });
 
 if (process.env.WHATSAPP_AUTO_CONNECT !== 'false') {
