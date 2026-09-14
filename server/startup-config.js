@@ -31,7 +31,7 @@ export function createTerminalQrEncoder({ QRCode, log = console.log } = {}) {
   }
 
   return async (qr) => {
-    const terminalQr = await QRCode.toString(qr, { type: 'terminal' });
+    const terminalQr = await QRCode.toString(qr, { type: 'terminal', small: true });
     const qrDataUrl = await QRCode.toDataURL(qr, { width: 320, margin: 1 });
 
     log('\n==========================================');
