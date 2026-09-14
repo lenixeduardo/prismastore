@@ -42,7 +42,7 @@ No Windows, `INICIAR_PRISMASTORE.bat` instala dependências e abre `http://local
 
 Em **Configurações → WhatsApp Web**, clique em **Conectar WhatsApp** e leia o QR com **Aparelhos conectados**. A sessão fica em `.wwebjs_auth/` e é restaurada ao reiniciar.
 
-## Fluxo atual — Passos 1 a 5
+## Fluxo atual — Passos 1 a 6
 
 ```text
 mensagem
@@ -55,9 +55,25 @@ mensagem
 → Pix dinâmico + QR + Copia e Cola
 → webhook Asaas
 → PAID / Pago · Embalar
+→ Em preparação
+→ Enviado ou Saiu para entrega
+→ Finalizado + arte final
 ```
 
 O `checkoutId` impede duplicidade de pedido e a cobrança Asaas é reutilizada em retentativas. O webhook valida o ID da cobrança e o valor antes de liberar o pedido. Ao confirmar o pagamento, a reserva vira baixa de estoque físico e o cliente recebe uma mensagem automática no WhatsApp.
+
+## Operação e tracker — Passo 6
+
+Depois do pagamento, o operador avança o pedido pelo painel. Cada transição passa pela API local e notifica o cliente no WhatsApp com um tracker simples:
+
+```text
+✅ Pagamento confirmado
+✅/○ Em preparação
+✅/○ Pedido enviado ou Saiu para entrega
+✅/○ Finalizado
+```
+
+O endpoint `POST /api/orders/:id/advance` recebe `expectedStatus`, impedindo que uma retentativa ou clique duplicado avance duas etapas. Para `local_delivery`, o fluxo é `PACKING → OUT_FOR_DELIVERY → DELIVERED`; para `shipping`, é `PACKING → SHIPPED → DELIVERED`. Ao chegar em `DELIVERED`, o WhatsApp envia a arte versionada em `assets/prismastore-order-finished.b64`, reconstruída como PNG local ao iniciar, antes da mensagem final.
 
 ## Configurar Asaas Sandbox
 

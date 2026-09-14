@@ -129,3 +129,30 @@ test('Asaas webhook requires token, processes payment event and notifies WhatsAp
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('order lifecycle endpoint advances with expectedStatus and returns the updated order', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismastore-step6-api-'));
+  const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });
+  const calls = [];
+  const orderLifecycleService = {
+    advanceOrder: async (input) => {
+      calls.push(input);
+      return { changed: true, stale: false, order: { id: input.orderId, status: 'PACKING' } };
+    },
+  };
+  const server = createAppServer({ stateStore: store, staticDir: process.cwd(), orderLifecycleService });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const response = await fetch(`${baseUrl}/api/orders/PS-1001/advance`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ expectedStatus: 'PAID' }),
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(calls, [{ orderId: 'PS-1001', expectedStatus: 'PAID' }]);
+    assert.equal((await response.json()).order.status, 'PACKING');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

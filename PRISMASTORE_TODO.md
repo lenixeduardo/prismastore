@@ -27,8 +27,6 @@
   - [x] Continua por texto se uma arte não puder ser enviada.
   - [x] Comandos de recuperação: `MENU`, `INICIO`, `REINICIAR` e `CANCELAR`.
 
-## Próximos passos
-
 - [x] **Passo 4 — Pedido e estoque**
   - [x] Ao confirmar no WhatsApp, criar exatamente um pedido real no painel.
   - [x] Reservar estoque do carrinho atomicamente.
@@ -47,10 +45,14 @@
   - [x] Baixa definitiva do estoque reservado após pagamento.
   - [x] Notificação automática de pagamento confirmado no WhatsApp.
 
-- [ ] **Passo 6 — Operação**
-  - [ ] Pago → embalar → enviado/em entrega → finalizado.
-  - [ ] Enviar tracker/status ao cliente.
-  - [ ] Enviar arte final aprovada.
+- [x] **Passo 6 — Operação**
+  - [x] Pago → embalar → enviado/em entrega → finalizado.
+  - [x] Enviar tracker/status ao cliente em cada mudança.
+  - [x] Enviar arte final aprovada ao finalizar.
+  - [x] Transições idempotentes com `expectedStatus`.
+  - [x] Histórico de status salvo no pedido.
+
+## Próximos passos
 
 - [ ] **Passo 7 — Relatórios**
   - [ ] Faturamento mensal real.

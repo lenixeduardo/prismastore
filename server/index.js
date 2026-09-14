@@ -11,6 +11,8 @@ import { createAppServer } from './app-server.js';
 import { createAsaasClient } from './asaas-client.js';
 import { createPaymentService } from './payment-service.js';
 import { createPaymentChatbot } from './payment-chatbot.js';
+import { createOrderLifecycleService } from './order-lifecycle-service.js';
+import { ensureBase64Asset } from './asset-loader.js';
 
 const { Client, LocalAuth, MessageMedia } = whatsappWeb;
 const here = dirname(fileURLToPath(import.meta.url));
@@ -30,6 +32,7 @@ const stateStore = createStateStore({
     orders: structuredClone(seedOrders),
   },
 });
+
 
 const asaasClient = createAsaasClient({
   apiKey: process.env.ASAAS_API_KEY || '',
@@ -65,6 +68,19 @@ const whatsappManager = createWhatsAppManager({
   }),
   qrEncoder: (qr) => QRCode.toDataURL(qr, { width: 320, margin: 1 }),
   messageHandler,
+  mediaFactory: { fromFilePath: (path) => MessageMedia.fromFilePath(path) },
+});
+
+
+const finalArtworkPath = ensureBase64Asset({
+  base64Path: join(assetsDir, 'prismastore-order-finished.b64'),
+  outputPath: join(dataDir, 'prismastore-order-finished.png'),
+});
+
+const orderLifecycleService = createOrderLifecycleService({
+  stateStore,
+  messenger: whatsappManager,
+  finalArtworkPath,
 });
 
 const server = createAppServer({
@@ -72,6 +88,7 @@ const server = createAppServer({
   staticDir: root,
   whatsappManager,
   paymentService,
+  orderLifecycleService,
   asaasWebhookToken: process.env.ASAAS_WEBHOOK_TOKEN || '',
 });
 
