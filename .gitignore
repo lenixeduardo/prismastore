@@ -1,6 +1,7 @@
 node_modules/
 data/*.db
 data/*.db-*
+data/whatsapp-auth/
 .wwebjs_auth/
 .DS_Store
 
