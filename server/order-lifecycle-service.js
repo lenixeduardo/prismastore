@@ -1,5 +1,5 @@
 import { nextOrderStatus } from '../src/domain.js';
-
+import { resolveChatbotMessage } from './chatbot-messages.js';
 
 function trackerStage(order) {
   if (order.status === 'DELIVERED') return 3;
@@ -25,12 +25,12 @@ export function buildOrderTracker(order) {
   ].join('\n');
 }
 
-function statusIntro(order) {
+function statusIntro(state, order) {
   if (order.status === 'PACKING') return `📦 Seu pedido *${order.id}* está *Em preparação*.`;
   if (order.status === 'OUT_FOR_DELIVERY') return `🛵 Seu pedido *${order.id}* *Saiu para entrega* no seu endereço.`;
   if (order.status === 'SHIPPED') return `🚚 Seu *Pedido enviado* (${order.id}) já está em transporte.`;
-  if (order.status === 'DELIVERED') return `✅ *Seu pedido foi finalizado!*\nPedido: *${order.id}*\nObrigado por comprar com a Prisma Store.`;
-  if (order.status === 'PAID') return `✅ Pagamento confirmado para o pedido *${order.id}*.`;
+  if (order.status === 'DELIVERED') return resolveChatbotMessage(state, 'orderFinished', { pedido: order.id });
+  if (order.status === 'PAID') return resolveChatbotMessage(state, 'paymentConfirmed', { pedido: order.id });
   return `Pedido *${order.id}* atualizado.`;
 }
 
@@ -41,7 +41,8 @@ export function createOrderLifecycleService({ stateStore, messenger = null, fina
       await messenger.sendMedia(order.phone, finalArtworkPath);
     }
     if (messenger.sendText) {
-      await messenger.sendText(order.phone, `${statusIntro(order)}\n\n${buildOrderTracker(order)}`);
+      const state = stateStore.load();
+      await messenger.sendText(order.phone, `${statusIntro(state, order)}\n\n${buildOrderTracker(order)}`);
     }
     return { notified: true };
   }
