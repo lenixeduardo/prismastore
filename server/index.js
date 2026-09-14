@@ -8,10 +8,14 @@ import { createChatbotEngine } from './chatbot.js';
 import { createWhatsAppChatAdapter } from './whatsapp-chat-adapter.js';
 import { createWhatsAppManager } from './whatsapp-manager.js';
 import { createAppServer } from './app-server.js';
+import { createAsaasClient } from './asaas-client.js';
+import { createPaymentService } from './payment-service.js';
+import { createPaymentChatbot } from './payment-chatbot.js';
 
 const { Client, LocalAuth, MessageMedia } = whatsappWeb;
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
+try { process.loadEnvFile(join(root, '.env')); } catch {}
 const dataDir = join(root, 'data');
 const authPath = join(root, '.wwebjs_auth');
 const assetsDir = join(root, 'assets');
@@ -27,15 +31,25 @@ const stateStore = createStateStore({
   },
 });
 
-const chatbot = createChatbotEngine({
+const asaasClient = createAsaasClient({
+  apiKey: process.env.ASAAS_API_KEY || '',
+  baseUrl: process.env.ASAAS_BASE_URL || 'https://api-sandbox.asaas.com/v3',
+});
+const paymentService = createPaymentService({ stateStore, asaasClient });
+
+const baseChatbot = createChatbotEngine({
   stateStore,
   welcomeMediaPath: join(assetsDir, 'prismastore-welcome.png'),
   catalogMediaPath: join(assetsDir, 'prismastore-catalog.png'),
 });
+const chatbot = createPaymentChatbot({ baseChatbot, stateStore, paymentService });
 
 const messageHandler = createWhatsAppChatAdapter({
   chatbot,
-  mediaFactory: MessageMedia,
+  mediaFactory: {
+    fromFilePath: (path) => MessageMedia.fromFilePath(path),
+    fromBase64: ({ mimeType, base64, filename }) => new MessageMedia(mimeType, base64, filename),
+  },
 });
 
 const whatsappManager = createWhatsAppManager({
@@ -53,7 +67,13 @@ const whatsappManager = createWhatsAppManager({
   messageHandler,
 });
 
-const server = createAppServer({ stateStore, staticDir: root, whatsappManager });
+const server = createAppServer({
+  stateStore,
+  staticDir: root,
+  whatsappManager,
+  paymentService,
+  asaasWebhookToken: process.env.ASAAS_WEBHOOK_TOKEN || '',
+});
 
 server.listen(port, host, () => {
   console.log(`PrismaStore disponível em http://localhost:${port}`);

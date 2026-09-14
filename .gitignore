@@ -3,3 +3,5 @@ data/*.db
 data/*.db-*
 .wwebjs_auth/
 .DS_Store
+
+.env

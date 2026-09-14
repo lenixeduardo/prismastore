@@ -89,5 +89,12 @@ export function createWhatsAppManager({ clientFactory, qrEncoder, messageHandler
     return getStatus();
   }
 
-  return { connect, disconnect, getStatus };
+  async function sendText(phone, text) {
+    if (!client || status.status !== 'connected') throw new Error('WhatsApp não conectado.');
+    const raw = String(phone ?? '');
+    const to = raw.includes('@') ? raw : `${raw.replace(/\D/g, '')}@c.us`;
+    return client.sendMessage(to, text);
+  }
+
+  return { connect, disconnect, getStatus, sendText };
 }

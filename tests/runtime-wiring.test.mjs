@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+const root = new URL('..', import.meta.url);
 const source = readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
 
 test('runtime wires the persisted chatbot to incoming WhatsApp messages', () => {
@@ -16,4 +17,13 @@ test('approved welcome and catalog artwork are packaged as local chatbot assets'
   const base = new URL('../assets/', import.meta.url);
   assert.equal(existsSync(join(base.pathname, 'prismastore-welcome.png')), true);
   assert.equal(existsSync(join(base.pathname, 'prismastore-catalog.png')), true);
+});
+
+test('runtime wires Asaas client, payment service and webhook token into the single process', () => {
+  assert.match(source, /createAsaasClient/);
+  assert.match(source, /createPaymentService/);
+  assert.match(source, /createPaymentChatbot/);
+  assert.match(source, /ASAAS_API_KEY/);
+  assert.match(source, /ASAAS_WEBHOOK_TOKEN/);
+  assert.match(source, /paymentService/);
 });

@@ -69,6 +69,20 @@ export function reserveCartStock(products, cart) {
   });
 }
 
+export function consumeReservedOrderStock(products, items = []) {
+  const quantities = new Map(items.map((item) => [item.productId, Number(item.quantity ?? 0)]));
+  return products.map((product) => {
+    const quantity = quantities.get(product.id) ?? 0;
+    if (quantity <= 0) return { ...product };
+    const reserved = Number(product.reserved ?? 0);
+    const stock = Number(product.stock ?? 0);
+    if (reserved < quantity || stock < quantity) {
+      throw new Error(`Reserva inconsistente para ${product.id}`);
+    }
+    return { ...product, stock: stock - quantity, reserved: reserved - quantity };
+  });
+}
+
 export function releaseCartStock(products, cart) {
   return products.map((product) => {
     const quantity = Number(cart?.[product.id] ?? 0);

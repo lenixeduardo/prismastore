@@ -95,3 +95,37 @@ test('WhatsApp API exposes status and triggers connect/disconnect', async () => 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('Asaas webhook requires token, processes payment event and notifies WhatsApp', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismastore-asaas-webhook-'));
+  const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });
+  const events = [];
+  const notifications = [];
+  const paymentService = {
+    getStatus: () => ({ provider: 'asaas', environment: 'sandbox', configured: true }),
+    handleAsaasEvent: async (payload) => { events.push(payload); return { handled: true, order: { id: 'PS-1', phone: '+5511999999999', status: 'PAID' } }; },
+  };
+  const whatsappManager = { sendText: async (phone, text) => notifications.push({ phone, text }) };
+  const server = createAppServer({ stateStore: store, staticDir: process.cwd(), whatsappManager, paymentService, asaasWebhookToken: 'x'.repeat(32) });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  try {
+    let response = await fetch(`${baseUrl}/api/payments/status`);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).configured, true);
+
+    response = await fetch(`${baseUrl}/api/webhooks/asaas`, { method: 'POST', headers: { 'content-type': 'application/json', 'asaas-access-token': 'wrong' }, body: JSON.stringify({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', value: 20 } }) });
+    assert.equal(response.status, 401);
+    assert.equal(events.length, 0);
+
+    response = await fetch(`${baseUrl}/api/webhooks/asaas`, { method: 'POST', headers: { 'content-type': 'application/json', 'asaas-access-token': 'x'.repeat(32) }, body: JSON.stringify({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', value: 20 } }) });
+    assert.equal(response.status, 200);
+    assert.equal(events.length, 1);
+    assert.equal(notifications.length, 1);
+    assert.match(notifications[0].text, /Pagamento confirmado/i);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

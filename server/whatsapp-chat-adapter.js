@@ -20,8 +20,10 @@ export function createWhatsAppChatAdapter({ chatbot, mediaFactory }) {
       text: message.body ?? '',
       contactName,
       sendText: (text) => activeClient.sendMessage(message.from, text),
-      sendMedia: async (path) => {
-        const media = mediaFactory.fromFilePath(path);
+      sendMedia: async (source) => {
+        const media = typeof source === 'string'
+          ? mediaFactory.fromFilePath(source)
+          : mediaFactory.fromBase64(source);
         return activeClient.sendMessage(message.from, media);
       },
     });

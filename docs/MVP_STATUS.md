@@ -31,10 +31,18 @@
 - Fila `Aguardando Pix` identifica pedidos recém-confirmados.
 - Estoque disponível reflete reservas e alerta abaixo de 3 unidades.
 
-## Em andamento
-
 ### Passo 5 — Pix dinâmico + webhook
 
-- Criar cobrança no Asaas Sandbox.
-- Enviar QR e copia-e-cola.
-- Confirmar pagamento somente por webhook.
+- Asaas Sandbox configurável por `.env`.
+- Cliente Asaas criado/reutilizado por `asaasCustomerId`.
+- CPF/CNPJ bruto não é persistido no PrismaStore.
+- Cobrança PIX idempotente por pedido.
+- QR Code Base64 e Pix Copia e Cola enviados pelo WhatsApp.
+- Webhook autenticado em `POST /api/webhooks/asaas`.
+- `PAYMENT_CONFIRMED` e `PAYMENT_RECEIVED` mudam o pedido para `PAID`.
+- O estoque reservado é baixado do estoque físico apenas uma vez.
+- Cliente é notificado pelo WhatsApp após confirmação.
+
+## Próximo
+
+### Passo 6 — Operação e tracker
