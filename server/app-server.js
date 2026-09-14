@@ -1,0 +1,98 @@
+import { createServer } from 'node:http';
+import { createReadStream, existsSync, statSync } from 'node:fs';
+import { extname, join, normalize, resolve, sep } from 'node:path';
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+};
+
+function sendJson(res, statusCode, value) {
+  res.writeHead(statusCode, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+  res.end(JSON.stringify(value));
+}
+
+async function readJson(req) {
+  let body = '';
+  for await (const chunk of req) {
+    body += chunk;
+    if (body.length > 1_000_000) throw new Error('Payload muito grande');
+  }
+  if (!body) return {};
+  return JSON.parse(body);
+}
+
+function serveStatic(staticDir, pathname, res) {
+  const root = resolve(staticDir);
+  const requested = pathname === '/' ? '/index.html' : pathname;
+  const cleanPath = normalize(decodeURIComponent(requested)).replace(/^([/\\])+/, '');
+  const filePath = resolve(join(root, cleanPath));
+  if (filePath !== root && !filePath.startsWith(`${root}${sep}`)) {
+    sendJson(res, 403, { error: 'Caminho inválido' });
+    return;
+  }
+  if (!existsSync(filePath) || !statSync(filePath).isFile()) {
+    sendJson(res, 404, { error: 'Não encontrado' });
+    return;
+  }
+  res.writeHead(200, { 'content-type': MIME[extname(filePath).toLowerCase()] || 'application/octet-stream' });
+  createReadStream(filePath).pipe(res);
+}
+
+export function createAppServer({ stateStore, staticDir, whatsappManager = null }) {
+  return createServer(async (req, res) => {
+    try {
+      const url = new URL(req.url, 'http://localhost');
+
+      if (req.method === 'GET' && url.pathname === '/api/state') {
+        sendJson(res, 200, stateStore.load());
+        return;
+      }
+
+      if (req.method === 'PUT' && url.pathname === '/api/state') {
+        const state = await readJson(req);
+        sendJson(res, 200, stateStore.save(state));
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/api/whatsapp/status') {
+        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, account: null, error: 'WhatsApp não configurado' });
+        sendJson(res, 200, whatsappManager.getStatus());
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/api/whatsapp/connect') {
+        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, account: null, error: 'WhatsApp não configurado' });
+        sendJson(res, 200, await whatsappManager.connect());
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/api/whatsapp/disconnect') {
+        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, account: null, error: 'WhatsApp não configurado' });
+        sendJson(res, 200, await whatsappManager.disconnect());
+        return;
+      }
+
+      if (url.pathname.startsWith('/api/')) {
+        sendJson(res, 404, { error: 'Endpoint não encontrado' });
+        return;
+      }
+
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        sendJson(res, 405, { error: 'Método não permitido' });
+        return;
+      }
+
+      serveStatic(staticDir, url.pathname, res);
+    } catch (error) {
+      sendJson(res, 400, { error: error instanceof Error ? error.message : 'Erro inesperado' });
+    }
+  });
+}
