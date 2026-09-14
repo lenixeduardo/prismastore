@@ -8,6 +8,7 @@ const MIME = {
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -62,7 +63,7 @@ export function createAppServer({ stateStore, staticDir, whatsappManager = null,
     whatsappManager,
     authPath: join(staticDir, '.wwebjs_auth'),
     backupsDir: join(staticDir, 'backups'),
-    appVersion: '0.8.0',
+    appVersion: '0.9.0',
   });
 
   return createServer(async (req, res) => {

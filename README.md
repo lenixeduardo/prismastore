@@ -42,7 +42,7 @@ No Windows, `INICIAR_PRISMASTORE.bat` instala dependências e abre `http://local
 
 Em **Configurações → WhatsApp Web**, clique em **Conectar WhatsApp** e leia o QR com **Aparelhos conectados**. A sessão fica em `.wwebjs_auth/` e é restaurada ao reiniciar.
 
-## Fluxo atual — Passos 1 a 8
+## Fluxo atual — Passos 1 a 9
 
 ```text
 mensagem
@@ -150,6 +150,28 @@ Na primeira instalação, dê duplo clique em `INSTALAR_PRISMASTORE.bat`. Ele ve
 Depois disso, o uso diário é feito pelo atalho ou por `INICIAR_PRISMASTORE.bat`.
 
 > Guarde a pasta `backups/` também em uma mídia ou armazenamento seguro externo periodicamente. Ela contém dados operacionais e pode conter a sessão do WhatsApp, portanto deve ser tratada como informação sensível.
+
+## PWA Mobile — Passo 9
+
+A versão `0.9.0` adiciona uma camada PWA e responsiva sem mover dados para o celular. O computador servidor continua sendo a única fonte de verdade para SQLite, WhatsApp, Asaas e backups.
+
+No celular:
+
+- sidebar desktop é substituída pela navegação inferior **Início · Pedidos · Clientes · Produtos · Mais**;
+- **Mais** abre Relatórios, Simular chatbot e Configurações;
+- tabelas viram cards verticais;
+- KPIs e grids se adaptam para uma coluna;
+- drawers ocupam a tela inteira;
+- safe area do iPhone é respeitada;
+- o painel mostra **Servidor online**, **Sem conexão** ou **Servidor indisponível**.
+
+O service worker cacheia somente o shell estático listado explicitamente. Rotas `/api/`, pedidos, estoque, Pix, relatórios e backups **nunca são atendidos pelo cache**. Não existe fila offline de operações.
+
+### Rede local x instalação
+
+O acesso por navegador na mesma rede continua funcionando via `http://IP-DO-SERVIDOR:4173`. Para instalar a PWA de verdade, o navegador exige contexto seguro: HTTPS, `localhost` ou loopback.
+
+No Android/Chromium, quando disponível, o PrismaStore oferece o botão **Instalar**. No iPhone, a interface orienta **Compartilhar → Adicionar à Tela de Início**. A publicação HTTPS externa deve ser configurada separadamente e protegida; a PWA não abre portas nem expõe o painel automaticamente à internet.
 
 ## Testes
 

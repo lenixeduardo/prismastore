@@ -76,6 +76,18 @@
 - Instalador Windows valida Node LTS, prepara dependências, `.env`, diretórios e inicializador na Área de Trabalho.
 - Dados sensíveis e backups permanecem fora do Git.
 
-## MVP 0.8.0
+### Passo 9 — PWA Mobile
 
-Passos 1 a 8 concluídos para homologação local. Antes de produção, validar políticas do WhatsApp, credenciais Asaas de produção, HTTPS público para webhook e rotina externa de cópia dos backups.
+- `manifest.webmanifest` com identidade PrismaStore e ícones 192/512.
+- Service worker com cache `prismastore-shell-v0.9.0` apenas para o shell estático listado.
+- Rotas `/api/` e dados operacionais nunca são atendidos pelo cache.
+- Worker registrado somente em contexto seguro.
+- Instalação Chromium via `beforeinstallprompt` e orientação para iPhone.
+- Navegação mobile com Início, Pedidos, Clientes, Produtos e Mais.
+- Tabelas viram cards, grids colapsam e drawers ocupam a tela no celular.
+- Suporte a safe area do iPhone.
+- Indicador persistente de servidor online/indisponível.
+
+## MVP 0.9.0
+
+Passos 1 a 9 concluídos para homologação. O painel funciona responsivamente por navegador na rede local. Para instalação PWA real, usar HTTPS, `localhost` ou loopback. Antes de produção, validar políticas do WhatsApp, credenciais Asaas de produção, HTTPS público para webhook, acesso HTTPS protegido ao painel e rotina externa de cópia dos backups.

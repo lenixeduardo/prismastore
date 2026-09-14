@@ -68,3 +68,13 @@
   - [x] Painel para criar, listar e restaurar backups.
   - [x] `INSTALAR_PRISMASTORE.bat` e inicializador na Área de Trabalho.
   - [x] `backups/`, banco, sessão WhatsApp e `.env` fora do Git.
+
+- [x] **Passo 9 — PWA Mobile**
+  - [x] Manifest instalável e ícones 192/512.
+  - [x] Service worker com cache apenas do shell estático.
+  - [x] Rotas `/api/` sempre fora do cache.
+  - [x] Navegação mobile com Início, Pedidos, Clientes, Produtos e Mais.
+  - [x] Tabelas em cards e drawers full-screen no celular.
+  - [x] Instalação Chromium e orientação iPhone.
+  - [x] Indicador de servidor online/indisponível.
+  - [x] Safe area e layout responsivo para telas pequenas.
