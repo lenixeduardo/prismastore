@@ -1,0 +1,61 @@
+.pwa-status { position:fixed; top:12px; right:12px; z-index:80; display:flex; align-items:center; gap:7px; min-height:34px; padding:7px 10px; border:1px solid var(--border); border-radius:999px; background:#0d1813; color:var(--muted); font-size:11px; box-shadow:0 8px 24px rgba(0,0,0,.18); }
+.pwa-status i { width:7px; height:7px; border-radius:50%; background:var(--emerald); }
+.pwa-status.offline i { background:var(--danger); }
+.pwa-install-card { position:fixed; right:14px; bottom:14px; z-index:75; width:min(360px,calc(100vw - 28px)); padding:14px; border:1px solid var(--border); border-radius:8px; background:#0d1813; box-shadow:var(--shadow); }
+.pwa-install-card strong { display:block; margin-bottom:5px; }
+.pwa-install-card p { margin:0 0 11px; color:var(--muted); font-size:12px; line-height:1.45; }
+.pwa-install-actions { display:flex; gap:8px; justify-content:flex-end; }
+.pwa-more-backdrop { position:fixed; inset:0; z-index:90; display:flex; align-items:flex-end; background:rgba(0,0,0,.55); }
+.pwa-more-sheet { width:100%; padding:10px 14px calc(14px + env(safe-area-inset-bottom)); border-radius:16px 16px 0 0; background:#0d1813; border-top:1px solid var(--border); }
+.pwa-more-handle { width:36px; height:4px; border-radius:999px; background:#3c4c43; margin:2px auto 14px; }
+.pwa-more-grid { display:grid; gap:8px; }
+.pwa-more-grid button { min-height:48px; border:1px solid var(--border); border-radius:6px; background:var(--panel-2); color:var(--text); text-align:left; padding:0 14px; font-weight:650; }
+
+@media (max-width: 900px) {
+  .grid.cols-4 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .grid.cols-3 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .split-layout { grid-template-columns:1fr; }
+}
+
+@media (max-width: 768px) {
+  body { padding-bottom:calc(68px + env(safe-area-inset-bottom)); }
+  .app-shell { display:block; min-height:100dvh; }
+  .sidebar { display:none !important; }
+  .main { padding:18px 14px calc(92px + env(safe-area-inset-bottom)); }
+  .topbar { display:grid; gap:12px; margin-bottom:16px; }
+  .top-actions { justify-content:flex-start; }
+  h1 { font-size:28px; }
+  .grid.cols-4, .grid.cols-3, .grid.cols-2 { grid-template-columns:1fr; }
+  .kpi { min-height:104px; }
+  .toolbar { align-items:stretch; }
+  .searchbar { min-width:100%; }
+  .tabs { width:100%; overflow-x:auto; }
+  .tab { white-space:nowrap; min-height:42px; }
+  .btn { min-height:44px; }
+  .drawer-backdrop { align-items:stretch; }
+  .drawer { width:100vw; max-width:none; padding:18px 14px calc(28px + env(safe-area-inset-bottom)); border-left:0; }
+  .phone-frame { min-height:0; border-radius:18px; }
+  .phone-screen { min-height:560px; }
+  .mobile-bottom { position:fixed; left:0; right:0; bottom:0; z-index:70; display:grid !important; grid-template-columns:repeat(5,1fr); padding:7px 6px calc(7px + env(safe-area-inset-bottom)); background:#07100c; border-top:1px solid var(--border); }
+  .mobile-bottom button { min-width:0; min-height:48px; border:0; background:transparent; color:var(--muted); font-size:9px; display:grid; place-items:center; gap:2px; }
+  .mobile-bottom button.active { color:var(--emerald); }
+  .mob-icon { font-size:18px; line-height:1; }
+  .table-wrap { overflow:visible; border:0; background:transparent; }
+  table { min-width:0; background:transparent; }
+  table thead { display:none; }
+  table tbody { display:grid; gap:10px; }
+  table tr { display:block; border:1px solid var(--border); border-radius:8px; background:var(--panel); overflow:hidden; }
+  table td { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; min-height:42px; padding:10px 12px; border-bottom:1px solid var(--border-soft); text-align:right; }
+  table td:last-child { border-bottom:0; }
+  table td::before { content:attr(data-label); flex:0 0 42%; color:var(--muted-2); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; text-align:left; }
+  .address { max-width:58%; }
+  .account-row { grid-template-columns:1fr; gap:5px; }
+  .pwa-status { top:8px; right:8px; min-height:30px; padding:5px 8px; }
+  .pwa-install-card { bottom:calc(76px + env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 420px) {
+  .main { padding-left:10px; padding-right:10px; }
+  .card.padded { padding:14px; }
+  .kpi-value { font-size:23px; }
+}

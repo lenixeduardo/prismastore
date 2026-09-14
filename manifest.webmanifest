@@ -1,0 +1,16 @@
+{
+  "id": "/",
+  "name": "PrismaStore Operations",
+  "short_name": "PrismaStore",
+  "description": "Painel operacional da PrismaStore para pedidos, clientes, estoque, pagamentos e operação.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07100c",
+  "theme_color": "#07140f",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
