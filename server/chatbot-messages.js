@@ -24,3 +24,12 @@ export function normalizeChatbotMessages(messages = {}) {
     }),
   );
 }
+
+export function resolveChatbotMessage(state, key, values = {}) {
+  const configured = state?.settings?.chatbotMessages?.[key];
+  const fallback = DEFAULT_CHATBOT_MESSAGES[key] ?? '';
+  const template = typeof configured === 'string' && configured.trim() ? configured : fallback;
+  return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, token) => (
+    Object.prototype.hasOwnProperty.call(values, token) ? String(values[token]) : match
+  ));
+}
