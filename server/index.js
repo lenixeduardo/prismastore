@@ -1,6 +1,11 @@
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import whatsappWeb from 'whatsapp-web.js';
+import makeWASocket, {
+  DisconnectReason,
+  fetchLatestBaileysVersion,
+  useMultiFileAuthState,
+} from '@whiskeysockets/baileys';
+import pino from 'pino';
 import QRCode from 'qrcode';
 import { seedProducts, seedCustomers, seedOrders, receivingAccounts } from '../src/data.js';
 import { createStateStore } from './state-store.js';
@@ -16,16 +21,16 @@ import { ensureBase64Asset } from './asset-loader.js';
 import { createReportService } from './report-service.js';
 import { createStartupState, createTerminalQrEncoder, clearLegacyDemoState } from './startup-config.js';
 
-const { Client, LocalAuth, MessageMedia } = whatsappWeb;
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
 try { process.loadEnvFile(join(root, '.env')); } catch {}
 const dataDir = join(root, 'data');
-const authPath = join(root, '.wwebjs_auth');
+const authPath = join(dataDir, 'whatsapp-auth');
 const assetsDir = join(root, 'assets');
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || '0.0.0.0';
 const useDemoData = process.env.PRISMASTORE_DEMO_DATA === 'true';
+const logger = pino({ level: 'silent' });
 const legacySeedState = {
   products: seedProducts,
   customers: seedCustomers,
@@ -56,29 +61,26 @@ const baseChatbot = createChatbotEngine({
   catalogMediaPath: join(assetsDir, 'prismastore-catalog.png'),
 });
 const chatbot = createPaymentChatbot({ baseChatbot, stateStore, paymentService });
+const messageHandler = createWhatsAppChatAdapter({ chatbot });
 
-const messageHandler = createWhatsAppChatAdapter({
-  chatbot,
-  mediaFactory: {
-    fromFilePath: (path) => MessageMedia.fromFilePath(path),
-    fromBase64: ({ mimeType, base64, filename }) => new MessageMedia(mimeType, base64, filename),
-  },
-});
+const authStateLoader = () => useMultiFileAuthState(authPath);
+const socketFactory = async ({ auth }) => {
+  const { version } = await fetchLatestBaileysVersion();
+  return makeWASocket({
+    version,
+    auth,
+    logger,
+    printQRInTerminal: false,
+    browser: ['PrismaStore', 'Chrome', '1.0.0'],
+  });
+};
 
 const whatsappManager = createWhatsAppManager({
-  clientFactory: () => new Client({
-    authStrategy: new LocalAuth({
-      clientId: 'prismastore-main',
-      dataPath: authPath,
-    }),
-    puppeteer: {
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    },
-  }),
+  socketFactory,
+  authStateLoader,
   qrEncoder: createTerminalQrEncoder({ QRCode }),
-  messageHandler,
-  mediaFactory: { fromFilePath: (path) => MessageMedia.fromFilePath(path) },
+  messageHandler: messageHandler.handleMessage,
+  disconnectReasonLoggedOut: DisconnectReason.loggedOut,
 });
 
 const finalArtworkPath = ensureBase64Asset({
@@ -99,6 +101,8 @@ const server = createAppServer({
   paymentService,
   orderLifecycleService,
   reportService,
+  whatsappAuthPath: authPath,
+  whatsappAuthProvider: 'baileys',
   asaasWebhookToken: process.env.ASAAS_WEBHOOK_TOKEN || '',
 });
 
