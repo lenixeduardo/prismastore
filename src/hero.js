@@ -35,4 +35,9 @@ function enterDashboard() {
 }
 
 enterButton?.addEventListener('click', enterDashboard);
-loadHeroArtwork();
+
+if (sessionStorage.getItem('prismastore:resume-panel')) {
+  enterDashboard();
+} else {
+  loadHeroArtwork();
+}
