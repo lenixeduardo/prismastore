@@ -5,3 +5,5 @@ data/*.db-*
 .DS_Store
 
 .env
+backups/
+data/prismastore-order-finished.png

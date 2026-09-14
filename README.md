@@ -42,7 +42,7 @@ No Windows, `INICIAR_PRISMASTORE.bat` instala dependências e abre `http://local
 
 Em **Configurações → WhatsApp Web**, clique em **Conectar WhatsApp** e leia o QR com **Aparelhos conectados**. A sessão fica em `.wwebjs_auth/` e é restaurada ao reiniciar.
 
-## Fluxo atual — Passos 1 a 7
+## Fluxo atual — Passos 1 a 8
 
 ```text
 mensagem
@@ -61,7 +61,6 @@ mensagem
 ```
 
 O `checkoutId` impede duplicidade de pedido e a cobrança Asaas é reutilizada em retentativas. O webhook valida o ID da cobrança e o valor antes de liberar o pedido. Ao confirmar o pagamento, a reserva vira baixa de estoque físico e o cliente recebe uma mensagem automática no WhatsApp.
-
 
 ## Operação e tracker — Passo 6
 
@@ -119,9 +118,38 @@ Não entram no Git:
 node_modules/
 data/*.db
 .wwebjs_auth/
+backups/
 ```
 
 O CPF/CNPJ recebido pelo WhatsApp é usado imediatamente para criar/reutilizar o pagador no Asaas; o PrismaStore persiste somente o `asaasCustomerId` retornado.
+
+## Backup e recuperação — Passo 8
+
+Em **Configurações → Backup e recuperação**, o operador pode criar um snapshot local sem usar terminal. Cada backup fica em `backups/` e contém:
+
+```text
+prismastore.db
+whatsapp-auth/   (quando existe uma sessão LocalAuth)
+manifest.json
+```
+
+O SQLite é copiado pela API de backup do próprio `node:sqlite`, mantendo consistência mesmo com WAL ativo. O `manifest.json` registra SHA-256 e tamanho de cada arquivo. Antes de restaurar, todos os hashes são verificados; se houver corrupção, nada é substituído.
+
+Toda restauração cria primeiro um backup `pre-restore`. O WhatsApp é desconectado durante a troca dos arquivos e reconectado em seguida. O `.env`, a chave do Asaas e o token do webhook **não entram no backup**.
+
+Endpoints locais:
+
+- `GET /api/backups`
+- `POST /api/backups`
+- `POST /api/backups/:id/restore`
+
+### Instalação simples no Windows
+
+Na primeira instalação, dê duplo clique em `INSTALAR_PRISMASTORE.bat`. Ele verifica Node.js, abre a página oficial do Node LTS caso esteja ausente, executa `npm install`, cria `.env`, `data/`, `backups/` e um inicializador **PrismaStore.cmd** na Área de Trabalho.
+
+Depois disso, o uso diário é feito pelo atalho ou por `INICIAR_PRISMASTORE.bat`.
+
+> Guarde a pasta `backups/` também em uma mídia ou armazenamento seguro externo periodicamente. Ela contém dados operacionais e pode conter a sessão do WhatsApp, portanto deve ser tratada como informação sensível.
 
 ## Testes
 

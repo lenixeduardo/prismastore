@@ -34,7 +34,6 @@ test('persists state across store instances', () => {
     changed.orders.unshift({ id: 'o2', status: 'PACKING', total: 25 });
     first.save(changed);
     first.close();
-
     const second = createStateStore({ dbPath, seedState: fixture() });
     assert.deepEqual(second.load(), changed);
     second.close();
@@ -50,7 +49,6 @@ test('persists chatbot sessions independently from operational state', () => {
     const first = createStateStore({ dbPath, seedState: fixture() });
     first.saveChatSession('5511999999999', { step: 'quantity', cart: { p1: 1 } });
     first.close();
-
     const second = createStateStore({ dbPath, seedState: fixture() });
     assert.deepEqual(second.getChatSession('5511999999999'), { step: 'quantity', cart: { p1: 1 } });
     second.close();
@@ -68,6 +66,28 @@ test('updates operational state atomically through a mutator', () => {
       return state;
     });
     assert.equal(store.load().customers.length, 2);
+    store.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('creates a consistent sqlite snapshot and can restore it into the live store', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismastore-state-backup-'));
+  const dbPath = join(dir, 'prismastore.db');
+  const backupPath = join(dir, 'snapshot.db');
+  try {
+    const store = createStateStore({ dbPath, seedState: fixture() });
+    store.saveChatSession('5511999999999', { step: 'awaiting_payment', orderId: 'o1' });
+    await store.backupTo(backupPath);
+    const changed = fixture();
+    changed.products[0].stock = 1;
+    changed.orders[0].status = 'DELIVERED';
+    store.save(changed);
+    store.saveChatSession('5511999999999', { step: 'catalog' });
+    store.restoreFrom(backupPath);
+    assert.deepEqual(store.load(), fixture());
+    assert.deepEqual(store.getChatSession('5511999999999'), { step: 'awaiting_payment', orderId: 'o1' });
     store.close();
   } finally {
     rmSync(dir, { recursive: true, force: true });

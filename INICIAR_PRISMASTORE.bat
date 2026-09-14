@@ -2,6 +2,9 @@
 setlocal
 cd /d "%~dp0"
 
+if not exist data mkdir data
+if not exist backups mkdir backups
+
 where node >nul 2>nul
 if errorlevel 1 (
   echo.

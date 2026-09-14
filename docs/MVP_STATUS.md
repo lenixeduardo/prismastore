@@ -65,6 +65,17 @@
 - JSON em `GET /api/reports/monthly?month=YYYY-MM`.
 - CSV em `GET /api/reports/monthly.csv?month=YYYY-MM`.
 
-## Próximo
+### Passo 8 — Backup, recuperação e instalação
 
-### Passo 8 — Backup e instalação
+- Snapshot consistente do SQLite usando `node:sqlite.backup`.
+- Sessão LocalAuth do WhatsApp incluída quando existente.
+- Manifesto de integridade com SHA-256 e tamanho dos arquivos.
+- Restauração bloqueada quando o backup está corrompido ou o id é inseguro.
+- Backup automático `pre-restore` antes de qualquer restauração.
+- Painel de Configurações cria, lista e restaura snapshots.
+- Instalador Windows valida Node LTS, prepara dependências, `.env`, diretórios e inicializador na Área de Trabalho.
+- Dados sensíveis e backups permanecem fora do Git.
+
+## MVP 0.8.0
+
+Passos 1 a 8 concluídos para homologação local. Antes de produção, validar políticas do WhatsApp, credenciais Asaas de produção, HTTPS público para webhook e rotina externa de cópia dos backups.
