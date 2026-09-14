@@ -80,6 +80,7 @@ function summaryFromManifest(id, manifest) {
     reason: manifest.reason,
     appVersion: manifest.appVersion,
     hasWhatsAppSession: Boolean(manifest.hasWhatsAppSession),
+    whatsappAuthProvider: manifest.whatsappAuthProvider || null,
     fileCount: Array.isArray(manifest.files) ? manifest.files.length : 0,
     totalBytes: Array.isArray(manifest.files) ? manifest.files.reduce((sum, file) => sum + Number(file.size || 0), 0) : 0,
   };
@@ -95,6 +96,7 @@ export function createBackupService({
   authPath,
   backupsDir,
   appVersion = 'unknown',
+  whatsappAuthProvider = 'baileys',
   now = () => new Date(),
   suffix = () => randomBytes(2).toString('hex'),
 }) {
@@ -132,6 +134,7 @@ export function createBackupService({
         createdAt: now().toISOString(),
         reason,
         hasWhatsAppSession,
+        whatsappAuthProvider,
         database: 'prismastore.db',
         files,
       };
@@ -207,9 +210,10 @@ export function createBackupService({
     return { valid: true, id, manifest, path: root };
   }
 
-  function restoreAuthFrom(root, hasWhatsAppSession) {
+  function restoreAuthFrom(root, manifest) {
     rmSync(authPath, { recursive: true, force: true });
-    if (hasWhatsAppSession) copyDirectory(join(root, 'whatsapp-auth'), authPath);
+    const compatible = manifest.hasWhatsAppSession && manifest.whatsappAuthProvider === whatsappAuthProvider;
+    if (compatible) copyDirectory(join(root, 'whatsapp-auth'), authPath);
   }
 
   async function restoreBackup(id) {
@@ -222,7 +226,7 @@ export function createBackupService({
     try {
       safety = await createSnapshot({ reason: 'pre-restore' });
       stateStore.restoreFrom(join(target.path, target.manifest.database));
-      restoreAuthFrom(target.path, target.manifest.hasWhatsAppSession);
+      restoreAuthFrom(target.path, target.manifest);
       if (active && whatsappManager?.connect) await whatsappManager.connect();
       return { restored: true, backupId: id, safetyBackupId: safety.id };
     } catch (error) {
@@ -230,7 +234,7 @@ export function createBackupService({
         try {
           const rollback = await validateBackup(safety.id);
           stateStore.restoreFrom(join(rollback.path, rollback.manifest.database));
-          restoreAuthFrom(rollback.path, rollback.manifest.hasWhatsAppSession);
+          restoreAuthFrom(rollback.path, rollback.manifest);
         } catch {}
       }
       if (active && whatsappManager?.connect) {
