@@ -12,14 +12,17 @@ test('index starts on a full-screen hero and exposes one functional dashboard en
   const html = await source('index.html');
   assert.match(html, /id="hero-page"/);
   assert.match(html, /class="hero-art"/);
+  assert.match(html, /data-hero-art/);
   assert.match(html, /data-enter-dashboard/);
   assert.match(html, /Acessar painel de controle/);
   assert.match(html, /id="app"[^>]*hidden/);
 });
 
-test('hero uses the supplied full-size PrismaStore artwork asset', async () => {
-  const html = await source('index.html');
-  assert.match(html, /assets\/prismastore-hero\.webp/);
+test('hero displays the supplied full-size PrismaStore artwork', async () => {
+  const startup = await source('src/hero.js');
+  assert.match(startup, /hero-part-1\.txt/);
+  assert.match(startup, /data:image\/webp;base64/);
+
   const css = await source('src/styles.css');
   assert.match(css, /\.hero-page[\s\S]*100(?:dvh|vh)/);
   assert.match(css, /\.hero-art[\s\S]*object-fit:\s*cover/);
