@@ -5,12 +5,14 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createStateStore } from '../server/state-store.js';
 import { createBackupService } from '../server/backup-service.js';
+import { DEFAULT_CHATBOT_MESSAGES } from '../server/chatbot-messages.js';
 
 function seed() {
   return {
     products: [{ id: 'p1', name: 'Produto', stock: 5, reserved: 0 }],
     customers: [{ id: 'c1', name: 'Cliente', phone: '+5511999999999', addresses: [] }],
     orders: [{ id: 'PS-1001', status: 'PAID', total: 25, paidAt: '2026-09-14T12:00:00Z' }],
+    settings: { chatbotMessages: { ...DEFAULT_CHATBOT_MESSAGES } },
   };
 }
 
