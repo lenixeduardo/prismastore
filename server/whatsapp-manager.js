@@ -12,6 +12,13 @@ function disconnectStatusCode(lastDisconnect) {
   return lastDisconnect?.error?.output?.statusCode ?? lastDisconnect?.error?.statusCode ?? null;
 }
 
+function canonicalDevPhone(value = '') {
+  const phone = phoneFromJid(String(value));
+  if (!phone) return '';
+  if (phone.length === 10 || phone.length === 11) return `55${phone}`;
+  return phone;
+}
+
 export function createWhatsAppManager({
   socketFactory,
   authStateLoader,
@@ -22,6 +29,7 @@ export function createWhatsAppManager({
   schedule = setTimeout,
   clearSchedule = clearTimeout,
   maxSeenMessageIds = 1000,
+  devAllowedPhone = '',
 }) {
   let socket = null;
   let connectPromise = null;
@@ -30,6 +38,8 @@ export function createWhatsAppManager({
   let status = { status: 'disconnected', qrDataUrl: null, account: null, error: null };
   const seenIds = new Set();
   const seenQueue = [];
+  const allowedPhone = canonicalDevPhone(devAllowedPhone);
+  const allowedJids = new Set();
 
   function setStatus(patch) {
     status = { ...status, ...patch };
@@ -65,6 +75,27 @@ export function createWhatsAppManager({
         setStatus({ status: 'error', error: error instanceof Error ? error.message : 'Falha ao reconectar WhatsApp' });
       });
     }, reconnectDelayMs);
+  }
+
+  function isAllowedDevMessage(message) {
+    if (!allowedPhone) return true;
+    const primaryJid = message?.key?.remoteJid ?? '';
+    const alternateJid = message?.key?.remoteJidAlt ?? '';
+    const matches = [primaryJid, alternateJid]
+      .filter(Boolean)
+      .some((jid) => canonicalDevPhone(jid) === allowedPhone);
+    if (matches && primaryJid) allowedJids.add(primaryJid);
+    return matches;
+  }
+
+  function normalizeDevOutboundRecipient(phoneOrJid) {
+    const jid = normalizeOutboundJid(phoneOrJid);
+    if (!allowedPhone) return jid;
+    if (allowedJids.has(jid)) return jid;
+    if (canonicalDevPhone(jid) !== allowedPhone) {
+      throw new Error('Modo DEV: destinatário fora da allowlist do WhatsApp.');
+    }
+    return `${allowedPhone}@s.whatsapp.net`;
   }
 
   async function performConnect() {
@@ -116,6 +147,7 @@ export function createWhatsAppManager({
           if (!message?.message) continue;
           const jid = message?.key?.remoteJid ?? '';
           if (!classifyInboundJid(jid).supported) continue;
+          if (!isAllowedDevMessage(message)) continue;
           if (!markSeen(message?.key?.id)) continue;
           if (messageHandler) await messageHandler({ message, socket: activeSocket });
         }
@@ -159,12 +191,12 @@ export function createWhatsAppManager({
 
   async function sendText(phoneOrJid, text) {
     if (!socket || status.status !== 'connected') throw new Error('WhatsApp não conectado.');
-    return socket.sendMessage(normalizeOutboundJid(phoneOrJid), { text: String(text) });
+    return socket.sendMessage(normalizeDevOutboundRecipient(phoneOrJid), { text: String(text) });
   }
 
   async function sendMedia(phoneOrJid, source) {
     if (!socket || status.status !== 'connected') throw new Error('WhatsApp não conectado.');
-    const jid = normalizeOutboundJid(phoneOrJid);
+    const jid = normalizeDevOutboundRecipient(phoneOrJid);
     if (typeof source === 'string') return socket.sendMessage(jid, { image: { url: source } });
     if (source?.base64) {
       return socket.sendMessage(jid, {
