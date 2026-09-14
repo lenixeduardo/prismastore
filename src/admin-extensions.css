@@ -1,0 +1,24 @@
+/* Operational extensions: real products + configurable chatbot messages. */
+.real-product-backdrop { position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.72); display:grid; place-items:center; padding:20px; }
+.real-product-modal { width:min(640px,96vw); max-height:90vh; overflow:auto; background:#0c1711; border:1px solid var(--border); border-radius:6px; padding:20px; box-shadow:0 30px 80px rgba(0,0,0,.38); }
+.real-product-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.real-product-modal h2 { margin:4px 0 0; font-size:22px; }
+.real-product-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.real-product-grid label,.message-setting-field { display:grid; gap:7px; font-size:11px; color:var(--muted); }
+.real-product-grid input,.message-setting-field textarea { width:100%; box-sizing:border-box; border:1px solid var(--border); background:#09120e; color:#eef5f0; border-radius:5px; padding:11px 12px; font:inherit; outline:none; }
+.real-product-grid input:focus,.message-setting-field textarea:focus { border-color:rgba(41,217,128,.55); }
+.real-product-active { margin:16px 0; display:flex; align-items:center; gap:9px; color:#dbe4dd; font-size:12px; }
+.real-product-actions,.message-settings-footer { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:16px; }
+.real-product-error { border:1px solid rgba(255,107,107,.24); background:var(--danger-dim); color:#ffb0b0; padding:10px 12px; border-radius:5px; font-size:11px; }
+.real-product-row-actions { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+.chatbot-message-settings { margin-top:18px; }
+.message-settings-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:16px; }
+.message-setting-field { border:1px solid var(--border-soft); border-radius:5px; padding:13px; background:rgba(255,255,255,.012); }
+.message-setting-title { color:#eef5f0; font-weight:700; font-size:12px; }
+.message-setting-field textarea { resize:vertical; min-height:92px; line-height:1.45; }
+.message-setting-help { font-size:10px; color:var(--muted-2); line-height:1.4; }
+.message-setting-field .btn { width:max-content; }
+.message-settings-footer { border-top:1px solid var(--border-soft); padding-top:14px; justify-content:space-between; }
+.wa-qr { width:180px !important; max-width:100%; height:auto; aspect-ratio:1; object-fit:contain; background:#fff; padding:8px; border-radius:5px; margin:8px auto; display:block; }
+@media (max-width:700px) { .real-product-grid,.message-settings-grid { grid-template-columns:1fr; } }
+@media (max-width:520px) { .wa-qr { width:160px !important; } .real-product-backdrop { padding:10px; } .real-product-modal { padding:16px; } .message-settings-footer { align-items:flex-start; flex-direction:column; } }
