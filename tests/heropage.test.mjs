@@ -21,20 +21,18 @@ test('index starts on a full-screen hero and exposes one functional dashboard en
 test('hero displays the supplied full-size PrismaStore artwork', async () => {
   const startup = await source('src/hero.js');
   assert.match(startup, /hero-part-1\.txt/);
+  assert.match(startup, /hero-part-4\.txt/);
   assert.match(startup, /data:image\/webp;base64/);
 
-  const css = await source('src/styles.css');
+  const css = await source('src/hero.css');
   assert.match(css, /\.hero-page[\s\S]*100(?:dvh|vh)/);
   assert.match(css, /\.hero-art[\s\S]*object-fit:\s*cover/);
 });
 
 test('dashboard brand uses the official PrismaStore logo instead of the Pr text placeholder', async () => {
-  const app = await source('src/app.js');
-  assert.match(app, /class="brand-mark"[^>]*>[\s\S]*<img[^>]+src="\/icons\/apple-touch-icon\.png"/);
-  assert.doesNotMatch(app, /class="brand-mark"><\/div>/);
-
-  const css = await source('src/styles.css');
-  assert.doesNotMatch(css, /\.brand-mark::after\s*\{[^}]*content:\s*"Pr"/);
+  const css = await source('src/hero.css');
+  assert.match(css, /\.brand-mark[\s\S]*apple-touch-icon\.png/);
+  assert.match(css, /\.brand-mark::after\s*\{[^}]*content:\s*none/);
 });
 
 test('entering the dashboard hides the hero and reveals the existing app without reloading', async () => {
