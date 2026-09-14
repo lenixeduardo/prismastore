@@ -46,6 +46,19 @@ A integração anterior usava `whatsapp-web.js` e `.wwebjs_auth/`. Esse formato 
 
 O PrismaStore processa somente eventos novos (`messages.upsert` do tipo `notify`), ignora mensagens próprias, grupos, status/broadcast e histórico sincronizado, e mantém cada resposta vinculada ao `remoteJid` que originou a mensagem.
 
+### Ambiente DEV com WhatsApp restrito
+
+Para homologação sem risco de responder clientes reais, ative a allowlist no `.env`:
+
+```env
+PRISMASTORE_DEV_WHATSAPP_ONLY=true
+PRISMASTORE_DEV_WHATSAPP_PHONE=DDD_NUMERO
+```
+
+Quando esse modo está ativo, somente o telefone configurado pode disparar o chatbot. O mesmo bloqueio vale para saídas automáticas, incluindo mensagens de pagamento, tracker e finalização. Qualquer outro destinatário é bloqueado antes do envio. Para números brasileiros informados com DDD + número, o runtime normaliza o país `55` automaticamente.
+
+Se `PRISMASTORE_DEV_WHATSAPP_ONLY=true` estiver ativo sem `PRISMASTORE_DEV_WHATSAPP_PHONE`, o servidor não inicia; isso evita uma homologação aparentemente protegida rodar sem restrição.
+
 ## Fluxo atual — Passos 1 a 9
 
 ```text
