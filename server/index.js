@@ -30,6 +30,11 @@ const assetsDir = join(root, 'assets');
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || '0.0.0.0';
 const useDemoData = process.env.PRISMASTORE_DEMO_DATA === 'true';
+const devWhatsappOnly = process.env.PRISMASTORE_DEV_WHATSAPP_ONLY === 'true';
+const devWhatsappPhone = String(process.env.PRISMASTORE_DEV_WHATSAPP_PHONE || '').trim();
+if (devWhatsappOnly && !devWhatsappPhone) {
+  throw new Error('PRISMASTORE_DEV_WHATSAPP_PHONE é obrigatório quando PRISMASTORE_DEV_WHATSAPP_ONLY=true.');
+}
 const logger = pino({ level: 'silent' });
 const legacySeedState = {
   products: seedProducts,
@@ -81,6 +86,7 @@ const whatsappManager = createWhatsAppManager({
   qrEncoder: createTerminalQrEncoder({ QRCode }),
   messageHandler: messageHandler.handleMessage,
   disconnectReasonLoggedOut: DisconnectReason.loggedOut,
+  devAllowedPhone: devWhatsappOnly ? devWhatsappPhone : '',
 });
 
 const finalArtworkPath = ensureBase64Asset({
@@ -109,6 +115,7 @@ const server = createAppServer({
 server.listen(port, host, () => {
   console.log(`PrismaStore disponível em http://localhost:${port}`);
   console.log(useDemoData ? 'Dados demo: ATIVOS' : 'Dados demo: DESATIVADOS');
+  if (devWhatsappOnly) console.log('WhatsApp DEV: allowlist exclusiva ATIVA');
 });
 
 if (process.env.WHATSAPP_AUTO_CONNECT !== 'false') {
