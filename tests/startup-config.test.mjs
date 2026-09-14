@@ -4,9 +4,7 @@ import { createStartupState, createTerminalQrEncoder, clearLegacyDemoState } fro
 
 test('starts with empty operational data unless demo mode is explicitly enabled', () => {
   const seedState = { products: [{ id: 'p1' }], customers: [{ id: 'c1' }], orders: [{ id: 'o1' }] };
-  assert.deepEqual(createStartupState({ useDemoData: false, seedState }), {
-    products: [], customers: [], orders: [],
-  });
+  assert.deepEqual(createStartupState({ useDemoData: false, seedState }), { products: [], customers: [], orders: [] });
 });
 
 test('keeps demo data available only when demo mode is explicitly enabled', () => {
@@ -19,10 +17,7 @@ test('keeps demo data available only when demo mode is explicitly enabled', () =
 test('clears persisted legacy demo data only when it still exactly matches the old seed', () => {
   const seedState = { products: [{ id: 'p1' }], customers: [{ id: 'c1' }], orders: [{ id: 'o1' }] };
   let saved = null;
-  const stateStore = {
-    load: () => structuredClone(seedState),
-    save: (value) => { saved = structuredClone(value); return value; },
-  };
+  const stateStore = { load: () => structuredClone(seedState), save: (value) => { saved = structuredClone(value); return value; } };
   const result = clearLegacyDemoState({ stateStore, seedState, useDemoData: false });
   assert.equal(result, true);
   assert.deepEqual(saved, { products: [], customers: [], orders: [] });
@@ -37,7 +32,7 @@ test('never clears changed or real persisted data', () => {
   assert.equal(saves, 0);
 });
 
-test('prints a terminal QR and still returns a browser data URL', async () => {
+test('prints a compact terminal QR and still returns a browser data URL', async () => {
   const calls = [];
   const QRCode = {
     toString: async (qr, options) => { calls.push(['toString', qr, options]); return 'TERMINAL_QR'; },
@@ -51,7 +46,7 @@ test('prints a terminal QR and still returns a browser data URL', async () => {
   assert.ok(logs.some((line) => String(line).includes('TERMINAL_QR')));
   assert.ok(logs.some((line) => String(line).includes('Aparelhos conectados')));
   assert.deepEqual(calls, [
-    ['toString', 'QR_PAYLOAD', { type: 'terminal' }],
+    ['toString', 'QR_PAYLOAD', { type: 'terminal', small: true }],
     ['toDataURL', 'QR_PAYLOAD', { width: 320, margin: 1 }],
   ]);
 });
