@@ -83,11 +83,23 @@ function serveStatic(staticDir, pathname, res) {
   createReadStream(filePath).pipe(res);
 }
 
-export function createAppServer({ stateStore, staticDir, whatsappManager = null, paymentService = null, orderLifecycleService = null, reportService = null, backupService = null, asaasWebhookToken = '' }) {
+export function createAppServer({
+  stateStore,
+  staticDir,
+  whatsappManager = null,
+  paymentService = null,
+  orderLifecycleService = null,
+  reportService = null,
+  backupService = null,
+  whatsappAuthPath = null,
+  whatsappAuthProvider = 'baileys',
+  asaasWebhookToken = '',
+}) {
   const resolvedBackupService = backupService ?? createBackupService({
     stateStore,
     whatsappManager,
-    authPath: join(staticDir, '.wwebjs_auth'),
+    authPath: whatsappAuthPath ?? join(staticDir, 'data', 'whatsapp-auth'),
+    whatsappAuthProvider,
     backupsDir: join(staticDir, 'backups'),
     appVersion: '0.9.2',
   });
