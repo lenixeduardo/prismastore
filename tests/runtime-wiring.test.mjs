@@ -15,8 +15,8 @@ test('runtime wires the persisted chatbot to incoming Baileys WhatsApp messages'
 
 test('approved welcome and catalog artwork are packaged as local chatbot assets', () => {
   const base = new URL('../assets/', import.meta.url);
-  assert.equal(existsSync(join(base.pathname, 'prismastore-welcome.png')), true);
-  assert.equal(existsSync(join(base.pathname, 'prismastore-catalog.png')), true);
+  assert.equal(existsSync(join(base.pathname, 'prismastore-welcome.jpg')), true);
+  assert.equal(existsSync(join(base.pathname, 'prismastore-catalog.jpg')), true);
 });
 
 test('runtime wires Asaas client, payment service and webhook token into the single process', () => {
@@ -30,10 +30,10 @@ test('runtime wires Asaas client, payment service and webhook token into the sin
 
 test('runtime wires order lifecycle tracker and approved finalization artwork', () => {
   assert.match(source, /createOrderLifecycleService/);
-  assert.match(source, /prismastore-order-finished\.b64/);
-  assert.match(source, /ensureBase64Asset/);
+  assert.match(source, /prismastore-order-finished\.jpg/);
+  assert.doesNotMatch(source, /ensureBase64Asset|prismastore-order-finished\.b64/);
   assert.match(source, /orderLifecycleService/);
-  assert.equal(existsSync(new URL('../assets/prismastore-order-finished.b64', import.meta.url)), true);
+  assert.equal(existsSync(new URL('../assets/prismastore-order-finished.jpg', import.meta.url)), true);
 });
 
 test('runtime wires real monthly reports into the same local server', () => {
