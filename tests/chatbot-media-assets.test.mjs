@@ -32,40 +32,50 @@ function jpegSize(buffer) {
 
 const approved = [
   {
-    source: 'prismastore-welcome.b64', output: 'prismastore-welcome.jpg',
+    name: 'prismastore-welcome.jpg',
     sha: '1389c95080338a68455880fea7f8084f874d6c157b03a8e0f161796ec1186466',
-    width: 1536, height: 864, minBytes: 120_000,
+    width: 1536,
+    height: 864,
+    minBytes: 120_000,
   },
   {
-    source: 'prismastore-catalog.b64', output: 'prismastore-catalog.jpg',
+    name: 'prismastore-catalog.jpg',
     sha: 'f364d07479ab87d7c9868411c613e887ef47e459fcfd969610dd8655a26f5522',
-    width: 1122, height: 1402, minBytes: 125_000,
+    width: 1122,
+    height: 1402,
+    minBytes: 125_000,
   },
   {
-    source: 'prismastore-order-finished.b64', output: 'prismastore-order-finished.jpg',
+    name: 'prismastore-order-finished.jpg',
     sha: '13b5a601668e5f38cc799f90a5b5dff1c21872073a93476095b7391dd28dfdbc',
-    width: 1122, height: 1402, minBytes: 120_000,
+    width: 1122,
+    height: 1402,
+    minBytes: 120_000,
   },
 ];
 
-test('versioned chatbot media sources decode to the approved reviewed artwork', () => {
+test('versioned chatbot assets are exactly the three reviewed artworks', () => {
   for (const asset of approved) {
-    const path = assetPath(asset.source);
-    assert.equal(existsSync(path), true, `${asset.source} must exist`);
-    const encoded = readFileSync(path, 'utf8').replace(/\s+/g, '');
-    const buffer = Buffer.from(encoded, 'base64');
-    assert.equal(sha256(buffer), asset.sha, `${asset.source} hash changed`);
-    assert.deepEqual(jpegSize(buffer), { width: asset.width, height: asset.height }, `${asset.source} dimensions changed`);
-    assert.ok(buffer.length >= asset.minBytes, `${asset.source} looks like a placeholder or truncated file`);
+    const path = assetPath(asset.name);
+    assert.equal(existsSync(path), true, `${asset.name} must exist`);
+    const buffer = readFileSync(path);
+    assert.equal(sha256(buffer), asset.sha, `${asset.name} hash changed`);
+    assert.deepEqual(jpegSize(buffer), { width: asset.width, height: asset.height }, `${asset.name} dimensions changed`);
+    assert.ok(buffer.length >= asset.minBytes, `${asset.name} looks like a placeholder or truncated file`);
   }
 });
 
-test('runtime reconstructs and sends the three approved chatbot images', () => {
+test('runtime sends approved artwork files directly and never references legacy placeholders', () => {
   const source = readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
-  for (const asset of approved) {
-    assert.match(source, new RegExp(asset.source.replace('.', '\\.')));
-    assert.match(source, new RegExp(asset.output.replace('.', '\\.')));
-  }
-  assert.doesNotMatch(source, /welcomeMediaPath:\s*join\(assetsDir/);
-  assert.doesNotMatch(source, /catalogMediaPath:\s*join\(assetsDir/);
+  assert.match(source, /prismastore-welcome\.jpg/);
+  assert.match(source, /prismastore-catalog\.jpg/);
+  assert.match(source, /prismastore-order-finished\.jpg/);
+  assert.doesNotMatch(source, /prismastore-welcome\.png|prismastore-catalog\.png|prismastore-order-finished\.b64/);
+  assert.doesNotMatch(source, /ensureBase64Asset/);
+});
+
+test('legacy placeholder assets are removed from the repository', () => {
+  assert.equal(existsSync(assetPath('prismastore-welcome.png')), false);
+  assert.equal(existsSync(assetPath('prismastore-catalog.png')), false);
+  assert.equal(existsSync(assetPath('prismastore-order-finished.b64')), false);
 });
