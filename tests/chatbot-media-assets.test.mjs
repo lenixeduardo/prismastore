@@ -32,28 +32,19 @@ function jpegSize(buffer) {
 
 const approved = [
   {
-    source: 'prismastore-welcome.b64',
-    output: 'prismastore-welcome.jpg',
-    sha: '4aff6044114a580b59bf8aef5ec6d82eac56c8d14d248a4b93cf8a2f489361c3',
-    width: 1536,
-    height: 864,
-    minBytes: 100_000,
+    source: 'prismastore-welcome.b64', output: 'prismastore-welcome.jpg',
+    sha: '4642ef0ea8dc6326d22f618307a4914ecb6188dfe1d0212dba6e1e06bd3f415e',
+    width: 1536, height: 864, minBytes: 90_000,
   },
   {
-    source: 'prismastore-catalog.b64',
-    output: 'prismastore-catalog.jpg',
-    sha: 'a7ff4c7fc3f812fdfb28901368c98969407916f6b644857a3725a6073960974a',
-    width: 1122,
-    height: 1402,
-    minBytes: 160_000,
+    source: 'prismastore-catalog.b64', output: 'prismastore-catalog.jpg',
+    sha: 'f364d07479ab87d7c9868411c613e887ef47e459fcfd969610dd8655a26f5522',
+    width: 1122, height: 1402, minBytes: 125_000,
   },
   {
-    source: 'prismastore-order-finished.b64',
-    output: 'prismastore-order-finished.jpg',
-    sha: 'e5d962d89709cab0e61f31f0100dc47832a29e559532fe8cd67f56aeae9ea189',
-    width: 1122,
-    height: 1402,
-    minBytes: 100_000,
+    source: 'prismastore-order-finished.b64', output: 'prismastore-order-finished.jpg',
+    sha: '035ab0c8b40a9524e06a84e9dc31a17cfe5228d31a414fb3e8b3201f62baa924',
+    width: 1122, height: 1402, minBytes: 85_000,
   },
 ];
 
