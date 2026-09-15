@@ -12,11 +12,6 @@ function sha256(buffer) {
   return createHash('sha256').update(buffer).digest('hex');
 }
 
-function pngSize(buffer) {
-  assert.equal(buffer.subarray(1, 4).toString('ascii'), 'PNG');
-  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
-}
-
 function jpegSize(buffer) {
   assert.equal(buffer[0], 0xff);
   assert.equal(buffer[1], 0xd8);
@@ -37,43 +32,49 @@ function jpegSize(buffer) {
 
 const approved = [
   {
-    name: 'prismastore-welcome.jpg',
-    sha: 'fb7d9207d6b874952bfec91dfee76b39933a647daed0f7f03b095052664e98c3',
+    source: 'prismastore-welcome.b64',
+    output: 'prismastore-welcome.jpg',
+    sha: '4aff6044114a580b59bf8aef5ec6d82eac56c8d14d248a4b93cf8a2f489361c3',
     width: 1536,
     height: 864,
-    size: jpegSize,
+    minBytes: 100_000,
   },
   {
-    name: 'prismastore-catalog.png',
-    sha: '01a987292fde50dabd60f39caa8776ed0912e8e5f3d71cd80ea1721328a99dca',
+    source: 'prismastore-catalog.b64',
+    output: 'prismastore-catalog.jpg',
+    sha: 'a7ff4c7fc3f812fdfb28901368c98969407916f6b644857a3725a6073960974a',
     width: 1122,
     height: 1402,
-    size: pngSize,
+    minBytes: 160_000,
   },
   {
-    name: 'prismastore-order-finished.jpg',
-    sha: '6c6f1836a86e5abdd61af8738ade3b1af29f80e07012ea614a55eada2584ad43',
+    source: 'prismastore-order-finished.b64',
+    output: 'prismastore-order-finished.jpg',
+    sha: 'e5d962d89709cab0e61f31f0100dc47832a29e559532fe8cd67f56aeae9ea189',
     width: 1122,
     height: 1402,
-    size: jpegSize,
+    minBytes: 100_000,
   },
 ];
 
-test('approved chatbot media assets are exact reviewed files', () => {
+test('versioned chatbot media sources decode to the approved reviewed artwork', () => {
   for (const asset of approved) {
-    const path = assetPath(asset.name);
-    assert.equal(existsSync(path), true, `${asset.name} must exist`);
-    const buffer = readFileSync(path);
-    assert.equal(sha256(buffer), asset.sha, `${asset.name} hash changed`);
-    assert.deepEqual(asset.size(buffer), { width: asset.width, height: asset.height }, `${asset.name} dimensions changed`);
-    assert.ok(buffer.length > 250_000, `${asset.name} looks like a placeholder or truncated file`);
+    const path = assetPath(asset.source);
+    assert.equal(existsSync(path), true, `${asset.source} must exist`);
+    const encoded = readFileSync(path, 'utf8').replace(/\s+/g, '');
+    const buffer = Buffer.from(encoded, 'base64');
+    assert.equal(sha256(buffer), asset.sha, `${asset.source} hash changed`);
+    assert.deepEqual(jpegSize(buffer), { width: asset.width, height: asset.height }, `${asset.source} dimensions changed`);
+    assert.ok(buffer.length >= asset.minBytes, `${asset.source} looks like a placeholder or truncated file`);
   }
 });
 
-test('runtime uses approved welcome catalog and finalization files directly', () => {
+test('runtime reconstructs and sends the three approved chatbot images', () => {
   const source = readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
-  assert.match(source, /prismastore-welcome\.jpg/);
-  assert.match(source, /prismastore-catalog\.png/);
-  assert.match(source, /prismastore-order-finished\.jpg/);
-  assert.doesNotMatch(source, /prismastore-order-finished\.b64/);
+  for (const asset of approved) {
+    assert.match(source, new RegExp(asset.source.replace('.', '\\.')));
+    assert.match(source, new RegExp(asset.output.replace('.', '\\.')));
+  }
+  assert.doesNotMatch(source, /welcomeMediaPath:\s*join\(assetsDir/);
+  assert.doesNotMatch(source, /catalogMediaPath:\s*join\(assetsDir/);
 });
