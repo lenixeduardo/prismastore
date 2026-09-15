@@ -33,8 +33,8 @@ function jpegSize(buffer) {
 const approved = [
   {
     source: 'prismastore-welcome.b64', output: 'prismastore-welcome.jpg',
-    sha: '4642ef0ea8dc6326d22f618307a4914ecb6188dfe1d0212dba6e1e06bd3f415e',
-    width: 1536, height: 864, minBytes: 90_000,
+    sha: '1389c95080338a68455880fea7f8084f874d6c157b03a8e0f161796ec1186466',
+    width: 1536, height: 864, minBytes: 120_000,
   },
   {
     source: 'prismastore-catalog.b64', output: 'prismastore-catalog.jpg',
@@ -43,8 +43,8 @@ const approved = [
   },
   {
     source: 'prismastore-order-finished.b64', output: 'prismastore-order-finished.jpg',
-    sha: '035ab0c8b40a9524e06a84e9dc31a17cfe5228d31a414fb3e8b3201f62baa924',
-    width: 1122, height: 1402, minBytes: 85_000,
+    sha: '13b5a601668e5f38cc799f90a5b5dff1c21872073a93476095b7391dd28dfdbc',
+    width: 1122, height: 1402, minBytes: 120_000,
   },
 ];
 
