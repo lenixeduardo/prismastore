@@ -5,6 +5,13 @@ import { normalizeChatbotMessages } from './chatbot-messages.js';
 
 const STATE_KEY = 'main';
 
+function normalizeOrder(order = {}) {
+  const address = order?.address && typeof order.address === 'object' && !Array.isArray(order.address)
+    ? order.address
+    : {};
+  return { ...order, address };
+}
+
 function sanitizeState(state = {}, fallbackSettings = null) {
   const fallbackMessages = fallbackSettings?.chatbotMessages ?? {};
   const suppliedMessages = state?.settings?.chatbotMessages;
@@ -16,7 +23,7 @@ function sanitizeState(state = {}, fallbackSettings = null) {
   return {
     products: Array.isArray(state.products) ? state.products : [],
     customers: Array.isArray(state.customers) ? state.customers : [],
-    orders: Array.isArray(state.orders) ? state.orders : [],
+    orders: Array.isArray(state.orders) ? state.orders.map(normalizeOrder) : [],
     settings: { chatbotMessages },
   };
 }
