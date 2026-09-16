@@ -36,6 +36,11 @@ test('runtime usa a chave aleatória Pix padrão quando PIX_KEY não está confi
   assert.match(source, /key:\s*process\.env\.PIX_KEY\s*\|\|\s*DEFAULT_PIX_KEY/);
 });
 
+test('runtime usa o beneficiário Pix padrão para cobrança e validação de comprovante', () => {
+  assert.match(source, /OSCAR FILIPE SILVA DOS SANTOS/);
+  assert.match(source, /recipientName:\s*process\.env\.PIX_RECIPIENT_NAME\s*\|\|\s*DEFAULT_PIX_RECIPIENT_NAME/);
+});
+
 test('runtime wires order lifecycle tracker and approved finalization artwork', () => {
   assert.match(source, /createOrderLifecycleService/);
   assert.match(source, /prismastore-order-finished\.b64/);
