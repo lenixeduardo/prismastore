@@ -13,6 +13,10 @@ function isRecoveryCommand(text = '') {
 }
 
 export function createPaymentChatbot({ baseChatbot, stateStore, paymentService }) {
+  function isLocalPix() {
+    return paymentService?.getStatus?.().provider === 'pix-local';
+  }
+
   async function sendPix({ phone, session, cpfCnpj, sendText, sendMedia }) {
     const pix = await paymentService.generatePixForOrder({ orderId: session.orderId, cpfCnpj });
     const nextSession = { ...session, step: 'awaiting_payment', paymentId: pix.paymentId };
@@ -26,11 +30,15 @@ export function createPaymentChatbot({ baseChatbot, stateStore, paymentService }
       }
     }
 
-    await sendText(`💠 *Pix gerado para o pedido ${session.orderId}*\n\n*Pix Copia e Cola:*\n${pix.payload}\n\n${pix.expirationDate ? `Validade do QR: ${pix.expirationDate}\n\n` : ''}Assim que o Asaas confirmar o pagamento, o pedido muda automaticamente para *Pago · Embalar*.`);
+    if (isLocalPix()) {
+      await sendText(`💠 *Pix do pedido ${session.orderId}*\n\n*Pix Copia e Cola:*\n${pix.payload}\n\nDepois de pagar, envie aqui a *imagem do comprovante*. O PrismaStore confere valor, destinatário, data e horário antes de liberar o pedido para embalagem.`);
+    } else {
+      await sendText(`💠 *Pix gerado para o pedido ${session.orderId}*\n\n*Pix Copia e Cola:*\n${pix.payload}\n\n${pix.expirationDate ? `Validade do QR: ${pix.expirationDate}\n\n` : ''}Assim que o Asaas confirmar o pagamento, o pedido muda automaticamente para *Pago · Embalar*.`);
+    }
     return { session: nextSession, pix };
   }
 
-  async function handlePaymentState({ phone, session, text, sendText, sendMedia }) {
+  async function handlePaymentState({ phone, session, text, receiptText, receiptFingerprint, sendText, sendMedia }) {
     if (session.step === 'payment_document') {
       const cpfCnpj = digits(text);
       if (![11, 14].includes(cpfCnpj.length)) {
@@ -48,6 +56,23 @@ export function createPaymentChatbot({ baseChatbot, stateStore, paymentService }
     }
 
     if (session.step === 'awaiting_payment') {
+      if (isLocalPix()) {
+        if (!receiptText) {
+          await sendText(`O pedido *${session.orderId}* está aguardando o Pix. Depois do pagamento, envie a *imagem do comprovante* nesta conversa.`);
+          return { handled: true, step: session.step };
+        }
+        const result = paymentService.validateReceiptForOrder({
+          orderId: session.orderId,
+          text: receiptText,
+          fingerprint: receiptFingerprint,
+        });
+        if (result.handled) {
+          await sendText(`✅ Pagamento do pedido *${session.orderId}* validado. Valor, destinatário, data e horário conferem. O pedido está liberado para separação e embalagem.`);
+          return { handled: true, step: 'paid', orderId: session.orderId, duplicate: result.duplicate };
+        }
+        await sendText(`⚠️ Não foi possível validar automaticamente o comprovante do pedido *${session.orderId}*. O pedido permanece aguardando pagamento e foi marcado para *validação manual*.`);
+        return { handled: true, step: session.step, orderId: session.orderId, manualReview: true, reasons: result.reasons };
+      }
       await sendText(`O pedido *${session.orderId}* está aguardando a confirmação automática do Pix. Você não precisa enviar comprovante.`);
       return { handled: true, step: session.step };
     }
@@ -69,6 +94,8 @@ export function createPaymentChatbot({ baseChatbot, stateStore, paymentService }
         phone,
         session,
         text: args.text,
+        receiptText: args.receiptText,
+        receiptFingerprint: args.receiptFingerprint,
         sendText: args.sendText,
         sendMedia: args.sendMedia ?? (async () => {}),
       });
@@ -80,6 +107,23 @@ export function createPaymentChatbot({ baseChatbot, stateStore, paymentService }
 
     const confirmedSession = stateStore.getChatSession(phone);
     if (!confirmedSession) return result;
+
+    if (isLocalPix()) {
+      await args.sendText(`Vou gerar o Pix do pedido *${result.orderId}* agora.`);
+      try {
+        const { session: nextSession, pix } = await sendPix({
+          phone,
+          session: confirmedSession,
+          sendText: args.sendText,
+          sendMedia: args.sendMedia ?? (async () => {}),
+        });
+        return { ...result, step: nextSession.step, paymentId: pix.paymentId };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Não foi possível gerar o Pix.';
+        await args.sendText(`Não consegui gerar o Pix agora: ${message}`);
+        return { ...result, error: 'payment-error' };
+      }
+    }
 
     if (paymentService.needsPayerDocument(result.orderId)) {
       const nextSession = { ...confirmedSession, step: 'payment_document' };
