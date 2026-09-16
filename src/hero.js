@@ -31,14 +31,9 @@ function enterDashboard() {
   hero.hidden = true;
   app.hidden = false;
   document.body.classList.add('dashboard-active');
-  localStorage.setItem('prismastore:dashboard-entered', '1');
   window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  window.dispatchEvent(new CustomEvent('prismastore:dashboard-opened'));
 }
 
 enterButton?.addEventListener('click', enterDashboard);
-
-if (sessionStorage.getItem('prismastore:resume-panel') || localStorage.getItem('prismastore:dashboard-entered') === '1') {
-  enterDashboard();
-} else {
-  loadHeroArtwork();
-}
+loadHeroArtwork();
