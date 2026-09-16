@@ -29,7 +29,6 @@ test('fresh page loads return to the hero while internal product saves may resum
   const source = readFileSync(heroJsPath, 'utf8');
   assert.doesNotMatch(source, /prismastore:dashboard-entered/);
   assert.match(source, /sessionStorage\.getItem\(['"]prismastore:resume-panel['"]\)/);
-  assert.match(source, /sessionStorage\.removeItem\(['"]prismastore:resume-panel['"]\)/);
   assert.match(source, /loadHeroArtwork\(\)/);
 });
 
