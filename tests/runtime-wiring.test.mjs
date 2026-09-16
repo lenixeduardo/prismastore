@@ -31,6 +31,11 @@ test('runtime wires local Pix, receipt OCR and payment chatbot without Asaas cre
   assert.doesNotMatch(source, /ASAAS_API_KEY|ASAAS_WEBHOOK_TOKEN/);
 });
 
+test('runtime usa a chave aleatória Pix padrão quando PIX_KEY não está configurada', () => {
+  assert.match(source, /2d03d745-5b05-4829-833d-60e4a210a664/);
+  assert.match(source, /key:\s*process\.env\.PIX_KEY\s*\|\|\s*DEFAULT_PIX_KEY/);
+});
+
 test('runtime wires order lifecycle tracker and approved finalization artwork', () => {
   assert.match(source, /createOrderLifecycleService/);
   assert.match(source, /prismastore-order-finished\.b64/);
