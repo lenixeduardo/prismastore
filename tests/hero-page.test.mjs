@@ -25,6 +25,13 @@ test('hero reveals the existing dashboard without reloading', () => {
   assert.match(source, /hero\.hidden\s*=\s*true/);
 });
 
+test('fresh page loads always return to the hero instead of remembering a prior dashboard entry', () => {
+  const source = readFileSync(heroJsPath, 'utf8');
+  assert.doesNotMatch(source, /prismastore:dashboard-entered/);
+  assert.doesNotMatch(source, /prismastore:resume-panel/);
+  assert.match(source, /loadHeroArtwork\(\)/);
+});
+
 test('dashboard brand mark uses the official PrismaStore icon endpoint', () => {
   assert.equal(existsSync(heroCssPath), true, 'src/hero.css should exist');
   if (!existsSync(heroCssPath)) return;
