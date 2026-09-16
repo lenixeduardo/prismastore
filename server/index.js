@@ -2,6 +2,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import makeWASocket, {
   DisconnectReason,
+  downloadMediaMessage,
   fetchLatestBaileysVersion,
   useMultiFileAuthState,
 } from '@whiskeysockets/baileys';
@@ -13,9 +14,9 @@ import { createChatbotEngine } from './chatbot.js';
 import { createWhatsAppChatAdapter } from './whatsapp-chat-adapter.js';
 import { createWhatsAppManager } from './whatsapp-manager.js';
 import { createAppServer } from './app-server.js';
-import { createAsaasClient } from './asaas-client.js';
 import { createPaymentService } from './payment-service.js';
 import { createPaymentChatbot } from './payment-chatbot.js';
+import { createReceiptOcr } from './receipt-ocr.js';
 import { createOrderLifecycleService } from './order-lifecycle-service.js';
 import { ensureBase64Asset } from './asset-loader.js';
 import { createReportService } from './report-service.js';
@@ -53,11 +54,20 @@ const stateStore = createStateStore({
 });
 clearLegacyDemoState({ stateStore, seedState: legacySeedState, useDemoData });
 
-const asaasClient = createAsaasClient({
-  apiKey: process.env.ASAAS_API_KEY || '',
-  baseUrl: process.env.ASAAS_BASE_URL || 'https://api-sandbox.asaas.com/v3',
+const paymentService = createPaymentService({
+  stateStore,
+  pixConfig: {
+    key: process.env.PIX_KEY || '',
+    recipientName: process.env.PIX_RECIPIENT_NAME || '',
+    recipientCity: process.env.PIX_RECIPIENT_CITY || 'SAO PAULO',
+    accountId: process.env.PIX_ACCOUNT_ID || 'pix-local',
+  },
+  qrEncoder: async (payload) => {
+    const dataUrl = await QRCode.toDataURL(payload, { width: 512, margin: 2 });
+    return dataUrl.split(',')[1] || null;
+  },
 });
-const paymentService = createPaymentService({ stateStore, asaasClient });
+const receiptOcr = createReceiptOcr();
 const reportService = createReportService({ stateStore, receivingAccounts });
 
 const baseChatbot = createChatbotEngine({
@@ -66,7 +76,19 @@ const baseChatbot = createChatbotEngine({
   catalogMediaPath: join(assetsDir, 'prismastore-catalog.png'),
 });
 const chatbot = createPaymentChatbot({ baseChatbot, stateStore, paymentService });
-const messageHandler = createWhatsAppChatAdapter({ chatbot });
+const messageHandler = createWhatsAppChatAdapter({
+  chatbot,
+  receiptOcr,
+  downloadMedia: ({ message, socket }) => downloadMediaMessage(
+    message,
+    'buffer',
+    {},
+    {
+      logger,
+      reuploadRequest: socket?.updateMediaMessage?.bind(socket),
+    },
+  ),
+});
 
 const authStateLoader = () => useMultiFileAuthState(authPath);
 const socketFactory = async ({ auth }) => {
@@ -109,12 +131,12 @@ const server = createAppServer({
   reportService,
   whatsappAuthPath: authPath,
   whatsappAuthProvider: 'baileys',
-  asaasWebhookToken: process.env.ASAAS_WEBHOOK_TOKEN || '',
 });
 
 server.listen(port, host, () => {
   console.log(`PrismaStore disponível em http://localhost:${port}`);
   console.log(useDemoData ? 'Dados demo: ATIVOS' : 'Dados demo: DESATIVADOS');
+  console.log(paymentService.getStatus().configured ? 'Pix local: CONFIGURADO' : 'Pix local: PENDENTE DE CONFIGURAÇÃO');
   if (devWhatsappOnly) console.log('WhatsApp DEV: allowlist exclusiva ATIVA');
 });
 
