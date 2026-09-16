@@ -38,6 +38,20 @@ function sendCsv(res, filename, csv) {
   res.end(csv);
 }
 
+function stateForAdmin(state = {}) {
+  return {
+    ...state,
+    orders: Array.isArray(state.orders)
+      ? state.orders.map((order) => ({
+          ...order,
+          address: order?.address && typeof order.address === 'object' && !Array.isArray(order.address)
+            ? order.address
+            : {},
+        }))
+      : [],
+  };
+}
+
 async function readJson(req) {
   let body = '';
   for await (const chunk of req) {
@@ -108,7 +122,7 @@ export function createAppServer({
       const url = new URL(req.url, 'http://localhost');
 
       if (req.method === 'GET' && url.pathname === '/api/state') {
-        sendJson(res, 200, stateStore.load());
+        sendJson(res, 200, stateForAdmin(stateStore.load()));
         return;
       }
 
