@@ -5,7 +5,7 @@ const APP_SHELL = [
   '/src/styles.css', '/src/reports.css', '/src/backup.css', '/src/pwa.css', '/src/hero.css', '/src/admin-extensions.css',
   '/src/app.js', '/src/data.js', '/src/domain.js', '/src/live-sync.js', '/src/payment-status.js',
   '/src/order-lifecycle-ui.js', '/src/reports-ui.js', '/src/backup-ui.js', '/src/pwa.js', '/src/hero.js',
-  '/src/admin-extensions.js', '/src/product-editor.js', '/src/chatbot-settings.js',
+  '/src/admin-extensions.js', '/src/product-editor.js', '/src/chatbot-settings.js', '/src/chat-simulator.js',
   '/assets/hero/hero-part-1.txt', '/assets/hero/hero-part-2.txt', '/assets/hero/hero-part-3.txt', '/assets/hero/hero-part-4.txt',
   '/icons/favicon-16.png', '/icons/favicon-32.png', '/icons/apple-touch-icon.png',
   '/icons/icon-192.png', '/icons/icon-512.png'
