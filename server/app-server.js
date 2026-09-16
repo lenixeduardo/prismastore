@@ -93,7 +93,6 @@ export function createAppServer({
   backupService = null,
   whatsappAuthPath = null,
   whatsappAuthProvider = 'baileys',
-  asaasWebhookToken = '',
 }) {
   const resolvedBackupService = backupService ?? createBackupService({
     stateStore,
@@ -180,25 +179,8 @@ export function createAppServer({
       }
 
       if (req.method === 'GET' && url.pathname === '/api/payments/status') {
-        if (!paymentService) return sendJson(res, 503, { provider: 'asaas', environment: 'sandbox', configured: false });
-        sendJson(res, 200, { ...paymentService.getStatus(), webhookConfigured: Boolean(asaasWebhookToken) });
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/api/webhooks/asaas') {
-        if (!paymentService || !asaasWebhookToken) return sendJson(res, 503, { error: 'Webhook Asaas não configurado' });
-        if (req.headers['asaas-access-token'] !== asaasWebhookToken) return sendJson(res, 401, { error: 'Token de webhook inválido' });
-        const payload = await readJson(req);
-        const result = await paymentService.handleAsaasEvent(payload);
-        if (result.handled && !result.duplicate && result.order?.status === 'PAID') {
-          try {
-            if (orderLifecycleService?.notifyOrderStatus) await orderLifecycleService.notifyOrderStatus(result.order);
-            else if (whatsappManager?.sendText) await whatsappManager.sendText(result.order.phone, `✅ Pagamento confirmado para o pedido *${result.order.id}*. Seu pedido entrou na fila de separação e embalagem.`);
-          } catch (error) {
-            console.error('Pagamento confirmado, mas falhou a notificação no WhatsApp:', error);
-          }
-        }
-        sendJson(res, 200, result);
+        if (!paymentService) return sendJson(res, 503, { provider: 'pix-local', environment: 'local', configured: false });
+        sendJson(res, 200, paymentService.getStatus());
         return;
       }
 
