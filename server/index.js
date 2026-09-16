@@ -34,6 +34,7 @@ const useDemoData = process.env.PRISMASTORE_DEMO_DATA === 'true';
 const devWhatsappOnly = process.env.PRISMASTORE_DEV_WHATSAPP_ONLY === 'true';
 const devWhatsappPhone = String(process.env.PRISMASTORE_DEV_WHATSAPP_PHONE || '').trim();
 const DEFAULT_PIX_KEY = '2d03d745-5b05-4829-833d-60e4a210a664';
+const DEFAULT_PIX_RECIPIENT_NAME = 'OSCAR FILIPE SILVA DOS SANTOS';
 if (devWhatsappOnly && !devWhatsappPhone) {
   throw new Error('PRISMASTORE_DEV_WHATSAPP_PHONE é obrigatório quando PRISMASTORE_DEV_WHATSAPP_ONLY=true.');
 }
@@ -59,7 +60,7 @@ const paymentService = createPaymentService({
   stateStore,
   pixConfig: {
     key: process.env.PIX_KEY || DEFAULT_PIX_KEY,
-    recipientName: process.env.PIX_RECIPIENT_NAME || '',
+    recipientName: process.env.PIX_RECIPIENT_NAME || DEFAULT_PIX_RECIPIENT_NAME,
     recipientCity: process.env.PIX_RECIPIENT_CITY || 'SAO PAULO',
     accountId: process.env.PIX_ACCOUNT_ID || 'pix-local',
   },
