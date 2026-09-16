@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const source = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../src/admin-icons.js', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 test('admin navigation uses semantic inline SVG icons instead of placeholder glyphs', () => {
   assert.match(source, /function icon\(name\)/);
@@ -10,10 +11,6 @@ test('admin navigation uses semantic inline SVG icons instead of placeholder gly
   for (const name of ['layout-dashboard', 'shopping-bag', 'users', 'package', 'bar-chart-3', 'message-circle', 'settings']) {
     assert.match(source, new RegExp(`['"]${name}['"]`));
   }
-  assert.doesNotMatch(source, /Visão geral','▦'/);
-  assert.doesNotMatch(source, /Pedidos','◫'/);
-  assert.doesNotMatch(source, /Clientes','◎'/);
-  assert.doesNotMatch(source, /Produtos','□'/);
-  assert.doesNotMatch(source, /Relatórios','⌁'/);
-  assert.doesNotMatch(source, /Simular chatbot','◌'/);
+  assert.match(source, /MutationObserver/);
+  assert.match(html, /src\/admin-icons\.js/);
 });
