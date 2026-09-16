@@ -19,13 +19,16 @@ test('approved welcome and catalog artwork are packaged as local chatbot assets'
   assert.equal(existsSync(join(base.pathname, 'prismastore-catalog.png')), true);
 });
 
-test('runtime wires Asaas client, payment service and webhook token into the single process', () => {
-  assert.match(source, /createAsaasClient/);
+test('runtime wires local Pix, receipt OCR and payment chatbot without Asaas credentials', () => {
   assert.match(source, /createPaymentService/);
   assert.match(source, /createPaymentChatbot/);
-  assert.match(source, /ASAAS_API_KEY/);
-  assert.match(source, /ASAAS_WEBHOOK_TOKEN/);
+  assert.match(source, /createReceiptOcr/);
+  assert.match(source, /PIX_KEY/);
+  assert.match(source, /PIX_RECIPIENT_NAME/);
+  assert.match(source, /downloadMediaMessage/);
   assert.match(source, /paymentService/);
+  assert.doesNotMatch(source, /createAsaasClient/);
+  assert.doesNotMatch(source, /ASAAS_API_KEY|ASAAS_WEBHOOK_TOKEN/);
 });
 
 test('runtime wires order lifecycle tracker and approved finalization artwork', () => {
