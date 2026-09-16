@@ -61,6 +61,31 @@ export function createPaymentService({
     };
   }
 
+  async function generateDemoPix({ amount } = {}) {
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      throw new Error('Valor do Pix de demonstração inválido.');
+    }
+
+    const payload = buildPixPayload({
+      key: '00000000-0000-0000-0000-000000000000',
+      recipientName: 'PRISMASTORE DEMO',
+      recipientCity: 'SAO PAULO',
+      amount: numericAmount,
+      txid: 'PRISMASTOREDEMO',
+    });
+    const encodedImage = qrEncoder ? await qrEncoder(payload) : null;
+
+    return {
+      paymentId: 'demo:pix',
+      encodedImage,
+      payload,
+      expirationDate: null,
+      amount: numericAmount,
+      demo: true,
+    };
+  }
+
   function needsPayerDocument(orderId) {
     if (pixConfig) return false;
     const state = stateStore.load();
@@ -291,6 +316,7 @@ export function createPaymentService({
 
   return {
     getStatus,
+    generateDemoPix,
     needsPayerDocument,
     generatePixForOrder,
     validateReceiptForOrder,
