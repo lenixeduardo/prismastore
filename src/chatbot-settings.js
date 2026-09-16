@@ -1,6 +1,6 @@
 export const CHATBOT_MESSAGE_DEFAULTS = Object.freeze({
   welcome: 'Olá, *{cliente}*! 👋\nBem-vindo à *Prisma Store*. Vou cuidar do seu pedido por aqui de forma simples.',
-  catalogHeader: '🛍️ *CARDÁPIO PRISMA STORE*',
+  catalogHeader: '🛍️ *CATÁLOGO PRISMA STORE*',
   catalogInstruction: 'Responda somente com o *número do item* que deseja.',
   invalidProduct: 'Não encontrei essa opção.',
   quantityPrompt: 'Você escolheu *{produto}*.\nQuantas unidades deseja? Restam {estoque} disponível(is) para este pedido.',
@@ -10,7 +10,7 @@ export const CHATBOT_MESSAGE_DEFAULTS = Object.freeze({
   savedAddressPrompt: 'Seu último endereço é:\n*{endereco}*\n\n1 — Usar este endereço\n2 — Informar outro endereço',
   addressInputPrompt: 'Envie seu *endereço completo em uma única mensagem*: rua, número, complemento (se houver), bairro, cidade/UF e CEP.',
   confirmationPrompt: '1 — Confirmar pedido\n2 — Alterar endereço\n0 — Cancelar',
-  cancelled: 'Pedido cancelado. Voltamos ao cardápio.',
+  cancelled: 'Pedido cancelado. Voltamos ao catálogo.',
   paymentPending: 'Pedido *{pedido}* criado. Aguardando pagamento.',
   paymentConfirmed: '✅ Pagamento confirmado para o pedido *{pedido}*.',
   orderFinished: '✅ *Seu pedido foi finalizado!*\nPedido: *{pedido}*\nObrigado por comprar com a Prisma Store.',
