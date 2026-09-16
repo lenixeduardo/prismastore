@@ -38,6 +38,38 @@ test('rejects group status own and unsupported content', async () => {
   assert.equal(calls, 0);
 });
 
+test('routes receipt images through OCR and forwards only extracted text and fingerprint', async () => {
+  const imageBuffer = Buffer.from('receipt-image');
+  let incoming = null;
+  const chatbot = { handleIncoming: async (args) => { incoming = args; return { handled: true }; } };
+  const receiptOcr = {
+    extractText: async (buffer) => {
+      assert.deepEqual(buffer, imageBuffer);
+      return 'Valor R$ 20,00\nDestinatário PRISMA STORE\n16/09/2026 17:05:00';
+    },
+  };
+  const adapter = createWhatsAppChatAdapter({
+    chatbot,
+    receiptOcr,
+    downloadMedia: async () => imageBuffer,
+  });
+  const socket = { sendMessage: async () => {} };
+
+  const result = await adapter.handleMessage({
+    message: {
+      key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe: false, id: 'PIX1' },
+      message: { imageMessage: { mimetype: 'image/jpeg' } },
+    },
+    socket,
+  });
+
+  assert.equal(result.handled, true);
+  assert.equal(incoming.text, '');
+  assert.match(incoming.receiptText, /R\$ 20,00/);
+  assert.match(incoming.receiptFingerprint, /^[a-f0-9]{64}$/);
+  assert.equal(Object.hasOwn(incoming, 'imageBuffer'), false);
+});
+
 test('supports extended text and Base64 Pix media', async () => {
   const sent = [];
   const socket = { sendMessage: async (jid, payload) => sent.push({ jid, payload }) };
