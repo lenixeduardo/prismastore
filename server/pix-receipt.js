@@ -24,6 +24,15 @@ function extractAmount(text) {
   return moneyToNumber(labelled?.[1] ?? fallback?.[1] ?? '');
 }
 
+function extractRecipient(text) {
+  const source = String(text);
+  const labels = '(?:destinat[aá]rio|recebedor|favorecido|nome\s+do\s+recebedor|quem\s+recebeu)';
+  const sameLine = source.match(new RegExp(`${labels}\\s*[:\\-]?\\s*([^\\r\\n]{2,120})`, 'i'));
+  if (!sameLine?.[1]) return null;
+  const value = sameLine[1].trim();
+  return value || null;
+}
+
 function isValidCalendarDate(day, month, year) {
   const date = new Date(Date.UTC(year, month - 1, day));
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
@@ -87,16 +96,19 @@ export function validatePixReceipt({
 } = {}) {
   const reasons = [];
   const amount = extractAmount(text);
+  const recipient = extractRecipient(text);
   const dateTime = extractDateTime(text);
   const transactionId = extractTransactionId(text);
-  const normalizedText = normalize(text);
   const normalizedRecipient = normalize(recipientName);
+  const normalizedExtractedRecipient = normalize(recipient);
 
   const expectedCents = Math.round(Number(order?.total ?? NaN) * 100);
   const receivedCents = amount == null ? null : Math.round(amount * 100);
   if (receivedCents == null || !Number.isFinite(expectedCents) || receivedCents !== expectedCents) reasons.push('amount-mismatch');
 
-  if (!normalizedRecipient || !normalizedText.includes(normalizedRecipient)) reasons.push('recipient-mismatch');
+  if (!normalizedRecipient || !normalizedExtractedRecipient || !normalizedExtractedRecipient.includes(normalizedRecipient)) {
+    reasons.push('recipient-mismatch');
+  }
 
   const orderCreatedAt = order?.createdAt ?? order?.requestedAt ?? order?.created_at ?? null;
   const orderKey = orderCreatedAt ? localDateTimeKey(orderCreatedAt, timeZone) : null;
@@ -118,6 +130,7 @@ export function validatePixReceipt({
     reasons: uniqueReasons,
     extracted: {
       amount,
+      recipient,
       date: dateTime?.date ?? null,
       time: dateTime?.time ?? null,
       transactionId,
