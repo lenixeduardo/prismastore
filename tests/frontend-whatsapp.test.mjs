@@ -11,11 +11,12 @@ test('settings UI can connect WhatsApp Web and render the QR status from the loc
   assert.match(source, /qrDataUrl/);
 });
 
-test('settings UI exposes Asaas Sandbox payment configuration status', () => {
+test('settings UI exposes local Pix receipt configuration status', () => {
   const paymentStatus = readFileSync(new URL('../src/payment-status.js', import.meta.url), 'utf8');
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(paymentStatus, /api\/payments\/status/);
-  assert.match(paymentStatus, /Asaas/);
-  assert.match(paymentStatus, /Sandbox/i);
+  assert.match(paymentStatus, /Pix local/);
+  assert.match(paymentStatus, /CONFIGURAR PIX/);
+  assert.doesNotMatch(paymentStatus, /Asaas|Sandbox|API KEY|WEBHOOK TOKEN/i);
   assert.match(html, /src\/payment-status\.js/);
 });
