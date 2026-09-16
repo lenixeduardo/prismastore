@@ -29,6 +29,7 @@ test('aprova somente comprovante que bate valor, destinatário e horário poster
   assert.equal(result.valid, true);
   assert.deepEqual(result.reasons, []);
   assert.equal(result.extracted.amount, 20);
+  assert.equal(result.extracted.recipient, 'PRISMA STORE');
   assert.equal(result.extracted.date, '16/09/2026');
   assert.equal(result.extracted.time, '17:05:00');
 });
@@ -49,6 +50,14 @@ test('divergência de valor ou destinatário vai para revisão manual', () => {
   assert.ok(amount.reasons.includes('amount-mismatch'));
   assert.equal(recipient.manualReview, true);
   assert.ok(recipient.reasons.includes('recipient-mismatch'));
+});
+
+test('não aceita nome configurado fora do campo de destinatário', () => {
+  const text = `${receipt({ recipient: 'OUTRA LOJA' })}\nPagador PRISMA STORE`;
+  const result = validatePixReceipt({ text, order, recipientName: 'Prisma Store', fingerprint: 'recipient-field', existingOrders: [] });
+  assert.equal(result.valid, false);
+  assert.ok(result.reasons.includes('recipient-mismatch'));
+  assert.equal(result.extracted.recipient, 'OUTRA LOJA');
 });
 
 test('bloqueia comprovante ou identificador Pix reutilizado', () => {
