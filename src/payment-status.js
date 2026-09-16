@@ -10,16 +10,13 @@ function renderPaymentStatus(status) {
   if (!row) return;
   const category = row.querySelector('.category');
   const badge = row.querySelector('.badge');
-  if (category) category.textContent = `Asaas · ${status.environment === 'production' ? 'Produção' : 'Sandbox'}`;
+  if (category) category.textContent = status.provider === 'pix-local' ? 'Pix local · Comprovante' : 'Pix';
   if (!badge) return;
 
   badge.className = 'badge';
   if (!status.configured) {
     badge.classList.add('orange');
-    badge.textContent = 'FALTA API KEY';
-  } else if (!status.webhookConfigured) {
-    badge.classList.add('orange');
-    badge.textContent = 'FALTA WEBHOOK TOKEN';
+    badge.textContent = 'CONFIGURAR PIX';
   } else {
     badge.classList.add('green');
     badge.textContent = 'CONFIGURADO';
@@ -33,7 +30,7 @@ async function refreshPaymentStatus() {
     lastStatus = await response.json();
     renderPaymentStatus(lastStatus);
   } catch {
-    // O painel continua funcional mesmo sem o provedor de pagamento.
+    // O painel continua funcional mesmo sem a configuração do Pix.
   }
 }
 
