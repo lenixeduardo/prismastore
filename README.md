@@ -1,6 +1,6 @@
 # PrismaStore — MVP local
 
-MVP operacional simplificado para rodar no mesmo computador/servidor: painel, SQLite, chatbot, integração WhatsApp via Baileys e Pix Asaas ficam em um único processo Node.js.
+MVP operacional simplificado para rodar em um único servidor Node.js: painel, SQLite, chatbot, integração WhatsApp via Baileys e validação local de Pix por comprovante.
 
 ## Arquitetura
 
@@ -14,18 +14,16 @@ Baileys (multi-device)
       Node.js único
       ├─ chatbot
       ├─ painel/API
-      ├─ Asaas Pix
+      ├─ Pix local + OCR de comprovante
       └─ SQLite
-        │
-        └── POST /api/webhooks/asaas ← Asaas (HTTPS público)
 ```
 
-Sem PostgreSQL, Redis, filas, microsserviços, ORM ou IA generativa no MVP.
+Sem PostgreSQL, Redis, filas, microsserviços, ORM, gateway de pagamento ou IA generativa no MVP.
 
 ## Requisitos
 
 - Node.js 22.5+ (recomendado Node.js 24 LTS).
-- Internet no computador que executa a integração WhatsApp e o Asaas.
+- Internet no servidor para a integração com o WhatsApp.
 - `data/`, `data/whatsapp-auth/` e `.env` persistentes no servidor.
 
 ## Instalação
@@ -68,16 +66,34 @@ mensagem
 → envio/entrega + endereço
 → confirmação
 → pedido PAYMENT_PENDING + reserva de estoque
-→ CPF/CNPJ do pagador (somente para o Asaas; não é persistido no PrismaStore)
-→ Pix dinâmico + QR + Copia e Cola
-→ webhook Asaas
+→ Pix local + QR + Copia e Cola
+→ cliente envia imagem do comprovante
+→ OCR local extrai valor, destinatário, data, horário e identificador
+→ validação local do comprovante
 → PAID / Pago · Embalar
 → Em preparação
 → Enviado ou Saiu para entrega
 → Finalizado + arte final
 ```
 
-O `checkoutId` impede duplicidade de pedido e a cobrança Asaas é reutilizada em retentativas. O webhook valida o ID da cobrança e o valor antes de liberar o pedido. Ao confirmar o pagamento, a reserva vira baixa de estoque físico e o cliente recebe uma mensagem automática no WhatsApp. O cliente não precisa enviar comprovante: a confirmação do Pix continua automática pelo webhook do Asaas.
+O `checkoutId` impede duplicidade de pedido. O comprovante só libera o pedido automaticamente quando o valor bate com o total, o destinatário corresponde ao configurado e a data/hora do Pix é estritamente posterior à criação do pedido. O sistema também bloqueia reutilização do mesmo comprovante ou identificador de transação.
+
+Se algum dado estiver ausente ou divergente, o pedido permanece em `PAYMENT_PENDING` e recebe marcação de **validação manual**. A imagem recebida pelo WhatsApp é usada apenas durante o OCR; o PrismaStore persiste o hash SHA-256 e os campos extraídos necessários para auditoria e deduplicação, não a imagem do comprovante.
+
+## Configurar Pix local
+
+Copie `.env.example` para `.env` e preencha:
+
+```env
+PIX_KEY=sua-chave-pix
+PIX_RECIPIENT_NAME=PRISMA STORE
+PIX_RECIPIENT_CITY=SAO PAULO
+PIX_ACCOUNT_ID=pix-local
+```
+
+`PIX_KEY` pode ser telefone, e-mail, CPF/CNPJ ou chave aleatória. `PIX_RECIPIENT_NAME` deve corresponder ao nome que aparece nos comprovantes bancários, pois ele faz parte da validação automática.
+
+O painel mostra **Pix local · Comprovante · CONFIGURADO** quando a chave, o destinatário e a cidade estão preenchidos. Não é necessário criar conta em gateway, configurar webhook público ou manter API key de serviço de pagamento.
 
 ## Operação e tracker — Passo 6
 
@@ -107,25 +123,6 @@ O painel permite selecionar o mês e exibe:
 
 A exportação usa `GET /api/reports/monthly.csv?month=YYYY-MM` e gera CSV compatível com Excel. O JSON equivalente está em `GET /api/reports/monthly?month=YYYY-MM`.
 
-## Configurar Asaas Sandbox
-
-1. Crie uma conta separada no Sandbox do Asaas.
-2. Copie `.env.example` para `.env`.
-3. Preencha `ASAAS_API_KEY` com a chave Sandbox.
-4. Gere `ASAAS_WEBHOOK_TOKEN` com 32–255 caracteres, sem espaços.
-5. Configure no Asaas um webhook para `PAYMENT_CONFIRMED` e `PAYMENT_RECEIVED`, usando o mesmo token.
-6. A URL do webhook deve ser HTTPS pública e terminar em `/api/webhooks/asaas`.
-
-Exemplo:
-
-```text
-https://pagamentos.seudominio.com/api/webhooks/asaas
-```
-
-O painel mostra **Asaas · Sandbox · CONFIGURADO** quando API key e token local estão presentes.
-
-> O PrismaStore pode continuar rodando no computador/servidor local, mas o Asaas precisa conseguir alcançar o endpoint do webhook pela internet. Use um domínio/reverse proxy HTTPS ou um túnel seguro durante a homologação.
-
 ## Persistência e segurança
 
 Não entram no Git:
@@ -139,7 +136,7 @@ data/whatsapp-auth/
 backups/
 ```
 
-O CPF/CNPJ recebido pelo WhatsApp é usado imediatamente para criar/reutilizar o pagador no Asaas; o PrismaStore persiste somente o `asaasCustomerId` retornado.
+A imagem do comprovante não é armazenada pelo fluxo de validação. Para pagamentos aprovados, o pedido registra o hash do comprovante, o identificador Pix quando reconhecido e os campos extraídos necessários para evitar reutilização e permitir auditoria operacional.
 
 ## Backup e recuperação — Passo 8
 
@@ -155,7 +152,7 @@ O `manifest.json` registra, além dos hashes SHA-256 e tamanhos, o provedor da s
 
 O SQLite é copiado pela API de backup do próprio `node:sqlite`, mantendo consistência mesmo com WAL ativo. Antes de restaurar, todos os hashes são verificados; se houver corrupção, nada é substituído.
 
-Toda restauração cria primeiro um backup `pre-restore`. O WhatsApp é desconectado durante a troca dos arquivos e reconectado em seguida. O `.env`, a chave do Asaas e o token do webhook **não entram no backup**.
+Toda restauração cria primeiro um backup `pre-restore`. O WhatsApp é desconectado durante a troca dos arquivos e reconectado em seguida. O `.env` e a chave Pix **não entram no backup**.
 
 Endpoints locais:
 
@@ -173,7 +170,7 @@ Depois disso, o uso diário é feito pelo atalho ou por `INICIAR_PRISMASTORE.bat
 
 ## PWA Mobile — Passo 9
 
-A versão `0.9.0` adiciona uma camada PWA e responsiva sem mover dados para o celular. O computador servidor continua sendo a única fonte de verdade para SQLite, WhatsApp, Asaas e backups.
+A camada PWA e responsiva permite usar o painel pelo celular sem mover os dados para o aparelho. O servidor continua sendo a fonte de verdade para SQLite, WhatsApp, pagamentos e backups.
 
 No celular:
 
