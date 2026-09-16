@@ -198,6 +198,13 @@ export function createAppServer({
         return;
       }
 
+      if (req.method === 'GET' && url.pathname === '/api/payments/demo-pix') {
+        if (!paymentService?.generateDemoPix) return sendJson(res, 503, { error: 'Pix de demonstração não configurado' });
+        const amount = Number(url.searchParams.get('amount'));
+        sendJson(res, 200, await paymentService.generateDemoPix({ amount }));
+        return;
+      }
+
       if (url.pathname.startsWith('/api/')) {
         sendJson(res, 404, { error: 'Endpoint não encontrado' });
         return;
