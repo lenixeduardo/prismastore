@@ -5,7 +5,6 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const root = resolve(import.meta.dirname, '..');
-const appSource = readFileSync(resolve(root, 'src/app.js'), 'utf8');
 const indexSource = readFileSync(resolve(root, 'index.html'), 'utf8');
 const serviceWorkerSource = readFileSync(resolve(root, 'service-worker.js'), 'utf8');
 const boardUrl = pathToFileURL(resolve(root, 'src/orders-board.js')).href;
@@ -18,11 +17,10 @@ async function loadBoardModule() {
   }
 }
 
-test('orders page delegates to the operational three-lane board instead of the legacy filters table', () => {
-  assert.match(appSource, /from ['"]\.\/orders-board\.js['"]/);
-  assert.match(appSource, /renderOrdersBoard/);
-  const ordersView = appSource.match(/function ordersView\(\)[\s\S]*?\n}\nfunction ordersTable/)?.[0] ?? '';
-  assert.doesNotMatch(ordersView, /data-order-filter|order-search|Fila de pedidos/);
+test('orders page loads the operational board enhancement instead of relying on the legacy table alone', async () => {
+  assert.match(indexSource, /src="\.\/src\/orders-board\.js"/);
+  const { enhanceOrdersView } = await loadBoardModule();
+  assert.equal(typeof enhanceOrdersView, 'function');
 });
 
 test('orders board assets are loaded and cached by the PWA shell', () => {
@@ -84,7 +82,7 @@ test('board markup exposes the reference lane titles and operational actions', a
   assert.match(html, /Enviar mensagem referente à demanda/);
   assert.match(html, /Informar a ordem na fila/);
   assert.match(html, /WhatsApp conectado/);
-  assert.match(html, /data-view="chatbot"/);
+  assert.match(html, /data-board-view="chatbot"/);
 });
 
 test('orders board stylesheet stacks lanes vertically on mobile', () => {
