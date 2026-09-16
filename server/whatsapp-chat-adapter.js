@@ -25,6 +25,9 @@ export function createWhatsAppChatAdapter({ chatbot, receiptOcr = null, download
     const text = String(extractText(message)).trim();
     const imageMessage = extractImageMessage(message);
     if (!text && !imageMessage) return { handled: false, reason: 'unsupported-content' };
+    if (!text && imageMessage && (!receiptOcr || !downloadMedia)) {
+      return { handled: false, reason: 'unsupported-content' };
+    }
 
     const sendText = (value) => socket.sendMessage(jid, { text: String(value) });
     const sendMedia = (source) => {
@@ -50,7 +53,7 @@ export function createWhatsAppChatAdapter({ chatbot, receiptOcr = null, download
         receiptText = await receiptOcr.extractText(buffer);
         // O buffer da imagem é transitório: somente fingerprint e campos extraídos seguem no fluxo.
       } catch (error) {
-        await sendText(`Não consegui ler a imagem do comprovante. Envie uma captura nítida, mostrando valor, destinatário, data e horário.`);
+        await sendText('Não consegui ler a imagem do comprovante. Envie uma captura nítida, mostrando valor, destinatário, data e horário.');
         return { handled: true, reason: 'receipt-ocr-failed', error: error instanceof Error ? error.message : 'OCR falhou' };
       }
     }
