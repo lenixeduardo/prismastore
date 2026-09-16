@@ -1,17 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createStateStore } from '../server/state-store.js';
 
-const appSource = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
+test('normaliza pedidos antigos sem address antes de expor o estado ao painel', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prismastore-address-'));
+  const store = createStateStore({
+    dbPath: path.join(dir, 'prismastore.db'),
+    seedState: {
+      products: [],
+      customers: [],
+      orders: [{ id: 'PS-LEGACY', status: 'PAID', items: [] }],
+    },
+  });
 
-function ordersTableSource() {
-  const match = appSource.match(/function ordersTable\([\s\S]*?\n}\n\nfunction customersView/);
-  assert.ok(match, 'ordersTable deve existir em src/app.js');
-  return match[0];
-}
-
-test('tabela de pedidos renderiza pedido sem address sem derrubar o painel', () => {
-  const source = ordersTableSource();
-  assert.doesNotMatch(source, /o\.address\.street|o\.address\.number|o\.address\.neighborhood/);
-  assert.match(source, /addressText\(o\.address\)/);
+  try {
+    const [order] = store.load().orders;
+    assert.deepEqual(order.address, {});
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
