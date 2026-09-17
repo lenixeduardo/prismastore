@@ -13,7 +13,6 @@ const BRAND_ICON_SOURCES = {
   '/icons/apple-touch-icon.png': 'icons/generated/apple-touch-icon.b64', '/icons/icon-192.png': 'icons/generated/icon-192.b64',
   '/icons/icon-512.png': 'icons/generated/icon-512.b64',
 };
-
 function sendJson(res, statusCode, value, headers = {}) {
   res.writeHead(statusCode, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers });
   res.end(JSON.stringify(value));
@@ -58,7 +57,6 @@ export function createAppServer({ stateStore, staticDir, whatsappManager = null,
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
-
       if (url.pathname === '/api/auth/session' && req.method === 'GET') {
         const session = authService?.session(req.headers.cookie || '') ?? { authenticated: true, user: null, authEnabled: false };
         return sendJson(res, 200, session);
@@ -75,23 +73,24 @@ export function createAppServer({ stateStore, staticDir, whatsappManager = null,
         authService?.logout(req.headers.cookie || '');
         return sendJson(res, 200, { authenticated: false }, authService ? { 'set-cookie': authService.clearCookie({ secure: isSecureRequest(req) }) } : {});
       }
-
-      if (url.pathname.startsWith('/api/') && authService && !authService.authenticate(req.headers.cookie || '').authenticated) {
-        return sendJson(res, 401, { error: 'Autenticação necessária' });
-      }
-
+      if (url.pathname.startsWith('/api/') && authService && !authService.authenticate(req.headers.cookie || '').authenticated) return sendJson(res, 401, { error: 'Autenticação necessária' });
       if (req.method === 'GET' && url.pathname === '/api/state') return sendJson(res, 200, stateForAdmin(stateStore.load()));
       if (req.method === 'PUT' && url.pathname === '/api/state') return sendJson(res, 200, stateStore.save(await readJson(req)));
       if (req.method === 'GET' && url.pathname === '/api/whatsapp/status') {
-        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, account: null, error: 'WhatsApp não configurado' });
+        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
         return sendJson(res, 200, whatsappManager.getStatus());
       }
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/connect') {
-        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, account: null, error: 'WhatsApp não configurado' });
+        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
         return sendJson(res, 200, await whatsappManager.connect());
       }
+      if (req.method === 'POST' && url.pathname === '/api/whatsapp/pairing-code') {
+        if (!whatsappManager?.requestPairingCode) return sendJson(res, 503, { error: 'Pareamento por código não configurado' });
+        const body = await readJson(req);
+        return sendJson(res, 200, await whatsappManager.requestPairingCode(body.phone));
+      }
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/disconnect') {
-        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, account: null, error: 'WhatsApp não configurado' });
+        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
         return sendJson(res, 200, await whatsappManager.disconnect());
       }
       const advanceMatch = url.pathname.match(/^\/api\/orders\/([^/]+)\/advance$/);
