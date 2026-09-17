@@ -1,0 +1,27 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+test('admin shell loads authentication UI before hero entry logic', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /src\/auth\.css/);
+  const authIndex = html.indexOf('src/auth-ui.js');
+  const heroIndex = html.indexOf('src/hero.js');
+  assert.ok(authIndex >= 0 && heroIndex > authIndex);
+});
+
+test('authentication UI uses status login and logout APIs and exposes an auth gate', () => {
+  const source = readFileSync(new URL('../src/auth-ui.js', import.meta.url), 'utf8');
+  assert.match(source, /\/api\/auth\/status/);
+  assert.match(source, /\/api\/auth\/login/);
+  assert.match(source, /\/api\/auth\/logout/);
+  assert.match(source, /PrismastoreAuth/);
+  assert.match(source, /ensureAuthenticated/);
+  assert.match(source, /type="password"/);
+});
+
+test('hero waits for authentication before revealing the dashboard', () => {
+  const source = readFileSync(new URL('../src/hero.js', import.meta.url), 'utf8');
+  assert.match(source, /ensureAuthenticated/);
+  assert.match(source, /await/);
+});

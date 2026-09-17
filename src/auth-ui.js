@@ -1,0 +1,167 @@
+let authState = { loaded: false, configured: false, authenticated: false, username: null };
+let loginPromise = null;
+let loginResolve = null;
+
+function ensureOverlay() {
+  let overlay = document.querySelector('[data-auth-overlay]');
+  if (overlay) return overlay;
+  overlay = document.createElement('section');
+  overlay.className = 'auth-overlay';
+  overlay.dataset.authOverlay = 'true';
+  overlay.hidden = true;
+  overlay.innerHTML = `
+    <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+      <div class="auth-brand">
+        <img src="/icons/icon-192.png" alt="" />
+        <div><strong>PrismaStore</strong><span>Painel administrativo</span></div>
+      </div>
+      <h1 id="auth-title">Entrar no painel</h1>
+      <p>Use o acesso administrativo configurado para esta loja.</p>
+      <form class="auth-form" data-auth-form>
+        <label class="auth-field">Usuário
+          <input name="username" autocomplete="username" value="admin" required />
+        </label>
+        <label class="auth-field">Senha
+          <input name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <div class="auth-error" data-auth-error aria-live="polite"></div>
+        <button class="auth-submit" type="submit">Entrar</button>
+      </form>
+      <button class="auth-back" type="button" data-auth-back>Voltar</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function showOverlay() {
+  const overlay = ensureOverlay();
+  overlay.hidden = false;
+  requestAnimationFrame(() => overlay.querySelector('input[name="password"]')?.focus());
+}
+
+function hideOverlay() {
+  const overlay = ensureOverlay();
+  overlay.hidden = true;
+  const error = overlay.querySelector('[data-auth-error]');
+  if (error) error.textContent = '';
+}
+
+async function refreshStatus() {
+  const response = await fetch('/api/auth/status', { cache: 'no-store' });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || 'Não foi possível verificar o acesso administrativo.');
+  authState = {
+    loaded: true,
+    configured: Boolean(payload.configured),
+    authenticated: Boolean(payload.authenticated),
+    username: payload.username || null,
+  };
+  return authState;
+}
+
+async function ensureAuthenticated() {
+  try {
+    if (!authState.loaded || !authState.authenticated) await refreshStatus();
+  } catch (error) {
+    showOverlay();
+    const target = document.querySelector('[data-auth-error]');
+    if (target) target.textContent = error instanceof Error ? error.message : 'Falha ao validar sessão.';
+  }
+
+  if (!authState.configured || authState.authenticated) return true;
+  showOverlay();
+  if (!loginPromise) {
+    loginPromise = new Promise((resolve) => { loginResolve = resolve; });
+  }
+  return loginPromise;
+}
+
+function settleLogin(value) {
+  loginResolve?.(value);
+  loginResolve = null;
+  loginPromise = null;
+}
+
+async function login(form) {
+  const submit = form.querySelector('button[type="submit"]');
+  const errorTarget = form.querySelector('[data-auth-error]');
+  const data = new FormData(form);
+  submit.disabled = true;
+  if (errorTarget) errorTarget.textContent = '';
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        username: String(data.get('username') || '').trim(),
+        password: String(data.get('password') || ''),
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Não foi possível entrar.');
+    authState = { loaded: true, configured: payload.configured !== false, authenticated: true, username: payload.username || null };
+    sessionStorage.setItem('prismastore:resume-panel', 'auth-login');
+    hideOverlay();
+    settleLogin(true);
+    window.location.reload();
+  } catch (error) {
+    if (errorTarget) errorTarget.textContent = error instanceof Error ? error.message : 'Falha ao entrar.';
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+async function logout() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } finally {
+    authState = { loaded: true, configured: true, authenticated: false, username: null };
+    sessionStorage.removeItem('prismastore:resume-panel');
+    window.location.reload();
+  }
+}
+
+function injectLogoutButton() {
+  if (!authState.configured || !authState.authenticated) return;
+  if (document.querySelector('[data-admin-logout]')) return;
+  const topActions = document.querySelector('#app .top-actions, #app .topbar-actions, #app .topbar');
+  if (!topActions) return;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn sm admin-logout-button';
+  button.dataset.adminLogout = 'true';
+  button.textContent = 'Sair';
+  topActions.appendChild(button);
+}
+
+document.addEventListener('submit', (event) => {
+  const form = event.target.closest?.('[data-auth-form]');
+  if (!form) return;
+  event.preventDefault();
+  login(form);
+});
+
+document.addEventListener('click', (event) => {
+  if (event.target.closest?.('[data-auth-back]')) {
+    hideOverlay();
+    settleLogin(false);
+    return;
+  }
+  if (event.target.closest?.('[data-admin-logout]')) logout();
+});
+
+window.addEventListener('prismastore:dashboard-opened', injectLogoutButton);
+
+window.addEventListener('prismastore:auth-required', () => {
+  authState = { ...authState, loaded: true, authenticated: false };
+  showOverlay();
+});
+
+window.PrismastoreAuth = {
+  ensureAuthenticated,
+  refreshStatus,
+  logout,
+  getState: () => ({ ...authState }),
+};
+
+refreshStatus().catch(() => {});
