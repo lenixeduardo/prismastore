@@ -31,7 +31,7 @@ function whatsappDashboardCard(status = latestStatus) {
   if (status.status === 'pairing' && status.pairingCode) {
     return `<section id="${CARD_ID}" class="wa-dashboard-card card" aria-live="polite">
       <div class="wa-dashboard-copy">
-        <div class="wa-dashboard-kicker">Vincular WhatsApp</div>
+        <div class="wa-dashboard-kicker">Conectar WhatsApp</div>
         <h2>Digite este código no WhatsApp</h2>
         <p>No próprio celular, abra <strong>WhatsApp → Aparelhos conectados → Conectar aparelho → Conectar com número de telefone</strong>.</p>
         <div class="wa-pairing-code-row">
@@ -47,7 +47,7 @@ function whatsappDashboardCard(status = latestStatus) {
   if (status.status === 'qr' && status.qrDataUrl) {
     return `<section id="${CARD_ID}" class="wa-dashboard-card card" aria-live="polite">
       <div class="wa-dashboard-copy">
-        <div class="wa-dashboard-kicker">Vincular WhatsApp</div>
+        <div class="wa-dashboard-kicker">Conectar WhatsApp</div>
         <h2>Escaneie ou vincule pelo próprio celular</h2>
         <p>Para QR Code: abra <strong>Aparelhos conectados → Conectar aparelho</strong>. O mesmo QR Code também é exibido no terminal.</p>
         ${pairingForm()}
@@ -60,7 +60,7 @@ function whatsappDashboardCard(status = latestStatus) {
   if (['connecting', 'authenticated'].includes(status.status)) {
     return `<section id="${CARD_ID}" class="wa-dashboard-card card" aria-live="polite">
       <div class="wa-dashboard-copy">
-        <div class="wa-dashboard-kicker">Vincular WhatsApp</div>
+        <div class="wa-dashboard-kicker">Conectar WhatsApp</div>
         <h2>Preparando conexão</h2>
         <p>Estamos preparando as opções de vínculo. Você poderá usar QR Code ou um código no próprio celular.</p>
         <div class="wa-dashboard-status"><span class="wa-spinner" aria-hidden="true"></span>Conectando…</div>
@@ -74,7 +74,7 @@ function whatsappDashboardCard(status = latestStatus) {
 
   return `<section id="${CARD_ID}" class="wa-dashboard-card card" aria-live="polite">
     <div class="wa-dashboard-copy">
-      <div class="wa-dashboard-kicker">Vincular WhatsApp</div>
+      <div class="wa-dashboard-kicker">Conectar WhatsApp</div>
       <h2>Conecte o WhatsApp ao PrismaStore</h2>
       <p>${message}</p>
       ${pairingForm()}
