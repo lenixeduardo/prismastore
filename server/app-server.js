@@ -24,8 +24,12 @@ const BRAND_ICON_SOURCES = {
   '/icons/icon-512.png': 'icons/generated/icon-512.b64',
 };
 
-function sendJson(res, statusCode, value) {
-  res.writeHead(statusCode, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+function sendJson(res, statusCode, value, headers = {}) {
+  res.writeHead(statusCode, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+    ...headers,
+  });
   res.end(JSON.stringify(value));
 }
 
@@ -60,6 +64,49 @@ async function readJson(req) {
   }
   if (!body) return {};
   return JSON.parse(body);
+}
+
+function parseCookies(header = '') {
+  return String(header)
+    .split(';')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .reduce((cookies, part) => {
+      const separator = part.indexOf('=');
+      if (separator <= 0) return cookies;
+      const key = part.slice(0, separator).trim();
+      const value = part.slice(separator + 1).trim();
+      try { cookies[key] = decodeURIComponent(value); } catch { cookies[key] = value; }
+      return cookies;
+    }, {});
+}
+
+function sessionToken(req, authService) {
+  if (!authService) return null;
+  return parseCookies(req.headers.cookie || '')[authService.cookieName] || null;
+}
+
+function clientKey(req, username = '') {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const remote = forwarded || req.socket?.remoteAddress || 'unknown';
+  return `${remote}:${String(username || '').trim().toLowerCase()}`;
+}
+
+function secureRequest(req, forceSecureCookies) {
+  if (forceSecureCookies) return true;
+  return String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
+}
+
+function sessionCookie({ authService, token, secure = false, clear = false }) {
+  const parts = [
+    `${authService.cookieName}=${clear ? '' : encodeURIComponent(token || '')}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Strict',
+    clear ? 'Max-Age=0' : 'Max-Age=43200',
+  ];
+  if (secure) parts.push('Secure');
+  return parts.join('; ');
 }
 
 function serveGeneratedIcon(staticDir, pathname, method, res) {
@@ -107,6 +154,8 @@ export function createAppServer({
   backupService = null,
   whatsappAuthPath = null,
   whatsappAuthProvider = 'baileys',
+  authService = null,
+  secureCookies = false,
 }) {
   const resolvedBackupService = backupService ?? createBackupService({
     stateStore,
@@ -121,6 +170,58 @@ export function createAppServer({
     try {
       const url = new URL(req.url, 'http://localhost');
 
+      if (req.method === 'GET' && url.pathname === '/api/auth/status') {
+        if (!authService) return sendJson(res, 200, { configured: false, authenticated: true, username: null });
+        const status = authService.getStatus(sessionToken(req, authService));
+        sendJson(res, 200, { configured: true, ...status });
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/api/auth/login') {
+        if (!authService) return sendJson(res, 200, { configured: false, authenticated: true });
+        const body = await readJson(req);
+        const result = authService.login({
+          username: body.username,
+          password: body.password,
+          key: clientKey(req, body.username),
+        });
+        if (!result.ok) {
+          const locked = result.reason === 'locked';
+          const retrySeconds = Math.max(1, Math.ceil(Number(result.retryAfterMs || 0) / 1000));
+          return sendJson(
+            res,
+            locked ? 429 : 401,
+            { error: locked ? 'Muitas tentativas. Aguarde antes de tentar novamente.' : 'Usuário ou senha inválidos.', reason: result.reason, retryAfterSeconds: locked ? retrySeconds : null },
+            locked ? { 'retry-after': String(retrySeconds) } : {},
+          );
+        }
+        sendJson(res, 200, { configured: true, authenticated: true, username: result.username, expiresAt: result.expiresAt }, {
+          'set-cookie': sessionCookie({
+            authService,
+            token: result.token,
+            secure: secureRequest(req, secureCookies),
+          }),
+        });
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/api/auth/logout') {
+        if (!authService) return sendJson(res, 200, { authenticated: false });
+        authService.logout(sessionToken(req, authService));
+        sendJson(res, 200, { authenticated: false }, {
+          'set-cookie': sessionCookie({ authService, clear: true, secure: secureRequest(req, secureCookies) }),
+        });
+        return;
+      }
+
+      if (url.pathname.startsWith('/api/') && authService) {
+        const auth = authService.validateSession(sessionToken(req, authService));
+        if (!auth.authenticated) {
+          sendJson(res, 401, { error: 'Autenticação necessária.', code: 'AUTH_REQUIRED' });
+          return;
+        }
+      }
+
       if (req.method === 'GET' && url.pathname === '/api/state') {
         sendJson(res, 200, stateForAdmin(stateStore.load()));
         return;
@@ -133,19 +234,26 @@ export function createAppServer({
       }
 
       if (req.method === 'GET' && url.pathname === '/api/whatsapp/status') {
-        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, account: null, error: 'WhatsApp não configurado' });
+        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
         sendJson(res, 200, whatsappManager.getStatus());
         return;
       }
 
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/connect') {
-        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, account: null, error: 'WhatsApp não configurado' });
+        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
         sendJson(res, 200, await whatsappManager.connect());
         return;
       }
 
+      if (req.method === 'POST' && url.pathname === '/api/whatsapp/pair') {
+        if (!whatsappManager?.requestPairingCode) return sendJson(res, 503, { error: 'Pareamento por telefone não configurado' });
+        const body = await readJson(req);
+        sendJson(res, 200, await whatsappManager.requestPairingCode(body.phone));
+        return;
+      }
+
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/disconnect') {
-        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, account: null, error: 'WhatsApp não configurado' });
+        if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
         sendJson(res, 200, await whatsappManager.disconnect());
         return;
       }
@@ -177,7 +285,11 @@ export function createAppServer({
       }
 
       if (req.method === 'GET' && url.pathname === '/api/backups') {
-        sendJson(res, 200, { backups: resolvedBackupService.listBackups() });
+        sendJson(res, 200, {
+          backups: resolvedBackupService.listBackups(),
+          external: resolvedBackupService.getExternalStatus?.() ?? null,
+          schedule: resolvedBackupService.getScheduleStatus?.() ?? null,
+        });
         return;
       }
 
