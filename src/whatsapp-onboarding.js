@@ -75,7 +75,7 @@ function whatsappDashboardCard(status = latestStatus) {
       <div class="wa-dashboard-kicker">Vincular WhatsApp</div>
       <h2>Conecte o WhatsApp ao PrismaStore</h2>
       <p>${message}</p>
-      <button class="btn primary" type="button" data-dashboard-whatsapp-connect>Iniciar conexão</button>
+      <button class="btn primary" type="button" data-dashboard-whatsapp-connect>Conectar WhatsApp</button>
     </div>
   </section>`;
 }
