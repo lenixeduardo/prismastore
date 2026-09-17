@@ -15,6 +15,9 @@ import { createWhatsAppChatAdapter } from './whatsapp-chat-adapter.js';
 import { createWhatsAppManager } from './whatsapp-manager.js';
 import { createAppServer } from './app-server.js';
 import { createAuthService } from './auth-service.js';
+import { createBackupService } from './backup-service.js';
+import { startBackupScheduler } from './backup-scheduler.js';
+import { createGoogleDriveBackupProvider } from './google-drive-backup-provider.js';
 import { createPaymentService } from './payment-service.js';
 import { createPaymentChatbot } from './payment-chatbot.js';
 import { createReceiptOcr } from './receipt-ocr.js';
@@ -38,20 +41,13 @@ const adminUser = String(process.env.PRISMASTORE_ADMIN_USER || 'admin').trim() |
 const adminPassword = String(process.env.PRISMASTORE_ADMIN_PASSWORD || '');
 const adminSessionHours = Number(process.env.PRISMASTORE_SESSION_HOURS || 12);
 const forceSecureCookie = process.env.PRISMASTORE_AUTH_SECURE_COOKIE === 'true';
+const backupIntervalHours = Number(process.env.PRISMASTORE_BACKUP_INTERVAL_HOURS || 24);
 const DEFAULT_PIX_KEY = '2d03d745-5b05-4829-833d-60e4a210a664';
 const DEFAULT_PIX_RECIPIENT_NAME = 'OSCAR FILIPE SILVA DOS SANTOS';
-if (devWhatsappOnly && !devWhatsappPhone) {
-  throw new Error('PRISMASTORE_DEV_WHATSAPP_PHONE é obrigatório quando PRISMASTORE_DEV_WHATSAPP_ONLY=true.');
-}
-if (process.env.NODE_ENV === 'production' && !adminPassword) {
-  throw new Error('PRISMASTORE_ADMIN_PASSWORD é obrigatório em produção.');
-}
-const authService = createAuthService({
-  username: adminUser,
-  password: adminPassword,
-  sessionHours: adminSessionHours,
-  forceSecureCookie,
-});
+if (devWhatsappOnly && !devWhatsappPhone) throw new Error('PRISMASTORE_DEV_WHATSAPP_PHONE é obrigatório quando PRISMASTORE_DEV_WHATSAPP_ONLY=true.');
+if (process.env.NODE_ENV === 'production' && !adminPassword) throw new Error('PRISMASTORE_ADMIN_PASSWORD é obrigatório em produção.');
+
+const authService = createAuthService({ username: adminUser, password: adminPassword, sessionHours: adminSessionHours, forceSecureCookie });
 const logger = pino({ level: 'silent' });
 const legacySeedState = { products: seedProducts, customers: seedCustomers, orders: seedOrders };
 const startupState = createStartupState({ useDemoData, seedState: legacySeedState });
@@ -95,6 +91,27 @@ const whatsappManager = createWhatsAppManager({
 });
 const finalArtworkPath = ensureBase64Asset({ base64Path: join(assetsDir, 'prismastore-order-finished.b64'), outputPath: join(dataDir, 'prismastore-order-finished.png') });
 const orderLifecycleService = createOrderLifecycleService({ stateStore, messenger: whatsappManager, finalArtworkPath });
+
+const driveBackupProvider = createGoogleDriveBackupProvider({
+  clientId: process.env.GOOGLE_DRIVE_CLIENT_ID || '',
+  clientSecret: process.env.GOOGLE_DRIVE_CLIENT_SECRET || '',
+  refreshToken: process.env.GOOGLE_DRIVE_REFRESH_TOKEN || '',
+  parentFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID || '',
+});
+const backupService = createBackupService({
+  stateStore,
+  whatsappManager,
+  authPath,
+  backupsDir: join(root, 'backups'),
+  appVersion: '0.9.2',
+  whatsappAuthProvider: 'baileys',
+  externalBackupProvider: driveBackupProvider,
+});
+const backupScheduler = driveBackupProvider.configured
+  ? startBackupScheduler({ backupService, intervalHours: backupIntervalHours })
+  : null;
+if (backupScheduler) backupScheduler.runIfDue().catch((error) => console.error('Falha no backup automático:', error));
+
 const server = createAppServer({
   stateStore,
   staticDir: root,
@@ -102,6 +119,7 @@ const server = createAppServer({
   paymentService,
   orderLifecycleService,
   reportService,
+  backupService,
   authService,
   whatsappAuthPath: authPath,
   whatsappAuthProvider: 'baileys',
@@ -112,10 +130,12 @@ server.listen(port, host, () => {
   console.log(useDemoData ? 'Dados demo: ATIVOS' : 'Dados demo: DESATIVADOS');
   console.log(paymentService.getStatus().configured ? 'Pix local: CONFIGURADO' : 'Pix local: PENDENTE DE CONFIGURAÇÃO');
   console.log(authService.enabled ? `Admin protegido: ${adminUser}` : 'Admin auth: DESATIVADA no ambiente local');
+  console.log(driveBackupProvider.configured ? `Backup Google Drive: ATIVO a cada ${backupIntervalHours}h` : 'Backup Google Drive: PENDENTE DE CONFIGURAÇÃO');
   if (devWhatsappOnly) console.log('WhatsApp DEV: allowlist exclusiva ATIVA');
 });
 if (process.env.WHATSAPP_AUTO_CONNECT !== 'false') whatsappManager.connect().catch((error) => console.error('Falha ao iniciar WhatsApp:', error));
 async function shutdown() {
+  backupScheduler?.stop();
   try { await whatsappManager.disconnect(); } catch {}
   stateStore.close();
   server.close(() => process.exit(0));
