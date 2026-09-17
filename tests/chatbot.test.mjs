@@ -40,16 +40,14 @@ function harness() {
   return { dir, store, bot, sent, incoming, cleanup: () => { store.close(); rmSync(dir, { recursive: true, force: true }); } };
 }
 
-test('first private message registers the customer and sends welcome plus catalog', async () => {
+test('first private message registers the customer and sends welcome plus catalog as text only', async () => {
   const h = harness();
   try {
     await h.incoming('Oi');
-    assert.deepEqual(h.sent.slice(0, 4).map((item) => item.type), ['media', 'text', 'media', 'text']);
-    assert.equal(h.sent[0].path, '/assets/welcome.png');
-    assert.equal(h.sent[2].path, '/assets/catalog.png');
-    assert.match(h.sent[1].text, /Eduardo/);
-    assert.match(h.sent[3].text, /1\. Produto A/);
-    assert.match(h.sent[3].text, /2\. Produto B/);
+    assert.deepEqual(h.sent.map((item) => item.type), ['text', 'text']);
+    assert.match(h.sent[0].text, /Eduardo/);
+    assert.match(h.sent[1].text, /1\. Produto A/);
+    assert.match(h.sent[1].text, /2\. Produto B/);
 
     const state = h.store.load();
     assert.equal(state.customers.length, 1);
@@ -163,30 +161,15 @@ test('does not let repeated cart additions exceed current available stock', asyn
   } finally { h.cleanup(); }
 });
 
-test('continues by text when a visual asset cannot be sent', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'prismastore-chatbot-media-fallback-'));
-  const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: seed() });
-  const sent = [];
-  const bot = createChatbotEngine({
-    stateStore: store,
-    welcomeMediaPath: '/missing/welcome.png',
-    catalogMediaPath: '/missing/catalog.png',
-    now: () => new Date('2026-09-14T12:00:00.000Z'),
-  });
+test('conversation start and catalog restart never send visual assets', async () => {
+  const h = harness();
   try {
-    await bot.handleIncoming({
-      chatId: '5511999999999@c.us',
-      text: 'Oi',
-      contactName: 'Eduardo',
-      sendText: async (text) => sent.push(text),
-      sendMedia: async () => { throw new Error('arquivo ausente'); },
-    });
-    assert.equal(store.getChatSession('5511999999999').step, 'catalog');
-    assert.equal(sent.length, 2);
-    assert.match(sent[0], /Bem-vindo/);
-    assert.match(sent[1], /CARDÁPIO PRISMA STORE/);
-  } finally {
-    store.close();
-    rmSync(dir, { recursive: true, force: true });
-  }
+    await h.incoming('Oi');
+    assert.equal(h.sent.some((item) => item.type === 'media'), false);
+    h.sent.length = 0;
+    await h.incoming('menu');
+    assert.equal(h.sent.some((item) => item.type === 'media'), false);
+    assert.equal(h.sent.filter((item) => item.type === 'text').length, 1);
+    assert.match(h.sent[0].text, /CARDÁPIO PRISMA STORE/);
+  } finally { h.cleanup(); }
 });

@@ -154,27 +154,20 @@ function storeConfirmedAddress(stateStore, phone, session, now) {
   });
 }
 
-export function createChatbotEngine({ stateStore, welcomeMediaPath = null, catalogMediaPath = null, now = () => new Date() }) {
-  async function trySendMedia(sendMedia, mediaPath) {
-    if (!mediaPath) return false;
-    try { await sendMedia(mediaPath); return true; } catch { return false; }
-  }
-
-  async function sendCatalog(sendText, sendMedia) {
+export function createChatbotEngine({ stateStore, now = () => new Date() }) {
+  async function sendCatalog(sendText) {
     const products = activeProducts(stateStore);
-    await trySendMedia(sendMedia, catalogMediaPath);
     await sendText(catalogText(stateStore, products));
   }
 
-  async function startConversation({ phone, contactName, sendText, sendMedia, includeWelcome = true }) {
+  async function startConversation({ phone, contactName, sendText, includeWelcome = true }) {
     const customer = upsertCustomer(stateStore, phone, contactName);
     const session = newSession(now);
     stateStore.saveChatSession(phone, session);
     if (includeWelcome) {
-      await trySendMedia(sendMedia, welcomeMediaPath);
       await sendText(message(stateStore, 'welcome', { cliente: customer.name }));
     }
-    await sendCatalog(sendText, sendMedia);
+    await sendCatalog(sendText);
     return session;
   }
 
@@ -182,7 +175,7 @@ export function createChatbotEngine({ stateStore, welcomeMediaPath = null, catal
     const session = newSession(now);
     saveSession(stateStore, phone, session, now);
     await sendText(message(stateStore, 'cancelled'));
-    await sendCatalog(sendText, sendMedia);
+    await sendCatalog(sendText);
     return { handled: true, step: session.step };
   }
 
@@ -217,7 +210,7 @@ export function createChatbotEngine({ stateStore, welcomeMediaPath = null, catal
       const remaining = Math.max(0, availableStock(product) - Number(session.cart[product.id] ?? 0));
       if (remaining <= 0) {
         await sendText(`Você já adicionou todo o estoque disponível de *${product.name}* ao pedido. Escolha outro item.`);
-        await sendCatalog(sendText, sendMedia);
+        await sendCatalog(sendText);
         return { handled: true, step: session.step };
       }
       session.selectedProductId = product.id;
@@ -233,7 +226,7 @@ export function createChatbotEngine({ stateStore, welcomeMediaPath = null, catal
       if (!product || product.active === false) {
         session.step = 'catalog'; session.selectedProductId = null; saveSession(stateStore, phone, session, now);
         await sendText('Esse produto não está mais disponível. Escolha outro item.');
-        await sendCatalog(sendText, sendMedia);
+        await sendCatalog(sendText);
         return { handled: true, step: session.step };
       }
       const quantity = Number.parseInt(input, 10);
@@ -253,7 +246,7 @@ export function createChatbotEngine({ stateStore, welcomeMediaPath = null, catal
     }
 
     if (session.step === 'cart_action') {
-      if (input === '1') { session.step = 'catalog'; saveSession(stateStore, phone, session, now); await sendCatalog(sendText, sendMedia); return { handled: true, step: session.step }; }
+      if (input === '1') { session.step = 'catalog'; saveSession(stateStore, phone, session, now); await sendCatalog(sendText); return { handled: true, step: session.step }; }
       if (input === '2') { session.step = 'delivery'; saveSession(stateStore, phone, session, now); await sendText(message(stateStore, 'deliveryPrompt')); return { handled: true, step: session.step }; }
       if (input === '0') return cancelAndRestart({ phone, sendText, sendMedia });
       await sendText(`Responda com:\n${message(stateStore, 'cartActions')}`);
@@ -306,7 +299,7 @@ export function createChatbotEngine({ stateStore, welcomeMediaPath = null, catal
       } catch (error) {
         session.step = 'catalog'; session.selectedProductId = null; saveSession(stateStore, phone, session, now);
         await sendText(`${error instanceof Error ? error.message : 'Não foi possível confirmar o pedido.'}\nVou atualizar o catálogo para você.`);
-        await sendCatalog(sendText, sendMedia);
+        await sendCatalog(sendText);
         return { handled: true, step: session.step, error: 'availability-changed' };
       }
     }
