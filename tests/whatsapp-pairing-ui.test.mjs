@@ -11,3 +11,13 @@ test('WhatsApp onboarding supports phone pairing code while keeping QR fallback'
   assert.match(source, /data-dashboard-whatsapp-connect/);
   assert.match(source, /qrDataUrl/);
 });
+
+
+test('single-phone pairing keeps the phone field stable while status polling runs', () => {
+  const source = readFileSync(new URL('../src/whatsapp-onboarding.js', import.meta.url), 'utf8');
+  assert.match(source, /function statusRenderKey\(/);
+  assert.match(source, /lastRenderedKey/);
+  assert.match(source, /if \(nextKey === lastRenderedKey && document\.getElementById\(CARD_ID\)\) return;/);
+  assert.match(source, /Vincular neste celular/);
+  assert.match(source, /Gerar código neste celular/);
+});

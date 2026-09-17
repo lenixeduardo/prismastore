@@ -3,6 +3,7 @@ const ACTIVE_STATUSES = new Set(['connecting', 'qr', 'pairing', 'authenticated',
 let latestStatus = { status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null };
 let dashboardOpened = false;
 let pollTimer = null;
+let lastRenderedKey = null;
 
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>"']/g, (char) => ({
@@ -12,11 +13,21 @@ function escapeHtml(value = '') {
 
 function pairingForm() {
   return `<div class="wa-pairing-form">
-    <label class="wa-pairing-label">Vincular usando este celular
+    <label class="wa-pairing-label">Vincular neste celular
       <input type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999" data-whatsapp-pair-phone />
     </label>
-    <button class="btn" type="button" data-dashboard-whatsapp-pair>Gerar código</button>
+    <button class="btn primary" type="button" data-dashboard-whatsapp-pair>Gerar código neste celular</button>
   </div>`;
+}
+
+function statusRenderKey(status = latestStatus) {
+  return JSON.stringify({
+    status: status.status ?? null,
+    qrDataUrl: status.qrDataUrl ?? null,
+    pairingCode: status.pairingCode ?? null,
+    account: status.account ?? null,
+    error: status.error ?? null,
+  });
 }
 
 function isDashboardVisible() {
@@ -48,12 +59,15 @@ function whatsappDashboardCard(status = latestStatus) {
     return `<section id="${CARD_ID}" class="wa-dashboard-card card" aria-live="polite">
       <div class="wa-dashboard-copy">
         <div class="wa-dashboard-kicker">Conectar WhatsApp</div>
-        <h2>Escaneie ou vincule pelo próprio celular</h2>
-        <p>Para QR Code: abra <strong>Aparelhos conectados → Conectar aparelho</strong>. O mesmo QR Code também é exibido no terminal.</p>
+        <h2>Conecte usando este mesmo celular</h2>
+        <p>Digite o número do WhatsApp abaixo. O PrismaStore vai gerar um código para você inserir no próprio WhatsApp, sem precisar de um segundo aparelho.</p>
         ${pairingForm()}
         <div class="wa-dashboard-status"><span class="status-dot offline"></span>Aguardando vínculo do WhatsApp</div>
+        <details class="wa-qr-fallback">
+          <summary>Alternativa: usar QR Code em outro dispositivo</summary>
+          <div class="wa-dashboard-qr"><img class="wa-qr" src="${escapeHtml(status.qrDataUrl)}" alt="QR Code para vincular o WhatsApp ao PrismaStore" /></div>
+        </details>
       </div>
-      <div class="wa-dashboard-qr"><img class="wa-qr" src="${escapeHtml(status.qrDataUrl)}" alt="QR Code para vincular o WhatsApp ao PrismaStore" /></div>
     </section>`;
   }
 
@@ -75,22 +89,29 @@ function whatsappDashboardCard(status = latestStatus) {
   return `<section id="${CARD_ID}" class="wa-dashboard-card card" aria-live="polite">
     <div class="wa-dashboard-copy">
       <div class="wa-dashboard-kicker">Conectar WhatsApp</div>
-      <h2>Conecte o WhatsApp ao PrismaStore</h2>
-      <p>${message}</p>
+      <h2>Conecte pelo número deste celular</h2>
+      <p>${message} Você não precisa de um segundo aparelho.</p>
       ${pairingForm()}
-      <button class="btn primary" type="button" data-dashboard-whatsapp-connect>Usar QR Code</button>
+      <button class="btn" type="button" data-dashboard-whatsapp-connect>Usar QR em outro dispositivo</button>
     </div>
   </section>`;
 }
 
 function renderWhatsAppDashboardCard(status = latestStatus) {
-  document.getElementById(CARD_ID)?.remove();
-  if (!dashboardOpened || !isDashboardVisible() || status.status === 'connected') return;
+  const nextKey = statusRenderKey(status);
+  if (!dashboardOpened || !isDashboardVisible() || status.status === 'connected') {
+    document.getElementById(CARD_ID)?.remove();
+    lastRenderedKey = null;
+    return;
+  }
+  if (nextKey === lastRenderedKey && document.getElementById(CARD_ID)) return;
 
+  document.getElementById(CARD_ID)?.remove();
   const main = document.querySelector('#app .main');
   const topbar = main?.querySelector('.topbar');
   if (!main || !topbar) return;
   topbar.insertAdjacentHTML('afterend', whatsappDashboardCard(status));
+  lastRenderedKey = nextKey;
 }
 
 async function fetchWhatsAppStatus() {
