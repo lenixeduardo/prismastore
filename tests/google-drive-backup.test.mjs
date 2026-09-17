@@ -14,9 +14,9 @@ test('uploads a compressed backup bundle to PrismaStore Backups', async () => {
   const calls = [];
   const fetchImpl = async (url) => {
     calls.push(String(url));
+    if (String(url).includes('/upload/drive/v3/files')) return new Response(JSON.stringify({ id: 'file-test' }), { status: 200 });
     if (String(url).includes('/drive/v3/files?')) return new Response(JSON.stringify({ files: [] }), { status: 200 });
     if (String(url).endsWith('/drive/v3/files')) return new Response(JSON.stringify({ id: 'folder-test' }), { status: 200 });
-    if (String(url).includes('/upload/drive/v3/files')) return new Response(JSON.stringify({ id: 'file-test' }), { status: 200 });
     throw new Error(`Unexpected URL: ${url}`);
   };
   try {
