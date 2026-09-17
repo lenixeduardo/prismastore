@@ -6,7 +6,10 @@ export function createBackupScheduler({
   now = () => new Date(),
 } = {}) {
   if (!backupService?.createBackup) throw new Error('Serviço de backup não configurado.');
-  const safeIntervalMs = Math.max(60_000, Number(intervalMs) || 24 * 60 * 60 * 1000);
+  const parsedIntervalMs = Number(intervalMs);
+  const safeIntervalMs = Number.isFinite(parsedIntervalMs) && parsedIntervalMs > 0
+    ? parsedIntervalMs
+    : 24 * 60 * 60 * 1000;
   let timer = null;
   let activeRun = null;
   let lastSuccessAt = null;
