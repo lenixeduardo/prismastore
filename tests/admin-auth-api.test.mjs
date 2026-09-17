@@ -40,3 +40,33 @@ test('admin APIs require login and authenticated session cookie grants access', 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('login lockout is keyed by client IP so changing usernames cannot bypass it', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ps-auth-lockout-'));
+  const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: { products: [], customers: [], orders: [], settings: {} } });
+  const authService = createAuthService({ username: 'admin', password: 'senha-forte', maxAttempts: 2, lockoutMs: 60_000 });
+  const server = createAppServer({ stateStore: store, staticDir: process.cwd(), authService });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const headers = { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.45' };
+  try {
+    const first = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ username: 'not-admin-1', password: 'wrong' }),
+    });
+    assert.equal(first.status, 401);
+
+    const second = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ username: 'not-admin-2', password: 'wrong' }),
+    });
+    assert.equal(second.status, 429);
+    assert.ok(Number(second.headers.get('retry-after')) > 0);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
