@@ -40,16 +40,14 @@ function harness() {
   return { dir, store, bot, sent, incoming, cleanup: () => { store.close(); rmSync(dir, { recursive: true, force: true }); } };
 }
 
-test('first private message registers the customer and sends welcome plus catalog', async () => {
+test('first private message registers the customer and sends welcome plus catalog as text only', async () => {
   const h = harness();
   try {
     await h.incoming('Oi');
-    assert.deepEqual(h.sent.slice(0, 4).map((item) => item.type), ['media', 'text', 'media', 'text']);
-    assert.equal(h.sent[0].path, '/assets/welcome.png');
-    assert.equal(h.sent[2].path, '/assets/catalog.png');
-    assert.match(h.sent[1].text, /Eduardo/);
-    assert.match(h.sent[3].text, /1\. Produto A/);
-    assert.match(h.sent[3].text, /2\. Produto B/);
+    assert.deepEqual(h.sent.map((item) => item.type), ['text', 'text']);
+    assert.match(h.sent[0].text, /Eduardo/);
+    assert.match(h.sent[1].text, /1\. Produto A/);
+    assert.match(h.sent[1].text, /2\. Produto B/);
 
     const state = h.store.load();
     assert.equal(state.customers.length, 1);
