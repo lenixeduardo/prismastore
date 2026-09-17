@@ -14,6 +14,7 @@ import { createChatbotEngine } from './chatbot.js';
 import { createWhatsAppChatAdapter } from './whatsapp-chat-adapter.js';
 import { createWhatsAppManager } from './whatsapp-manager.js';
 import { createAppServer } from './app-server.js';
+import { createAuthService } from './auth-service.js';
 import { createPaymentService } from './payment-service.js';
 import { createPaymentChatbot } from './payment-chatbot.js';
 import { createReceiptOcr } from './receipt-ocr.js';
@@ -33,27 +34,28 @@ const host = process.env.HOST || '0.0.0.0';
 const useDemoData = process.env.PRISMASTORE_DEMO_DATA === 'true';
 const devWhatsappOnly = process.env.PRISMASTORE_DEV_WHATSAPP_ONLY === 'true';
 const devWhatsappPhone = String(process.env.PRISMASTORE_DEV_WHATSAPP_PHONE || '').trim();
+const adminUser = String(process.env.PRISMASTORE_ADMIN_USER || 'admin').trim() || 'admin';
+const adminPassword = String(process.env.PRISMASTORE_ADMIN_PASSWORD || '');
+const adminSessionHours = Number(process.env.PRISMASTORE_SESSION_HOURS || 12);
+const forceSecureCookie = process.env.PRISMASTORE_AUTH_SECURE_COOKIE === 'true';
 const DEFAULT_PIX_KEY = '2d03d745-5b05-4829-833d-60e4a210a664';
 const DEFAULT_PIX_RECIPIENT_NAME = 'OSCAR FILIPE SILVA DOS SANTOS';
 if (devWhatsappOnly && !devWhatsappPhone) {
   throw new Error('PRISMASTORE_DEV_WHATSAPP_PHONE é obrigatório quando PRISMASTORE_DEV_WHATSAPP_ONLY=true.');
 }
+if (process.env.NODE_ENV === 'production' && !adminPassword) {
+  throw new Error('PRISMASTORE_ADMIN_PASSWORD é obrigatório em produção.');
+}
+const authService = createAuthService({
+  username: adminUser,
+  password: adminPassword,
+  sessionHours: adminSessionHours,
+  forceSecureCookie,
+});
 const logger = pino({ level: 'silent' });
-const legacySeedState = {
-  products: seedProducts,
-  customers: seedCustomers,
-  orders: seedOrders,
-};
-
-const startupState = createStartupState({
-  useDemoData,
-  seedState: legacySeedState,
-});
-
-const stateStore = createStateStore({
-  dbPath: join(dataDir, 'prismastore.db'),
-  seedState: startupState,
-});
+const legacySeedState = { products: seedProducts, customers: seedCustomers, orders: seedOrders };
+const startupState = createStartupState({ useDemoData, seedState: legacySeedState });
+const stateStore = createStateStore({ dbPath: join(dataDir, 'prismastore.db'), seedState: startupState });
 clearLegacyDemoState({ stateStore, seedState: legacySeedState, useDemoData });
 
 const paymentService = createPaymentService({
@@ -71,39 +73,18 @@ const paymentService = createPaymentService({
 });
 const receiptOcr = createReceiptOcr();
 const reportService = createReportService({ stateStore, receivingAccounts });
-
-const baseChatbot = createChatbotEngine({
-  stateStore,
-  welcomeMediaPath: join(assetsDir, 'prismastore-welcome.png'),
-  catalogMediaPath: join(assetsDir, 'prismastore-catalog.png'),
-});
+const baseChatbot = createChatbotEngine({ stateStore, welcomeMediaPath: join(assetsDir, 'prismastore-welcome.png'), catalogMediaPath: join(assetsDir, 'prismastore-catalog.png') });
 const chatbot = createPaymentChatbot({ baseChatbot, stateStore, paymentService });
 const messageHandler = createWhatsAppChatAdapter({
   chatbot,
   receiptOcr,
-  downloadMedia: ({ message, socket }) => downloadMediaMessage(
-    message,
-    'buffer',
-    {},
-    {
-      logger,
-      reuploadRequest: socket?.updateMediaMessage?.bind(socket),
-    },
-  ),
+  downloadMedia: ({ message, socket }) => downloadMediaMessage(message, 'buffer', {}, { logger, reuploadRequest: socket?.updateMediaMessage?.bind(socket) }),
 });
-
 const authStateLoader = () => useMultiFileAuthState(authPath);
 const socketFactory = async ({ auth }) => {
   const { version } = await fetchLatestBaileysVersion();
-  return makeWASocket({
-    version,
-    auth,
-    logger,
-    printQRInTerminal: false,
-    browser: ['PrismaStore', 'Chrome', '1.0.0'],
-  });
+  return makeWASocket({ version, auth, logger, printQRInTerminal: false, browser: ['PrismaStore', 'Chrome', '1.0.0'] });
 };
-
 const whatsappManager = createWhatsAppManager({
   socketFactory,
   authStateLoader,
@@ -112,18 +93,8 @@ const whatsappManager = createWhatsAppManager({
   disconnectReasonLoggedOut: DisconnectReason.loggedOut,
   devAllowedPhone: devWhatsappOnly ? devWhatsappPhone : '',
 });
-
-const finalArtworkPath = ensureBase64Asset({
-  base64Path: join(assetsDir, 'prismastore-order-finished.b64'),
-  outputPath: join(dataDir, 'prismastore-order-finished.png'),
-});
-
-const orderLifecycleService = createOrderLifecycleService({
-  stateStore,
-  messenger: whatsappManager,
-  finalArtworkPath,
-});
-
+const finalArtworkPath = ensureBase64Asset({ base64Path: join(assetsDir, 'prismastore-order-finished.b64'), outputPath: join(dataDir, 'prismastore-order-finished.png') });
+const orderLifecycleService = createOrderLifecycleService({ stateStore, messenger: whatsappManager, finalArtworkPath });
 const server = createAppServer({
   stateStore,
   staticDir: root,
@@ -131,6 +102,7 @@ const server = createAppServer({
   paymentService,
   orderLifecycleService,
   reportService,
+  authService,
   whatsappAuthPath: authPath,
   whatsappAuthProvider: 'baileys',
 });
@@ -139,18 +111,14 @@ server.listen(port, host, () => {
   console.log(`PrismaStore disponível em http://localhost:${port}`);
   console.log(useDemoData ? 'Dados demo: ATIVOS' : 'Dados demo: DESATIVADOS');
   console.log(paymentService.getStatus().configured ? 'Pix local: CONFIGURADO' : 'Pix local: PENDENTE DE CONFIGURAÇÃO');
+  console.log(authService.enabled ? `Admin protegido: ${adminUser}` : 'Admin auth: DESATIVADA no ambiente local');
   if (devWhatsappOnly) console.log('WhatsApp DEV: allowlist exclusiva ATIVA');
 });
-
-if (process.env.WHATSAPP_AUTO_CONNECT !== 'false') {
-  whatsappManager.connect().catch((error) => console.error('Falha ao iniciar WhatsApp:', error));
-}
-
+if (process.env.WHATSAPP_AUTO_CONNECT !== 'false') whatsappManager.connect().catch((error) => console.error('Falha ao iniciar WhatsApp:', error));
 async function shutdown() {
   try { await whatsappManager.disconnect(); } catch {}
   stateStore.close();
   server.close(() => process.exit(0));
 }
-
 process.once('SIGINT', shutdown);
 process.once('SIGTERM', shutdown);
