@@ -139,6 +139,7 @@ const driveClientId = String(process.env.GOOGLE_DRIVE_CLIENT_ID || '');
 const driveClientSecret = String(process.env.GOOGLE_DRIVE_CLIENT_SECRET || '');
 const driveRefreshToken = String(process.env.GOOGLE_DRIVE_REFRESH_TOKEN || '');
 const driveConfigured = Boolean(driveClientId && driveClientSecret && driveRefreshToken);
+const driveRetentionCount = Math.max(1, Number(process.env.GOOGLE_DRIVE_BACKUP_RETENTION || 30));
 const driveAccessTokenProvider = driveConfigured
   ? createGoogleDriveAccessTokenProvider({
       clientId: driveClientId,
@@ -150,6 +151,7 @@ const externalBackupStore = createGoogleDriveBackupStore({
   enabled: driveConfigured,
   accessTokenProvider: driveAccessTokenProvider,
   folderName: process.env.GOOGLE_DRIVE_BACKUP_FOLDER || 'PrismaStore Backups',
+  retentionCount: driveRetentionCount,
 });
 
 let backupScheduler = null;
@@ -197,7 +199,7 @@ server.listen(port, host, () => {
   console.log(useDemoData ? 'Dados demo: ATIVOS' : 'Dados demo: DESATIVADOS');
   console.log(paymentService.getStatus().configured ? 'Pix local: CONFIGURADO' : 'Pix local: PENDENTE DE CONFIGURAÇÃO');
   console.log(authService ? `Admin protegido: ${adminUser}` : 'Admin: sem senha; acesso restrito ao próprio dispositivo (127.0.0.1)');
-  console.log(driveConfigured ? 'Backup Google Drive: AUTOMÁTICO' : 'Backup Google Drive: PENDENTE DE CONFIGURAÇÃO');
+  console.log(driveConfigured ? `Backup Google Drive: AUTOMÁTICO · retenção ${driveRetentionCount}` : 'Backup Google Drive: PENDENTE DE CONFIGURAÇÃO');
   if (devWhatsappOnly) console.log('WhatsApp DEV: allowlist exclusiva ATIVA');
 });
 
