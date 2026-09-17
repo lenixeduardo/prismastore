@@ -20,6 +20,10 @@ import { createReceiptOcr } from './receipt-ocr.js';
 import { createOrderLifecycleService } from './order-lifecycle-service.js';
 import { ensureBase64Asset } from './asset-loader.js';
 import { createReportService } from './report-service.js';
+import { createBackupService } from './backup-service.js';
+import { createBackupScheduler } from './backup-scheduler.js';
+import { createAuthService } from './auth-service.js';
+import { createGoogleDriveAccessTokenProvider, createGoogleDriveBackupStore } from './google-drive-backup.js';
 import { createStartupState, createTerminalQrEncoder, clearLegacyDemoState } from './startup-config.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -29,7 +33,10 @@ const dataDir = join(root, 'data');
 const authPath = join(dataDir, 'whatsapp-auth');
 const assetsDir = join(root, 'assets');
 const port = Number(process.env.PORT || 4173);
-const host = process.env.HOST || '0.0.0.0';
+const adminUser = String(process.env.PRISMASTORE_ADMIN_USER || 'admin').trim() || 'admin';
+const adminPassword = String(process.env.PRISMASTORE_ADMIN_PASSWORD || '');
+const requestedHost = process.env.HOST || '127.0.0.1';
+const host = adminPassword ? requestedHost : '127.0.0.1';
 const useDemoData = process.env.PRISMASTORE_DEMO_DATA === 'true';
 const devWhatsappOnly = process.env.PRISMASTORE_DEV_WHATSAPP_ONLY === 'true';
 const devWhatsappPhone = String(process.env.PRISMASTORE_DEV_WHATSAPP_PHONE || '').trim();
@@ -124,6 +131,54 @@ const orderLifecycleService = createOrderLifecycleService({
   finalArtworkPath,
 });
 
+const authService = adminPassword
+  ? createAuthService({ username: adminUser, password: adminPassword })
+  : null;
+
+const driveClientId = String(process.env.GOOGLE_DRIVE_CLIENT_ID || '');
+const driveClientSecret = String(process.env.GOOGLE_DRIVE_CLIENT_SECRET || '');
+const driveRefreshToken = String(process.env.GOOGLE_DRIVE_REFRESH_TOKEN || '');
+const driveConfigured = Boolean(driveClientId && driveClientSecret && driveRefreshToken);
+const driveAccessTokenProvider = driveConfigured
+  ? createGoogleDriveAccessTokenProvider({
+      clientId: driveClientId,
+      clientSecret: driveClientSecret,
+      refreshToken: driveRefreshToken,
+    })
+  : null;
+const externalBackupStore = createGoogleDriveBackupStore({
+  enabled: driveConfigured,
+  accessTokenProvider: driveAccessTokenProvider,
+  folderName: process.env.GOOGLE_DRIVE_BACKUP_FOLDER || 'PrismaStore Backups',
+});
+
+let backupScheduler = null;
+const backupService = createBackupService({
+  stateStore,
+  whatsappManager,
+  authPath,
+  whatsappAuthProvider: 'baileys',
+  backupsDir: join(root, 'backups'),
+  appVersion: '0.9.2',
+  externalBackupStore,
+  scheduleStatusProvider: () => backupScheduler?.getStatus() ?? {
+    enabled: driveConfigured,
+    running: false,
+    intervalHours: Number(process.env.PRISMASTORE_BACKUP_INTERVAL_HOURS || 24),
+    lastSuccessAt: null,
+    lastError: null,
+  },
+});
+
+if (driveConfigured) {
+  const intervalHours = Math.max(1, Number(process.env.PRISMASTORE_BACKUP_INTERVAL_HOURS || 24));
+  backupScheduler = createBackupScheduler({
+    backupService,
+    intervalMs: intervalHours * 60 * 60 * 1000,
+  });
+  backupScheduler.start();
+}
+
 const server = createAppServer({
   stateStore,
   staticDir: root,
@@ -131,14 +186,18 @@ const server = createAppServer({
   paymentService,
   orderLifecycleService,
   reportService,
+  backupService,
   whatsappAuthPath: authPath,
   whatsappAuthProvider: 'baileys',
+  authService,
 });
 
 server.listen(port, host, () => {
-  console.log(`PrismaStore disponível em http://localhost:${port}`);
+  console.log(`PrismaStore disponível em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
   console.log(useDemoData ? 'Dados demo: ATIVOS' : 'Dados demo: DESATIVADOS');
   console.log(paymentService.getStatus().configured ? 'Pix local: CONFIGURADO' : 'Pix local: PENDENTE DE CONFIGURAÇÃO');
+  console.log(authService ? `Admin protegido: ${adminUser}` : 'Admin: sem senha; acesso restrito ao próprio dispositivo (127.0.0.1)');
+  console.log(driveConfigured ? 'Backup Google Drive: AUTOMÁTICO' : 'Backup Google Drive: PENDENTE DE CONFIGURAÇÃO');
   if (devWhatsappOnly) console.log('WhatsApp DEV: allowlist exclusiva ATIVA');
 });
 
@@ -147,6 +206,7 @@ if (process.env.WHATSAPP_AUTO_CONNECT !== 'false') {
 }
 
 async function shutdown() {
+  backupScheduler?.stop();
   try { await whatsappManager.disconnect(); } catch {}
   stateStore.close();
   server.close(() => process.exit(0));
