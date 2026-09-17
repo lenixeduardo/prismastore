@@ -1,4 +1,6 @@
 let backups = [];
+let externalStatus = null;
+let scheduleStatus = null;
 let loading = false;
 let lastError = null;
 
@@ -25,6 +27,12 @@ function isSettingsView() {
   return document.querySelector('.topbar h1')?.textContent?.trim() === 'Configurações';
 }
 
+function backupReason(reason) {
+  if (reason === 'pre-restore') return 'Segurança pré-restauração';
+  if (reason === 'automatic') return 'Automático';
+  return 'Manual';
+}
+
 function backupRows() {
   if (loading && !backups.length) return '<div class="backup-empty">Carregando backups…</div>';
   if (!backups.length) return '<div class="backup-empty">Nenhum backup criado ainda.</div>';
@@ -32,7 +40,7 @@ function backupRows() {
     <div class="backup-row">
       <div class="backup-row-main">
         <div class="product-name">${index === 0 ? 'Último backup' : 'Backup'} · ${escapeHtml(formatDate(backup.createdAt))}</div>
-        <div class="category">${backup.reason === 'pre-restore' ? 'Segurança pré-restauração' : 'Manual'} · ${formatSize(backup.totalBytes)} · ${Number(backup.fileCount || 0)} arquivo(s)</div>
+        <div class="category">${backupReason(backup.reason)} · ${formatSize(backup.totalBytes)} · ${Number(backup.fileCount || 0)} arquivo(s)</div>
         <div class="backup-meta">
           <span class="badge ${backup.hasWhatsAppSession ? 'green' : 'gray'}">${backup.hasWhatsAppSession ? 'WhatsApp incluído' : 'Sem sessão WhatsApp'}</span>
           <span class="backup-id">${escapeHtml(backup.id)}</span>
@@ -41,6 +49,19 @@ function backupRows() {
       <button class="btn sm" data-restore-backup="${escapeHtml(backup.id)}" ${loading ? 'disabled' : ''}>Restaurar</button>
     </div>
   `).join('');
+}
+
+function driveStatusLabel() {
+  if (!externalStatus?.configured) return 'Aguardando configuração';
+  if (externalStatus.lastError) return `Erro: ${escapeHtml(externalStatus.lastError)}`;
+  if (externalStatus.lastSuccessAt) return `Sincronizado ${escapeHtml(formatDate(externalStatus.lastSuccessAt))}`;
+  return 'Configurado · aguardando primeiro backup';
+}
+
+function scheduleStatusLabel() {
+  if (!externalStatus?.configured) return 'Desativado';
+  if (!scheduleStatus?.running) return 'Configurado';
+  return `A cada ${Number(scheduleStatus.intervalHours || 24)}h`;
 }
 
 function render() {
@@ -61,14 +82,15 @@ function render() {
     <div class="section-head backup-head">
       <div>
         <div class="section-title">Backup e recuperação</div>
-        <div class="category">SQLite + sessão local do WhatsApp. Credenciais do .env nunca entram no backup.</div>
+        <div class="category">SQLite + sessão local do WhatsApp. Segredos do .env nunca entram no backup.</div>
       </div>
       <button class="btn primary" data-create-backup ${loading ? 'disabled' : ''}>${loading ? 'Processando…' : 'Criar backup agora'}</button>
     </div>
     ${lastError ? `<div class="backup-error">${escapeHtml(lastError)}</div>` : ''}
     <div class="backup-summary">
-      <div><span>Último backup</span><strong>${latest ? escapeHtml(formatDate(latest.createdAt)) : 'Ainda não criado'}</strong></div>
-      <div><span>Local</span><strong>backups/</strong></div>
+      <div><span>Último backup local</span><strong>${latest ? escapeHtml(formatDate(latest.createdAt)) : 'Ainda não criado'}</strong></div>
+      <div><span>Google Drive</span><strong>${driveStatusLabel()}</strong></div>
+      <div><span>Backup automático</span><strong>${scheduleStatusLabel()}</strong></div>
       <div><span>Integridade</span><strong>SHA-256</strong></div>
     </div>
     <div class="backup-list">${backupRows()}</div>
@@ -78,9 +100,15 @@ function render() {
 async function refreshBackups() {
   try {
     const response = await fetch('/api/backups', { cache: 'no-store' });
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent('prismastore:auth-required'));
+      return;
+    }
     if (!response.ok) throw new Error('Não foi possível consultar os backups.');
     const payload = await response.json();
     backups = Array.isArray(payload.backups) ? payload.backups : [];
+    externalStatus = payload.external || null;
+    scheduleStatus = payload.schedule || null;
     lastError = null;
   } catch (error) {
     lastError = error instanceof Error ? error.message : 'Falha ao consultar backups.';
@@ -97,6 +125,7 @@ async function createBackup() {
     const response = await fetch('/api/backups', { method: 'POST' });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || 'Não foi possível criar o backup.');
+    if (payload.external?.error) lastError = `Backup local criado, mas o Google Drive falhou: ${payload.external.error}`;
     await refreshBackups();
   } catch (error) {
     lastError = error instanceof Error ? error.message : 'Falha ao criar backup.';
