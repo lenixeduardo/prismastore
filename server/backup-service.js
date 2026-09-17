@@ -87,7 +87,7 @@ function summaryFromManifest(id, manifest) {
 }
 
 function wasActive(status) {
-  return ['connected', 'authenticated', 'connecting', 'qr'].includes(status);
+  return ['connected', 'authenticated', 'connecting', 'qr', 'pairing'].includes(status);
 }
 
 export function createBackupService({
@@ -97,6 +97,8 @@ export function createBackupService({
   backupsDir,
   appVersion = 'unknown',
   whatsappAuthProvider = 'baileys',
+  externalBackupStore = null,
+  scheduleStatusProvider = null,
   now = () => new Date(),
   suffix = () => randomBytes(2).toString('hex'),
 }) {
@@ -158,8 +160,28 @@ export function createBackupService({
     }
   }
 
+  async function syncExternal(summary) {
+    if (!externalBackupStore?.uploadBackup) return { uploaded: false, skipped: true, reason: 'not_configured' };
+    try {
+      return await externalBackupStore.uploadBackup({
+        id: summary.id,
+        path: backupPath(summary.id),
+        summary,
+      });
+    } catch (error) {
+      return {
+        uploaded: false,
+        error: error instanceof Error ? error.message : 'Falha ao sincronizar backup externo.',
+      };
+    }
+  }
+
   async function createBackup({ reason = 'manual' } = {}) {
-    return withWhatsappPaused(() => createSnapshot({ reason }), { reconnect: true });
+    return withWhatsappPaused(async () => {
+      const summary = await createSnapshot({ reason });
+      const external = await syncExternal(summary);
+      return { ...summary, external };
+    }, { reconnect: true });
   }
 
   function listBackups() {
@@ -244,5 +266,27 @@ export function createBackupService({
     }
   }
 
-  return { listBackups, createBackup, validateBackup, restoreBackup, backupsDir: basename(backupsDir) };
+  function getExternalStatus() {
+    return externalBackupStore?.getStatus?.() ?? {
+      provider: 'google-drive',
+      configured: false,
+      folderName: 'PrismaStore Backups',
+      lastSuccessAt: null,
+      lastError: null,
+    };
+  }
+
+  function getScheduleStatus() {
+    return scheduleStatusProvider?.() ?? null;
+  }
+
+  return {
+    listBackups,
+    createBackup,
+    validateBackup,
+    restoreBackup,
+    getExternalStatus,
+    getScheduleStatus,
+    backupsDir: basename(backupsDir),
+  };
 }
