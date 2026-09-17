@@ -19,6 +19,13 @@ function canonicalDevPhone(value = '') {
   return phone;
 }
 
+function normalizePairingPhone(value = '') {
+  let phone = String(value).replace(/\D/g, '');
+  if (phone.length === 10 || phone.length === 11) phone = `55${phone}`;
+  if (phone.length < 12 || phone.length > 15) throw new Error('Informe um telefone válido com DDD para vincular o WhatsApp.');
+  return phone;
+}
+
 export function createWhatsAppManager({
   socketFactory,
   authStateLoader,
@@ -35,7 +42,7 @@ export function createWhatsAppManager({
   let connectPromise = null;
   let reconnectTimer = null;
   let manualDisconnect = false;
-  let status = { status: 'disconnected', qrDataUrl: null, account: null, error: null };
+  let status = { status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null };
   const seenIds = new Set();
   const seenQueue = [];
   const allowedPhone = canonicalDevPhone(devAllowedPhone);
@@ -101,7 +108,7 @@ export function createWhatsAppManager({
   async function performConnect() {
     manualDisconnect = false;
     clearReconnect();
-    setStatus({ status: 'connecting', qrDataUrl: null, account: null, error: null });
+    setStatus({ status: 'connecting', qrDataUrl: null, pairingCode: null, account: null, error: null });
 
     try {
       const { state, saveCreds } = await authStateLoader();
@@ -116,15 +123,15 @@ export function createWhatsAppManager({
         if (qr) {
           try {
             const qrDataUrl = await qrEncoder(qr);
-            setStatus({ status: 'qr', qrDataUrl, account: null, error: null });
+            setStatus({ status: status.pairingCode ? 'pairing' : 'qr', qrDataUrl, account: null, error: null });
           } catch (error) {
-            setStatus({ status: 'error', qrDataUrl: null, account: null, error: error instanceof Error ? error.message : 'Falha ao gerar QR Code' });
+            setStatus({ status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: error instanceof Error ? error.message : 'Falha ao gerar QR Code' });
           }
         }
 
         if (connection === 'open') {
           clearReconnect();
-          setStatus({ status: 'connected', qrDataUrl: null, account: accountFromSocket(activeSocket), error: null });
+          setStatus({ status: 'connected', qrDataUrl: null, pairingCode: null, account: accountFromSocket(activeSocket), error: null });
         }
 
         if (connection === 'close') {
@@ -133,6 +140,7 @@ export function createWhatsAppManager({
           setStatus({
             status: 'disconnected',
             qrDataUrl: null,
+            pairingCode: null,
             account: null,
             error: loggedOut ? 'Sessão do WhatsApp encerrada.' : null,
           });
@@ -159,6 +167,7 @@ export function createWhatsAppManager({
       setStatus({
         status: 'error',
         qrDataUrl: null,
+        pairingCode: null,
         account: null,
         error: error instanceof Error ? error.message : 'Falha ao conectar WhatsApp',
       });
@@ -167,7 +176,7 @@ export function createWhatsAppManager({
   }
 
   function connect() {
-    if (socket && ['connecting', 'qr', 'authenticated', 'connected'].includes(status.status)) {
+    if (socket && ['connecting', 'qr', 'pairing', 'authenticated', 'connected'].includes(status.status)) {
       return Promise.resolve(getStatus());
     }
     if (connectPromise) return connectPromise;
@@ -175,6 +184,17 @@ export function createWhatsAppManager({
       connectPromise = null;
     });
     return connectPromise;
+  }
+
+  async function requestPairingCode(phoneNumber) {
+    const phone = normalizePairingPhone(phoneNumber);
+    if (!socket) await connect();
+    if (status.status === 'connected') throw new Error('WhatsApp já está conectado.');
+    if (!socket?.requestPairingCode) throw new Error('Pareamento por telefone não está disponível nesta sessão do WhatsApp.');
+    const pairingCode = await socket.requestPairingCode(phone);
+    if (!pairingCode) throw new Error('WhatsApp não retornou um código de pareamento.');
+    setStatus({ status: 'pairing', pairingCode: String(pairingCode), qrDataUrl: null, account: null, error: null });
+    return getStatus();
   }
 
   async function disconnect() {
@@ -185,7 +205,7 @@ export function createWhatsAppManager({
     if (activeSocket?.end) {
       await Promise.resolve(activeSocket.end(new Error('PrismaStore desconectado')));
     }
-    setStatus({ status: 'disconnected', qrDataUrl: null, account: null, error: null });
+    setStatus({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null });
     return getStatus();
   }
 
@@ -208,5 +228,5 @@ export function createWhatsAppManager({
     throw new Error('Mídia do WhatsApp inválida.');
   }
 
-  return { connect, disconnect, getStatus, sendText, sendMedia };
+  return { connect, requestPairingCode, disconnect, getStatus, sendText, sendMedia };
 }
