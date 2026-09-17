@@ -71,18 +71,21 @@ export function createGoogleDriveBackupStore({
   accessTokenProvider = null,
   fetchImpl = fetch,
   folderName = 'PrismaStore Backups',
+  retentionCount = 30,
   now = () => new Date(),
 } = {}) {
   let lastSuccessAt = null;
   let lastError = null;
   let folderId = null;
   const configured = Boolean(enabled && accessTokenProvider);
+  const safeRetentionCount = Math.max(0, Math.floor(Number(retentionCount) || 0));
 
   function getStatus() {
     return {
       provider: 'google-drive',
       configured,
       folderName,
+      retentionCount: safeRetentionCount,
       lastSuccessAt,
       lastError,
     };
@@ -120,6 +123,21 @@ export function createGoogleDriveBackupStore({
     return folderId;
   }
 
+  async function enforceRetention(parentId) {
+    if (safeRetentionCount <= 0) return { deleted: 0 };
+    const query = `'${parentId}' in parents and trashed = false`;
+    const listUrl = `${DRIVE_API}/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent('files(id,name,createdTime)')}&orderBy=${encodeURIComponent('createdTime desc')}&pageSize=1000`;
+    const payload = await driveJson(listUrl);
+    const files = (payload.files || [])
+      .filter((file) => String(file.name || '').endsWith('.json.gz'))
+      .sort((a, b) => String(b.createdTime || '').localeCompare(String(a.createdTime || '')));
+    const expired = files.slice(safeRetentionCount);
+    for (const file of expired) {
+      await driveJson(`${DRIVE_API}/drive/v3/files/${encodeURIComponent(file.id)}`, { method: 'DELETE' });
+    }
+    return { deleted: expired.length };
+  }
+
   async function uploadBackup({ id, path }) {
     if (!configured) return { uploaded: false, skipped: true, reason: 'not_configured' };
     try {
@@ -134,9 +152,10 @@ export function createGoogleDriveBackupStore({
         method: 'POST',
         body: form,
       });
+      const retention = await enforceRetention(parentId);
       lastSuccessAt = now().toISOString();
       lastError = null;
-      return { uploaded: true, fileId: payload.id, fileName: payload.name || fileName, bytes: compressed.length };
+      return { uploaded: true, fileId: payload.id, fileName: payload.name || fileName, bytes: compressed.length, retention };
     } catch (error) {
       lastError = error instanceof Error ? error.message : 'Falha ao enviar backup ao Google Drive.';
       throw error;
