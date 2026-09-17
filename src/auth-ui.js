@@ -100,12 +100,10 @@ async function login(form) {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || 'Não foi possível entrar.');
     authState = { loaded: true, configured: payload.configured !== false, authenticated: true, username: payload.username || null };
-    form.reset();
-    const username = form.querySelector('input[name="username"]');
-    if (username) username.value = 'admin';
+    sessionStorage.setItem('prismastore:resume-panel', 'auth-login');
     hideOverlay();
     settleLogin(true);
-    window.dispatchEvent(new CustomEvent('prismastore:authenticated'));
+    window.location.reload();
   } catch (error) {
     if (errorTarget) errorTarget.textContent = error instanceof Error ? error.message : 'Falha ao entrar.';
   } finally {
