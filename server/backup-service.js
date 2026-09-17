@@ -14,65 +14,40 @@ import { createHash, randomBytes } from 'node:crypto';
 import { basename, join, relative, resolve, sep } from 'node:path';
 
 const BACKUP_ID = /^backup-\d{8}-\d{6}-\d{3}-[a-f0-9]{4}(?:-\d{2})?$/;
+const EXTERNAL_SYNC_FILE = '.external-sync.json';
 
-function pad(value, width = 2) {
-  return String(value).padStart(width, '0');
-}
-
+function pad(value, width = 2) { return String(value).padStart(width, '0'); }
 function timestampForId(date) {
   return [date.getUTCFullYear(), pad(date.getUTCMonth() + 1), pad(date.getUTCDate())].join('') + '-' +
-    [pad(date.getUTCHours()), pad(date.getUTCMinutes()), pad(date.getUTCSeconds())].join('') + '-' +
-    pad(date.getUTCMilliseconds(), 3);
+    [pad(date.getUTCHours()), pad(date.getUTCMinutes()), pad(date.getUTCSeconds())].join('') + '-' + pad(date.getUTCMilliseconds(), 3);
 }
-
-function hashFile(path) {
-  return createHash('sha256').update(readFileSync(path)).digest('hex');
-}
-
+function hashFile(path) { return createHash('sha256').update(readFileSync(path)).digest('hex'); }
 function ensureInside(root, candidate) {
-  const safeRoot = resolve(root);
-  const safeCandidate = resolve(candidate);
-  if (safeCandidate !== safeRoot && !safeCandidate.startsWith(`${safeRoot}${sep}`)) {
-    throw new Error('Backup inválido: caminho fora da pasta de backups.');
-  }
+  const safeRoot = resolve(root); const safeCandidate = resolve(candidate);
+  if (safeCandidate !== safeRoot && !safeCandidate.startsWith(`${safeRoot}${sep}`)) throw new Error('Backup inválido: caminho fora da pasta de backups.');
   return safeCandidate;
 }
-
-function assertBackupId(id) {
-  if (!BACKUP_ID.test(String(id ?? ''))) throw new Error('Backup inválido.');
-}
-
+function assertBackupId(id) { if (!BACKUP_ID.test(String(id ?? ''))) throw new Error('Backup inválido.'); }
 function copyDirectory(source, destination) {
   if (!existsSync(source)) return false;
   mkdirSync(destination, { recursive: true });
   for (const entry of readdirSync(source, { withFileTypes: true })) {
-    const from = join(source, entry.name);
-    const to = join(destination, entry.name);
-    const info = lstatSync(from);
+    const from = join(source, entry.name); const to = join(destination, entry.name); const info = lstatSync(from);
     if (info.isSymbolicLink()) continue;
-    if (info.isDirectory()) copyDirectory(from, to);
-    else if (info.isFile()) copyFileSync(from, to);
+    if (info.isDirectory()) copyDirectory(from, to); else if (info.isFile()) copyFileSync(from, to);
   }
   return true;
 }
-
 function collectFiles(root, current = root) {
   if (!existsSync(current)) return [];
   const result = [];
   for (const entry of readdirSync(current, { withFileTypes: true })) {
     const path = join(current, entry.name);
     if (entry.isDirectory()) result.push(...collectFiles(root, path));
-    else if (entry.isFile() && entry.name !== 'manifest.json') {
-      result.push({
-        path: relative(root, path).split(sep).join('/'),
-        size: statSync(path).size,
-        sha256: hashFile(path),
-      });
-    }
+    else if (entry.isFile() && entry.name !== 'manifest.json') result.push({ path: relative(root, path).split(sep).join('/'), size: statSync(path).size, sha256: hashFile(path) });
   }
   return result.sort((a, b) => a.path.localeCompare(b.path));
 }
-
 function summaryFromManifest(id, manifest) {
   return {
     id,
@@ -85,10 +60,7 @@ function summaryFromManifest(id, manifest) {
     totalBytes: Array.isArray(manifest.files) ? manifest.files.reduce((sum, file) => sum + Number(file.size || 0), 0) : 0,
   };
 }
-
-function wasActive(status) {
-  return ['connected', 'authenticated', 'connecting', 'qr'].includes(status);
-}
+function wasActive(status) { return ['connected', 'authenticated', 'connecting', 'qr', 'pairing'].includes(status); }
 
 export function createBackupService({
   stateStore,
@@ -97,69 +69,84 @@ export function createBackupService({
   backupsDir,
   appVersion = 'unknown',
   whatsappAuthProvider = 'baileys',
+  externalBackupProvider = null,
   now = () => new Date(),
   suffix = () => randomBytes(2).toString('hex'),
 }) {
   mkdirSync(backupsDir, { recursive: true });
+  const syncPath = join(backupsDir, EXTERNAL_SYNC_FILE);
+
+  function loadExternalState() {
+    if (!existsSync(syncPath)) return {};
+    try { return JSON.parse(readFileSync(syncPath, 'utf8')) || {}; } catch { return {}; }
+  }
+  function saveExternalState(state) { writeFileSync(syncPath, `${JSON.stringify(state, null, 2)}\n`, 'utf8'); }
+  function externalFor(id) {
+    const saved = loadExternalState()[id];
+    if (saved) return saved;
+    if (!externalBackupProvider?.configured) return { provider: externalBackupProvider?.provider || 'google-drive', status: 'not-configured', syncedAt: null, remoteFolderId: null, error: null };
+    return { provider: externalBackupProvider.provider || 'external', status: 'pending', syncedAt: null, remoteFolderId: null, error: null };
+  }
+  function withExternal(summary) { return { ...summary, external: externalFor(summary.id) }; }
 
   function makeBackupId() {
     const base = `backup-${timestampForId(now())}-${suffix()}`;
-    let id = base;
-    let counter = 1;
-    while (existsSync(join(backupsDir, id))) {
-      id = `${base}-${pad(counter)}`;
-      counter += 1;
-    }
+    let id = base; let counter = 1;
+    while (existsSync(join(backupsDir, id))) { id = `${base}-${pad(counter)}`; counter += 1; }
     return id;
   }
-
-  function backupPath(id) {
-    assertBackupId(id);
-    return ensureInside(backupsDir, join(backupsDir, id));
-  }
+  function backupPath(id) { assertBackupId(id); return ensureInside(backupsDir, join(backupsDir, id)); }
 
   async function createSnapshot({ reason = 'manual' } = {}) {
-    const id = makeBackupId();
-    const destination = backupPath(id);
-    const temp = ensureInside(backupsDir, `${destination}.tmp`);
-    rmSync(temp, { recursive: true, force: true });
-    mkdirSync(temp, { recursive: true });
+    const id = makeBackupId(); const destination = backupPath(id); const temp = ensureInside(backupsDir, `${destination}.tmp`);
+    rmSync(temp, { recursive: true, force: true }); mkdirSync(temp, { recursive: true });
     try {
       await stateStore.backupTo(join(temp, 'prismastore.db'));
       const hasWhatsAppSession = copyDirectory(authPath, join(temp, 'whatsapp-auth'));
       const files = collectFiles(temp);
-      const manifest = {
-        schemaVersion: 1,
-        appVersion,
-        createdAt: now().toISOString(),
-        reason,
-        hasWhatsAppSession,
-        whatsappAuthProvider,
-        database: 'prismastore.db',
-        files,
-      };
+      const manifest = { schemaVersion: 1, appVersion, createdAt: now().toISOString(), reason, hasWhatsAppSession, whatsappAuthProvider, database: 'prismastore.db', files };
       writeFileSync(join(temp, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
       renameSync(temp, destination);
       return summaryFromManifest(id, manifest);
-    } catch (error) {
-      rmSync(temp, { recursive: true, force: true });
-      throw error;
-    }
+    } catch (error) { rmSync(temp, { recursive: true, force: true }); throw error; }
   }
 
   async function withWhatsappPaused(action, { reconnect = true } = {}) {
     const initialStatus = whatsappManager?.getStatus?.()?.status ?? 'disconnected';
     const active = wasActive(initialStatus);
     if (active && whatsappManager?.disconnect) await whatsappManager.disconnect();
+    try { return await action(); }
+    finally { if (active && reconnect && whatsappManager?.connect) await whatsappManager.connect(); }
+  }
+
+  async function syncExternal(summary) {
+    if (!externalBackupProvider?.configured) return withExternal(summary);
+    const state = loadExternalState();
     try {
-      return await action();
-    } finally {
-      if (active && reconnect && whatsappManager?.connect) await whatsappManager.connect();
+      const result = await externalBackupProvider.uploadBackupDirectory({ id: summary.id, path: backupPath(summary.id) });
+      state[summary.id] = {
+        provider: result.provider || externalBackupProvider.provider || 'external',
+        status: 'synced',
+        syncedAt: now().toISOString(),
+        remoteFolderId: result.remoteFolderId || null,
+        error: null,
+      };
+    } catch (error) {
+      state[summary.id] = {
+        provider: externalBackupProvider.provider || 'external',
+        status: 'error',
+        syncedAt: null,
+        remoteFolderId: null,
+        error: error instanceof Error ? error.message : 'Falha ao sincronizar backup externo.',
+      };
     }
+    saveExternalState(state);
+    return withExternal(summary);
   }
 
   async function createBackup({ reason = 'manual' } = {}) {
-    return withWhatsappPaused(() => createSnapshot({ reason }), { reconnect: true });
+    const local = await withWhatsappPaused(() => createSnapshot({ reason }), { reconnect: true });
+    return syncExternal(local);
   }
 
   function listBackups() {
@@ -167,12 +154,8 @@ export function createBackupService({
     return readdirSync(backupsDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && BACKUP_ID.test(entry.name))
       .map((entry) => {
-        try {
-          const manifest = JSON.parse(readFileSync(join(backupsDir, entry.name, 'manifest.json'), 'utf8'));
-          return summaryFromManifest(entry.name, manifest);
-        } catch {
-          return null;
-        }
+        try { return withExternal(summaryFromManifest(entry.name, JSON.parse(readFileSync(join(backupsDir, entry.name, 'manifest.json'), 'utf8')))); }
+        catch { return null; }
       })
       .filter(Boolean)
       .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
@@ -184,28 +167,15 @@ export function createBackupService({
     const manifestPath = join(root, 'manifest.json');
     if (!existsSync(manifestPath)) throw new Error('Backup inválido: manifesto ausente.');
     let manifest;
-    try {
-      manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    } catch {
-      throw new Error('Backup inválido: manifesto corrompido.');
-    }
-    if (manifest.schemaVersion !== 1 || manifest.database !== 'prismastore.db' || !Array.isArray(manifest.files)) {
-      throw new Error('Backup inválido: formato de manifesto incompatível.');
-    }
-    if (!manifest.files.find((file) => file.path === 'prismastore.db')) {
-      throw new Error('Backup inválido: banco não listado no manifesto.');
-    }
-
+    try { manifest = JSON.parse(readFileSync(manifestPath, 'utf8')); } catch { throw new Error('Backup inválido: manifesto corrompido.'); }
+    if (manifest.schemaVersion !== 1 || manifest.database !== 'prismastore.db' || !Array.isArray(manifest.files)) throw new Error('Backup inválido: formato de manifesto incompatível.');
+    if (!manifest.files.find((file) => file.path === 'prismastore.db')) throw new Error('Backup inválido: banco não listado no manifesto.');
     for (const file of manifest.files) {
       const relativePath = String(file.path ?? '');
-      if (!relativePath || relativePath.startsWith('/') || relativePath.includes('..')) {
-        throw new Error('Backup inválido: caminho inseguro no manifesto.');
-      }
+      if (!relativePath || relativePath.startsWith('/') || relativePath.includes('..')) throw new Error('Backup inválido: caminho inseguro no manifesto.');
       const path = ensureInside(root, join(root, relativePath));
       if (!existsSync(path) || !statSync(path).isFile()) throw new Error(`Falha de integridade: ${relativePath} ausente.`);
-      if (statSync(path).size !== Number(file.size) || hashFile(path) !== file.sha256) {
-        throw new Error(`Falha de integridade: hash inválido em ${relativePath}.`);
-      }
+      if (statSync(path).size !== Number(file.size) || hashFile(path) !== file.sha256) throw new Error(`Falha de integridade: hash inválido em ${relativePath}.`);
     }
     return { valid: true, id, manifest, path: root };
   }
@@ -221,7 +191,6 @@ export function createBackupService({
     const initialStatus = whatsappManager?.getStatus?.()?.status ?? 'disconnected';
     const active = wasActive(initialStatus);
     if (active && whatsappManager?.disconnect) await whatsappManager.disconnect();
-
     let safety = null;
     try {
       safety = await createSnapshot({ reason: 'pre-restore' });
@@ -237,12 +206,10 @@ export function createBackupService({
           restoreAuthFrom(rollback.path, rollback.manifest);
         } catch {}
       }
-      if (active && whatsappManager?.connect) {
-        try { await whatsappManager.connect(); } catch {}
-      }
+      if (active && whatsappManager?.connect) { try { await whatsappManager.connect(); } catch {} }
       throw error;
     }
   }
 
-  return { listBackups, createBackup, validateBackup, restoreBackup, backupsDir: basename(backupsDir) };
+  return { listBackups, createBackup, validateBackup, restoreBackup, syncExternal, backupsDir: basename(backupsDir) };
 }
