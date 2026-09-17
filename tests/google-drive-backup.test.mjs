@@ -58,7 +58,7 @@ test('deletes oldest Drive backups beyond configured retention count', async () 
         { id: 'old-1', name: 'backup-1.json.gz', createdTime: '2026-09-15T15:00:00Z' },
       ] }), { status: 200 });
     }
-    if (href.includes('/drive/v3/files/old-1') && options.method === 'DELETE') return new Response('', { status: 204 });
+    if (href.includes('/drive/v3/files/old-1') && options.method === 'DELETE') return new Response(null, { status: 204 });
     throw new Error(`Unexpected URL: ${url}`);
   };
   try {
