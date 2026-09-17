@@ -35,10 +35,20 @@ function enterDashboard() {
   window.dispatchEvent(new CustomEvent('prismastore:dashboard-opened'));
 }
 
-enterButton?.addEventListener('click', enterDashboard);
+async function requestDashboardAccess() {
+  const auth = window.PrismastoreAuth;
+  const allowed = auth?.ensureAuthenticated ? await auth.ensureAuthenticated() : true;
+  if (!allowed) return false;
+  enterDashboard();
+  return true;
+}
+
+enterButton?.addEventListener('click', requestDashboardAccess);
 
 if (sessionStorage.getItem('prismastore:resume-panel')) {
-  enterDashboard();
+  requestDashboardAccess();
 } else {
   loadHeroArtwork();
 }
+
+export { enterDashboard, requestDashboardAccess };
