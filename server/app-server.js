@@ -86,10 +86,9 @@ function sessionToken(req, authService) {
   return parseCookies(req.headers.cookie || '')[authService.cookieName] || null;
 }
 
-function clientKey(req, username = '') {
+function clientKey(req) {
   const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  const remote = forwarded || req.socket?.remoteAddress || 'unknown';
-  return `${remote}:${String(username || '').trim().toLowerCase()}`;
+  return forwarded || req.socket?.remoteAddress || 'unknown';
 }
 
 function secureRequest(req, forceSecureCookies) {
@@ -183,7 +182,7 @@ export function createAppServer({
         const result = authService.login({
           username: body.username,
           password: body.password,
-          key: clientKey(req, body.username),
+          key: clientKey(req),
         });
         if (!result.ok) {
           const locked = result.reason === 'locked';
@@ -196,11 +195,7 @@ export function createAppServer({
           );
         }
         sendJson(res, 200, { configured: true, authenticated: true, username: result.username, expiresAt: result.expiresAt }, {
-          'set-cookie': sessionCookie({
-            authService,
-            token: result.token,
-            secure: secureRequest(req, secureCookies),
-          }),
+          'set-cookie': sessionCookie({ authService, token: result.token, secure: secureRequest(req, secureCookies) }),
         });
         return;
       }
@@ -222,111 +217,67 @@ export function createAppServer({
         }
       }
 
-      if (req.method === 'GET' && url.pathname === '/api/state') {
-        sendJson(res, 200, stateForAdmin(stateStore.load()));
-        return;
-      }
-
-      if (req.method === 'PUT' && url.pathname === '/api/state') {
-        const state = await readJson(req);
-        sendJson(res, 200, stateStore.save(state));
-        return;
-      }
+      if (req.method === 'GET' && url.pathname === '/api/state') return sendJson(res, 200, stateForAdmin(stateStore.load()));
+      if (req.method === 'PUT' && url.pathname === '/api/state') return sendJson(res, 200, stateStore.save(await readJson(req)));
 
       if (req.method === 'GET' && url.pathname === '/api/whatsapp/status') {
         if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
-        sendJson(res, 200, whatsappManager.getStatus());
-        return;
+        return sendJson(res, 200, whatsappManager.getStatus());
       }
-
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/connect') {
         if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
-        sendJson(res, 200, await whatsappManager.connect());
-        return;
+        return sendJson(res, 200, await whatsappManager.connect());
       }
-
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/pair') {
         if (!whatsappManager?.requestPairingCode) return sendJson(res, 503, { error: 'Pareamento por telefone não configurado' });
         const body = await readJson(req);
-        sendJson(res, 200, await whatsappManager.requestPairingCode(body.phone));
-        return;
+        return sendJson(res, 200, await whatsappManager.requestPairingCode(body.phone));
       }
-
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/disconnect') {
         if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
-        sendJson(res, 200, await whatsappManager.disconnect());
-        return;
+        return sendJson(res, 200, await whatsappManager.disconnect());
       }
 
       const advanceMatch = url.pathname.match(/^\/api\/orders\/([^/]+)\/advance$/);
       if (req.method === 'POST' && advanceMatch) {
         if (!orderLifecycleService) return sendJson(res, 503, { error: 'Fluxo operacional não configurado' });
         const body = await readJson(req);
-        const result = await orderLifecycleService.advanceOrder({
-          orderId: decodeURIComponent(advanceMatch[1]),
-          expectedStatus: body.expectedStatus || null,
-        });
-        sendJson(res, 200, result);
-        return;
+        const result = await orderLifecycleService.advanceOrder({ orderId: decodeURIComponent(advanceMatch[1]), expectedStatus: body.expectedStatus || null });
+        return sendJson(res, 200, result);
       }
 
       if (req.method === 'GET' && url.pathname === '/api/reports/monthly') {
         if (!reportService) return sendJson(res, 503, { error: 'Relatórios não configurados' });
-        const month = url.searchParams.get('month') || '';
-        sendJson(res, 200, reportService.getMonthlyReport(month));
-        return;
+        return sendJson(res, 200, reportService.getMonthlyReport(url.searchParams.get('month') || ''));
       }
-
       if (req.method === 'GET' && url.pathname === '/api/reports/monthly.csv') {
         if (!reportService) return sendJson(res, 503, { error: 'Relatórios não configurados' });
         const month = url.searchParams.get('month') || '';
-        sendCsv(res, `prismastore-${month}.csv`, reportService.exportMonthlyCsv(month));
-        return;
+        return sendCsv(res, `prismastore-${month}.csv`, reportService.exportMonthlyCsv(month));
       }
 
       if (req.method === 'GET' && url.pathname === '/api/backups') {
-        sendJson(res, 200, {
+        return sendJson(res, 200, {
           backups: resolvedBackupService.listBackups(),
           external: resolvedBackupService.getExternalStatus?.() ?? null,
           schedule: resolvedBackupService.getScheduleStatus?.() ?? null,
         });
-        return;
       }
-
-      if (req.method === 'POST' && url.pathname === '/api/backups') {
-        sendJson(res, 200, await resolvedBackupService.createBackup({ reason: 'manual' }));
-        return;
-      }
-
+      if (req.method === 'POST' && url.pathname === '/api/backups') return sendJson(res, 200, await resolvedBackupService.createBackup({ reason: 'manual' }));
       const restoreBackupMatch = url.pathname.match(/^\/api\/backups\/([^/]+)\/restore$/);
-      if (req.method === 'POST' && restoreBackupMatch) {
-        sendJson(res, 200, await resolvedBackupService.restoreBackup(decodeURIComponent(restoreBackupMatch[1])));
-        return;
-      }
+      if (req.method === 'POST' && restoreBackupMatch) return sendJson(res, 200, await resolvedBackupService.restoreBackup(decodeURIComponent(restoreBackupMatch[1])));
 
       if (req.method === 'GET' && url.pathname === '/api/payments/status') {
         if (!paymentService) return sendJson(res, 503, { provider: 'pix-local', environment: 'local', configured: false });
-        sendJson(res, 200, paymentService.getStatus());
-        return;
+        return sendJson(res, 200, paymentService.getStatus());
       }
-
       if (req.method === 'GET' && url.pathname === '/api/payments/demo-pix') {
         if (!paymentService?.generateDemoPix) return sendJson(res, 503, { error: 'Pix de demonstração não configurado' });
-        const amount = Number(url.searchParams.get('amount'));
-        sendJson(res, 200, await paymentService.generateDemoPix({ amount }));
-        return;
+        return sendJson(res, 200, await paymentService.generateDemoPix({ amount: Number(url.searchParams.get('amount')) }));
       }
 
-      if (url.pathname.startsWith('/api/')) {
-        sendJson(res, 404, { error: 'Endpoint não encontrado' });
-        return;
-      }
-
-      if (req.method !== 'GET' && req.method !== 'HEAD') {
-        sendJson(res, 405, { error: 'Método não permitido' });
-        return;
-      }
-
+      if (url.pathname.startsWith('/api/')) return sendJson(res, 404, { error: 'Endpoint não encontrado' });
+      if (req.method !== 'GET' && req.method !== 'HEAD') return sendJson(res, 405, { error: 'Método não permitido' });
       if (serveGeneratedIcon(staticDir, url.pathname, req.method, res)) return;
       serveStatic(staticDir, url.pathname, res);
     } catch (error) {
