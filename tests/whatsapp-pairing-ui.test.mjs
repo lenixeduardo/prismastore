@@ -2,22 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-test('WhatsApp onboarding supports phone pairing code while keeping QR fallback', () => {
-  const source = readFileSync(new URL('../src/whatsapp-onboarding.js', import.meta.url), 'utf8');
-  assert.match(source, /\/api\/whatsapp\/pair/);
-  assert.match(source, /pairingCode/);
-  assert.match(source, /data-whatsapp-pair-phone/);
-  assert.match(source, /Conectar com número de telefone/);
-  assert.match(source, /data-dashboard-whatsapp-connect/);
-  assert.match(source, /qrDataUrl/);
+const onboarding = readFileSync(new URL('../src/whatsapp-onboarding.js', import.meta.url), 'utf8');
+const app = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
+
+test('WhatsApp pairing is kept out of the dashboard onboarding', () => {
+  assert.match(onboarding, /does not render on the dashboard/);
+  assert.match(onboarding, /Pairing remains available only from Configurações/);
+  assert.doesNotMatch(onboarding, /fetch\('\/api\/whatsapp\/status'/);
+  assert.doesNotMatch(onboarding, /setInterval|setTimeout/);
+  assert.match(onboarding, /whatsappDashboardCard\(\) \{\s*return '';/);
 });
 
-
-test('single-phone pairing keeps the phone field stable while status polling runs', () => {
-  const source = readFileSync(new URL('../src/whatsapp-onboarding.js', import.meta.url), 'utf8');
-  assert.match(source, /function statusRenderKey\(/);
-  assert.match(source, /lastRenderedKey/);
-  assert.match(source, /if \(nextKey === lastRenderedKey && document\.getElementById\(CARD_ID\)\) return;/);
-  assert.match(source, /Vincular neste celular/);
-  assert.match(source, /Gerar código neste celular/);
+test('Configurações keeps phone pairing and QR fallback controls', () => {
+  assert.match(app, /\/api\/whatsapp\/pair/);
+  assert.match(app, /pairingCode/);
+  assert.match(app, /data-whatsapp-pair-phone/);
+  assert.match(app, /Conectar com número de telefone/);
+  assert.match(app, /qrDataUrl/);
 });
