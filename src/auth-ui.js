@@ -34,7 +34,7 @@ function ensureOverlay() {
             <span>Usuário</span>
             <div class="auth-input-wrap">
               <span class="auth-input-icon" aria-hidden="true">◎</span>
-              <input name="username" autocomplete="username" value="admin" required />
+              <input name="username" autocomplete="username" value="admin" readonly aria-readonly="true" required />
             </div>
           </label>
 
@@ -123,7 +123,7 @@ async function login(form) {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        username: String(data.get('username') || '').trim(),
+        username: 'admin',
         password: String(data.get('password') || ''),
       }),
     });
