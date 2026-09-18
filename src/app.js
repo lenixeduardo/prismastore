@@ -293,6 +293,19 @@ async function disconnectWhatsApp() {
   render();
 }
 
+async function restartWhatsAppConnection() {
+  state.whatsapp = { ...state.whatsapp, status: 'connecting', pairingCode: null, qrDataUrl: null, error: null };
+  render();
+  try {
+    const response = await fetch('/api/whatsapp/restart', { method: 'POST' });
+    state.whatsapp = await response.json();
+    if (!response.ok) throw new Error(state.whatsapp.error || 'Falha ao reiniciar conexão do WhatsApp');
+  } catch (error) {
+    state.whatsapp = { ...state.whatsapp, status: 'error', pairingCode: null, qrDataUrl: null, error: error instanceof Error ? error.message : 'Falha ao reiniciar conexão do WhatsApp' };
+  }
+  render();
+}
+
 function whatsappPairingForm() {
   return `<div class="wa-pairing-form"><label class="wa-pairing-label">Número deste celular<input type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999" data-whatsapp-pair-phone /></label><button class="btn primary" type="button" data-whatsapp-pair>Gerar código neste celular</button></div>`;
 }
@@ -300,19 +313,19 @@ function whatsappPairingForm() {
 function whatsappConnectionPanel() {
   const w = state.whatsapp;
   if (w.status === 'pairing' && w.pairingCode) {
-    return `<div class="wa-connection-panel success"><strong>Digite este código no próprio WhatsApp</strong><div class="wa-pairing-code-row"><code class="wa-pairing-code">${esc(w.pairingCode)}</code></div><div class="category">No celular: WhatsApp → Aparelhos conectados → Conectar aparelho → Conectar com número de telefone.</div></div>`;
+    return `<div class="wa-connection-panel success"><strong>Digite este código no próprio WhatsApp</strong><div class="wa-pairing-code-row"><code class="wa-pairing-code">${esc(w.pairingCode)}</code></div><div class="category">No celular: WhatsApp → Aparelhos conectados → Conectar aparelho → Conectar com número de telefone.</div><button class="btn" type="button" data-whatsapp-restart>Reiniciar conexão</button></div>`;
   }
   if (w.status === 'qr' && w.qrDataUrl) {
-    return `<div class="wa-connection-panel"><strong>Conectar usando este mesmo celular</strong><div class="category">Informe o número abaixo. Não é necessário ter um segundo aparelho.</div>${whatsappPairingForm()}<details class="wa-qr-fallback"><summary>Alternativa: QR Code em outro dispositivo</summary><img class="wa-qr" src="${esc(w.qrDataUrl)}" alt="QR Code para conectar o WhatsApp" /></details></div>`;
+    return `<div class="wa-connection-panel"><strong>Conectar usando este mesmo celular</strong><div class="category">Informe o número abaixo. Não é necessário ter um segundo aparelho.</div>${whatsappPairingForm()}<details class="wa-qr-fallback"><summary>Alternativa: QR Code em outro dispositivo</summary><img class="wa-qr" src="${esc(w.qrDataUrl)}" alt="QR Code para conectar o WhatsApp" /></details><button class="btn" type="button" data-whatsapp-restart>Reiniciar conexão</button></div>`;
   }
   if (w.status === 'connected') {
-    return `<div class="wa-connection-panel success"><strong>WhatsApp conectado</strong><div class="category">${esc(w.account?.name || 'Conta ativa')}${w.account?.number ? ` · +${esc(w.account.number)}` : ''}</div><button class="btn" data-whatsapp-disconnect>Desconectar</button></div>`;
+    return `<div class="wa-connection-panel success"><strong>WhatsApp conectado</strong><div class="category">${esc(w.account?.name || 'Conta ativa')}${w.account?.number ? ` · +${esc(w.account.number)}` : ''}</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" data-whatsapp-restart>Reiniciar conexão</button><button class="btn" data-whatsapp-disconnect>Desconectar</button></div></div>`;
   }
   if (['connecting', 'authenticated'].includes(w.status)) {
-    return `<div class="wa-connection-panel"><strong>${whatsappStatusLabel()}</strong><div class="category">Preparando o pareamento por número deste celular.</div></div>`;
+    return `<div class="wa-connection-panel"><strong>${whatsappStatusLabel()}</strong><div class="category">Preparando o pareamento por número deste celular.</div><button class="btn" type="button" data-whatsapp-restart>Reiniciar conexão</button></div>`;
   }
   if (w.status === 'error') {
-    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(w.error || 'Verifique a conexão do servidor.')}</div>${whatsappPairingForm()}<button class="btn" data-whatsapp-connect>Tentar QR Code</button></div>`;
+    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(w.error || 'Verifique a conexão do servidor.')}</div>${whatsappPairingForm()}<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-whatsapp-restart>Reiniciar conexão</button><button class="btn" data-whatsapp-connect>Tentar QR Code</button></div></div>`;
   }
   return `<div class="wa-connection-panel"><strong>Conectar WhatsApp</strong><div class="category">Use o número do WhatsApp deste próprio celular para gerar o código de vínculo.</div>${whatsappPairingForm()}<button class="btn" data-whatsapp-connect>Alternativa: usar QR Code</button></div>`;
 }
@@ -366,6 +379,7 @@ function bind() {
     button.disabled = true;
     pairWhatsAppByPhone(phone).finally(() => { button.disabled = false; });
   });
+  document.querySelector('[data-whatsapp-restart]')?.addEventListener('click', restartWhatsAppConnection);
   document.querySelector('[data-whatsapp-disconnect]')?.addEventListener('click', disconnectWhatsApp);
 }
 function resetChat(){state.chatbot={step:'welcome',cart:{},deliveryType:null,addressMode:null,paymentConfirmed:false};render();}
