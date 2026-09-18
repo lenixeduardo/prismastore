@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.2-mobile-secure-4';
+const CACHE_NAME = 'prismastore-shell-v0.9.2-mobile-ui-20260918-1';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
@@ -7,12 +7,17 @@ const APP_SHELL = [
   '/src/order-lifecycle-ui.js', '/src/reports-ui.js', '/src/backup-ui.js', '/src/pwa.js', '/src/hero.js',
   '/src/admin-extensions.js', '/src/product-editor.js', '/src/chatbot-settings.js', '/src/chat-simulator.js', '/src/admin-icons.js', '/src/whatsapp-onboarding.js', '/src/orders-board.js',
   '/assets/hero/hero-part-1.txt', '/assets/hero/hero-part-2.txt', '/assets/hero/hero-part-3.txt', '/assets/hero/hero-part-4.txt',
+  '/assets/mobile-dashboard-bg.svg', '/assets/prism-hero.svg', '/assets/empty-stock-ok.svg', '/assets/login-prism-burst.svg',
   '/icons/favicon-16.png', '/icons/favicon-32.png', '/icons/apple-touch-icon.png',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/prismastore-logo.png'
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -34,13 +39,15 @@ async function networkFirst(request) {
   }
 }
 
-async function cacheFirst(request) {
+async function freshAsset(request) {
   const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
-  if (cached) return cached;
-  const response = await fetch(request);
-  if (response.ok) cache.put(request, response.clone());
-  return response;
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch {
+    return cache.match(request);
+  }
 }
 
 self.addEventListener('fetch', (event) => {
@@ -54,7 +61,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (!APP_SHELL.includes(url.pathname)) return;
-  event.respondWith(cacheFirst(request));
+  event.respondWith(freshAsset(request));
 });
 
 self.addEventListener('message', (event) => {
