@@ -155,6 +155,8 @@ export function createAppServer({
   whatsappAuthProvider = 'baileys',
   authService = null,
   secureCookies = false,
+  runtimeLogProvider = null,
+  appVersion = '0.9.2',
 }) {
   const resolvedBackupService = backupService ?? createBackupService({
     stateStore,
@@ -215,6 +217,15 @@ export function createAppServer({
           sendJson(res, 401, { error: 'Autenticação necessária.', code: 'AUTH_REQUIRED' });
           return;
         }
+      }
+
+      if (req.method === 'GET' && url.pathname === '/api/debug-report') {
+        return sendJson(res, 200, {
+          generatedAt: new Date().toISOString(),
+          appVersion,
+          uptimeSeconds: Math.round(process.uptime()),
+          logs: runtimeLogProvider?.getRecent?.(80) ?? [],
+        });
       }
 
       if (req.method === 'GET' && url.pathname === '/api/state') return sendJson(res, 200, stateForAdmin(stateStore.load()));
@@ -285,7 +296,8 @@ export function createAppServer({
       if (serveGeneratedIcon(staticDir, url.pathname, req.method, res)) return;
       serveStatic(staticDir, url.pathname, res);
     } catch (error) {
-      sendJson(res, 400, { error: error instanceof Error ? error.message : 'Erro inesperado' });
+      runtimeLogProvider?.record?.('erro', error);
+      sendJson(res, 400, { error: 'Não foi possível concluir esta ação. Tente novamente ou use “Reportar bug” para enviar o diagnóstico.' });
     }
   });
 }

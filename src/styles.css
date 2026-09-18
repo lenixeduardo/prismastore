@@ -336,3 +336,16 @@ tr:hover td { background:rgba(255,255,255,.012); }
   .dashboard-order-row { grid-template-columns:34px minmax(0,1fr) 86px 10px;gap:7px; }
   .order-side { font-size:11px; }
 }
+
+
+.report-bug-btn { margin-bottom:12px; color:#d8e2dc; border:1px solid var(--border-soft); background:rgba(255,255,255,.018); }
+.report-bug-btn:hover { border-color:rgba(255,107,107,.28); background:var(--danger-dim); color:#ffd0d0; }
+.report-bug-btn .nav-icon { width:18px; height:18px; border:1px solid currentColor; border-radius:50%; font-size:11px; font-weight:800; }
+.bug-report-backdrop { position:fixed; inset:0; z-index:120; display:grid; place-items:center; padding:20px; background:rgba(2,8,5,.76); }
+.bug-report-backdrop[hidden] { display:none; }
+.bug-report-modal { width:min(720px,100%); max-height:min(760px,90vh); overflow:auto; background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:20px; box-shadow:var(--shadow); }
+.bug-report-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:10px; }
+.bug-report-head h2 { margin:4px 0 0; font-size:22px; }
+.bug-report-text { width:100%; min-height:360px; resize:vertical; margin-top:14px; padding:14px; border:1px solid var(--border); border-radius:5px; background:#06100b; color:#d9e4dc; font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; outline:none; }
+.bug-report-text:focus { border-color:#365445; }
+.bug-report-actions { display:flex; justify-content:flex-end; margin-top:12px; }

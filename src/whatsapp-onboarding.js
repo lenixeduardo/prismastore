@@ -1,3 +1,5 @@
+import { friendlyErrorMessage } from './error-messages.js';
+
 const CARD_ID = 'whatsapp-dashboard-onboarding';
 const ACTIVE_STATUSES = new Set(['connecting', 'qr', 'pairing', 'authenticated', 'connected']);
 let latestStatus = { status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null };
@@ -83,7 +85,7 @@ function whatsappDashboardCard(status = latestStatus) {
   }
 
   const message = status.status === 'error'
-    ? escapeHtml(status.error || 'Não foi possível iniciar a conexão com o WhatsApp.')
+    ? escapeHtml(friendlyErrorMessage(status.error, 'Não foi possível iniciar a conexão com o WhatsApp.'))
     : 'O WhatsApp ainda não está vinculado a este painel.';
 
   return `<section id="${CARD_ID}" class="wa-dashboard-card card" aria-live="polite">
@@ -162,7 +164,7 @@ async function ensureWhatsAppConnection() {
       qrDataUrl: null,
       pairingCode: null,
       account: null,
-      error: error instanceof Error ? error.message : 'Falha ao conectar o WhatsApp.',
+      error: friendlyErrorMessage(error, 'Não foi possível conectar o WhatsApp.'),
     };
     renderWhatsAppDashboardCard(latestStatus);
   }
@@ -186,7 +188,7 @@ async function pollWhatsAppStatus() {
       qrDataUrl: null,
       pairingCode: null,
       account: null,
-      error: error instanceof Error ? error.message : 'Falha ao consultar o WhatsApp.',
+      error: friendlyErrorMessage(error, 'Não foi possível consultar o WhatsApp.'),
     };
     renderWhatsAppDashboardCard(latestStatus);
     stopStatusPolling();
@@ -224,7 +226,7 @@ document.addEventListener('click', (event) => {
         ...latestStatus,
         status: 'error',
         pairingCode: null,
-        error: error instanceof Error ? error.message : 'Falha ao gerar código.',
+        error: friendlyErrorMessage(error, 'Não foi possível gerar o código de pareamento.'),
       };
       renderWhatsAppDashboardCard(latestStatus);
     }).finally(() => { pairButton.disabled = false; });
@@ -246,7 +248,7 @@ document.addEventListener('click', (event) => {
       qrDataUrl: null,
       pairingCode: null,
       account: null,
-      error: error instanceof Error ? error.message : 'Falha ao conectar o WhatsApp.',
+      error: friendlyErrorMessage(error, 'Não foi possível conectar o WhatsApp.'),
     };
     renderWhatsAppDashboardCard(latestStatus);
   });
