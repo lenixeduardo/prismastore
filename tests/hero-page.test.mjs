@@ -13,8 +13,8 @@ test('starts on the PrismaStore hero page before revealing the control panel', (
   assert.match(html, /id="hero-page"/);
   assert.match(html, /id="app"\s+hidden/);
   assert.match(html, /Acessar painel de controle/);
-  assert.match(html, /src="\.\/src\/hero\.js"/);
-  assert.match(html, /href="\.\/src\/hero\.css"/);
+  assert.match(html, /src="\.\/src\/hero\.js(?:\?[^"]*)?"/);
+  assert.match(html, /href="\.\/src\/hero\.css(?:\?[^"]*)?"/);
 });
 
 test('hero reveals the existing dashboard without reloading', () => {
