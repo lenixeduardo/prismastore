@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.2-login-fix-20260918-2';
+const CACHE_NAME = 'prismastore-shell-v0.9.2-prism-icon-20260918-3';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
@@ -9,7 +9,7 @@ const APP_SHELL = [
   '/assets/hero/hero-part-1.txt', '/assets/hero/hero-part-2.txt', '/assets/hero/hero-part-3.txt', '/assets/hero/hero-part-4.txt',
   '/assets/mobile-dashboard-bg.svg', '/assets/prism-hero.svg', '/assets/empty-stock-ok.svg', '/assets/login-prism-burst.svg',
   '/icons/favicon-16.png', '/icons/favicon-32.png', '/icons/apple-touch-icon.png',
-  '/icons/icon-192.png', '/icons/icon-512.png', '/icons/prismastore-logo.png'
+  '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-192.svg', '/icons/icon-512.svg', '/icons/prismastore-logo.png'
 ];
 
 self.addEventListener('install', (event) => {
