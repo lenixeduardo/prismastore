@@ -183,3 +183,33 @@ test('monthly report API returns real report JSON and CSV export', async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+
+test('debug report API returns recent sanitized terminal logs', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismastore-debug-report-'));
+  const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });
+  const runtimeLogProvider = {
+    getRecent: () => [{ at: '2026-09-18T03:00:00.000Z', level: 'erro', message: 'Falha de teste' }],
+    record: () => {},
+  };
+  const server = createAppServer({
+    stateStore: store,
+    staticDir: process.cwd(),
+    runtimeLogProvider,
+    appVersion: '0.9.2',
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const response = await fetch(`${baseUrl}/api/debug-report`);
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.appVersion, '0.9.2');
+    assert.equal(payload.logs[0].message, 'Falha de teste');
+    assert.equal(typeof payload.uptimeSeconds, 'number');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
