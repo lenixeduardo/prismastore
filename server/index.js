@@ -196,8 +196,7 @@ const server = createAppServer({
 
 server.listen(port, host, () => {
   console.log(`PrismaStore disponível em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
-  console.log(useDemoData ? 'Dados demo: ATIVOS' : 'Dados demo: DESATIVADOS');
-  console.log(paymentService.getStatus().configured ? 'Pix local: CONFIGURADO' : 'Pix local: PENDENTE DE CONFIGURAÇÃO');
+  console.log(paymentService.getStatus().configured ? 'Pix Oscar: CONFIGURADO' : 'Pix Oscar: PENDENTE DE CONFIGURAÇÃO');
   console.log(authService ? `Admin protegido: ${adminUser}` : 'Admin: sem senha; acesso restrito ao próprio dispositivo (127.0.0.1)');
   console.log(driveConfigured ? `Backup Google Drive: AUTOMÁTICO · retenção ${driveRetentionCount}` : 'Backup Google Drive: PENDENTE DE CONFIGURAÇÃO');
   if (devWhatsappOnly) console.log('WhatsApp DEV: allowlist exclusiva ATIVA');
