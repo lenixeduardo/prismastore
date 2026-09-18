@@ -7,6 +7,7 @@ import {
   computeProductStatus,
 } from './domain.js';
 import { seedProducts, seedCustomers, seedOrders, receivingAccounts } from './data.js';
+import { friendlyErrorMessage } from './error-messages.js';
 
 const icons = {
   dashboard: '▦', orders: '◫', customers: '◎', products: '□', reports: '⌁', chatbot: '◌', settings: '⚙', search: '⌕', alert: '!', money: 'R$', box: '◇', close: '×'
@@ -51,7 +52,7 @@ async function persist() {
     state.serverError = null;
   } catch (error) {
     state.serverConnected = false;
-    state.serverError = error instanceof Error ? error.message : 'Falha ao salvar dados locais.';
+    state.serverError = friendlyErrorMessage(error, 'Não foi possível salvar as alterações. Tente novamente.');
     console.error(error);
   }
 }
@@ -96,7 +97,10 @@ function shell(content) {
         <div class="nav-label">Sistema</div>
         <button class="nav-btn ${state.view==='settings'?'active':''}" data-view="settings"><span class="nav-icon">⚙</span>Configurações</button>
       </div>
-      <div class="sidebar-footer"><div class="status-row"><span>WhatsApp</span><span style="display:flex;gap:8px;align-items:center"><i class="status-dot ${state.whatsapp.status==='connected'?'':'offline'}"></i>${whatsappStatusLabel()}</span></div></div>
+      <div class="sidebar-footer">
+        <button class="nav-btn report-bug-btn" type="button" data-report-bug><span class="nav-icon">!</span>Reportar bug</button>
+        <div class="status-row"><span>WhatsApp</span><span style="display:flex;gap:8px;align-items:center"><i class="status-dot ${state.whatsapp.status==='connected'?'':'offline'}"></i>${whatsappStatusLabel()}</span></div>
+      </div>
     </aside>
     <main class="main">${content}</main>
     <nav class="mobile-bottom">${mobileViews.map(([id,label,icon])=>`<button class="${state.view===id?'active':''}" data-view="${id}"><span class="mob-icon">${icon}</span>${label}</button>`).join('')}<button type="button" data-pwa-more><span class="mob-icon">•••</span>Mais</button></nav>
@@ -330,7 +334,7 @@ async function refreshWhatsAppStatus({ rerender = false } = {}) {
     state.whatsapp = await response.json();
     if (!response.ok && state.whatsapp.status !== 'error') throw new Error(state.whatsapp.error || 'Falha ao consultar WhatsApp');
   } catch (error) {
-    state.whatsapp = { status: 'error', qrDataUrl: null, account: null, error: error instanceof Error ? error.message : 'Falha ao consultar WhatsApp' };
+    state.whatsapp = { status: 'error', qrDataUrl: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível consultar o WhatsApp.') };
   }
   if (rerender && state.view === 'settings' && before !== whatsappRenderKey(state.whatsapp)) render();
   return state.whatsapp;
@@ -344,7 +348,7 @@ async function connectWhatsApp() {
     state.whatsapp = await response.json();
     if (!response.ok) throw new Error(state.whatsapp.error || 'Falha ao conectar WhatsApp');
   } catch (error) {
-    state.whatsapp = { status: 'error', qrDataUrl: null, account: null, error: error instanceof Error ? error.message : 'Falha ao conectar WhatsApp' };
+    state.whatsapp = { status: 'error', qrDataUrl: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível conectar o WhatsApp.') };
   }
   render();
 }
@@ -359,7 +363,7 @@ async function pairWhatsAppByPhone(phone) {
     state.whatsapp = await response.json();
     if (!response.ok) throw new Error(state.whatsapp.error || 'Falha ao gerar código de pareamento');
   } catch (error) {
-    state.whatsapp = { ...state.whatsapp, status: 'error', pairingCode: null, error: error instanceof Error ? error.message : 'Falha ao gerar código de pareamento' };
+    state.whatsapp = { ...state.whatsapp, status: 'error', pairingCode: null, error: friendlyErrorMessage(error, 'Não foi possível gerar o código de pareamento.') };
   }
   render();
 }
@@ -369,7 +373,7 @@ async function disconnectWhatsApp() {
     const response = await fetch('/api/whatsapp/disconnect', { method: 'POST' });
     state.whatsapp = await response.json();
   } catch (error) {
-    state.whatsapp = { status: 'error', qrDataUrl: null, account: null, error: error instanceof Error ? error.message : 'Falha ao desconectar WhatsApp' };
+    state.whatsapp = { status: 'error', qrDataUrl: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível desconectar o WhatsApp.') };
   }
   render();
 }
@@ -382,7 +386,7 @@ async function restartWhatsAppConnection() {
     state.whatsapp = await response.json();
     if (!response.ok) throw new Error(state.whatsapp.error || 'Falha ao reiniciar conexão do WhatsApp');
   } catch (error) {
-    state.whatsapp = { ...state.whatsapp, status: 'error', pairingCode: null, qrDataUrl: null, error: error instanceof Error ? error.message : 'Falha ao reiniciar conexão do WhatsApp' };
+    state.whatsapp = { ...state.whatsapp, status: 'error', pairingCode: null, qrDataUrl: null, error: friendlyErrorMessage(error, 'Não foi possível reiniciar a conexão do WhatsApp.') };
   }
   render();
 }
@@ -406,7 +410,7 @@ function whatsappConnectionPanel() {
     return `<div class="wa-connection-panel"><strong>${whatsappStatusLabel()}</strong><div class="category">Preparando o pareamento por número deste celular.</div><button class="btn" type="button" data-whatsapp-restart>Reiniciar conexão</button></div>`;
   }
   if (w.status === 'error') {
-    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(w.error || 'Verifique a conexão do servidor.')}</div>${whatsappPairingForm()}<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-whatsapp-restart>Reiniciar conexão</button><button class="btn" data-whatsapp-connect>Tentar QR Code</button></div></div>`;
+    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(friendlyErrorMessage(w.error, 'Não foi possível conectar ao WhatsApp. Tente novamente.'))}</div>${whatsappPairingForm()}<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-whatsapp-restart>Reiniciar conexão</button><button class="btn" data-whatsapp-connect>Tentar QR Code</button></div></div>`;
   }
   return `<div class="wa-connection-panel"><strong>Conectar WhatsApp</strong><div class="category">Use o número do WhatsApp deste próprio celular para gerar o código de vínculo.</div>${whatsappPairingForm()}<button class="btn" data-whatsapp-connect>Alternativa: usar QR Code</button></div>`;
 }
@@ -493,7 +497,7 @@ async function bootstrapOperationalRuntime() {
     window.dispatchEvent(new CustomEvent('prismastore:runtime-ready'));
   } catch (error) {
     state.serverConnected = false;
-    state.serverError = error instanceof Error ? error.message : 'Falha ao conectar ao servidor local.';
+    state.serverError = friendlyErrorMessage(error, 'Não foi possível conectar ao PrismaStore. Verifique se o sistema está iniciado.');
   }
   render();
 }
