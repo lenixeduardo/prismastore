@@ -31,3 +31,14 @@ test('rejects invalid real product input', () => {
   assert.throws(() => normalizeProductInput({ name: 'Produto', category: 'Cat', price: '-1', stock: '2' }), /Preço/);
   assert.throws(() => normalizeProductInput({ name: 'Produto', category: 'Cat', price: '1', stock: '2.5' }), /Estoque/);
 });
+
+
+test('defaults unspecified stock to ten units', () => {
+  const product = normalizeProductInput(
+    { name: 'Produto padrão', category: 'Catálogo', price: '25', stock: '' },
+    null,
+    () => new Date('2026-09-18T22:00:00.000Z'),
+    () => 'uuid-default-stock',
+  );
+  assert.equal(product.stock, 10);
+});

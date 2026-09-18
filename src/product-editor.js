@@ -12,7 +12,8 @@ export function normalizeProductInput(input = {}, existing = null, now = () => n
   const name = String(input.name ?? '').trim();
   const category = String(input.category ?? '').trim();
   const price = decimal(input.price);
-  const stock = Number(String(input.stock ?? '').trim());
+  const stockRaw = String(input.stock ?? '').trim();
+  const stock = stockRaw === '' ? 10 : Number(stockRaw);
 
   if (!name) throw new Error('Nome do produto é obrigatório.');
   if (!category) throw new Error('Categoria é obrigatória.');
