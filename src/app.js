@@ -496,4 +496,6 @@ async function bootstrap() {
 }
 
 bootstrap();
-setInterval(() => refreshWhatsAppStatus({ rerender: true }), 2000);
+setInterval(() => {
+  if (state.view === 'settings') refreshWhatsAppStatus({ rerender: true });
+}, 5000);
