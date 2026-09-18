@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.2-mobile-secure-2';
+const CACHE_NAME = 'prismastore-shell-v0.9.2-mobile-secure-3';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
@@ -8,7 +8,7 @@ const APP_SHELL = [
   '/src/admin-extensions.js', '/src/product-editor.js', '/src/chatbot-settings.js', '/src/chat-simulator.js', '/src/admin-icons.js', '/src/whatsapp-onboarding.js', '/src/orders-board.js',
   '/assets/hero/hero-part-1.txt', '/assets/hero/hero-part-2.txt', '/assets/hero/hero-part-3.txt', '/assets/hero/hero-part-4.txt',
   '/icons/favicon-16.png', '/icons/favicon-32.png', '/icons/apple-touch-icon.png',
-  '/icons/icon-192.png', '/icons/icon-512.png'
+  '/icons/icon-192.png', '/icons/icon-512.png', '/icons/prismastore-logo.png'
 ];
 
 self.addEventListener('install', (event) => {
