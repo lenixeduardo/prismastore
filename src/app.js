@@ -30,14 +30,21 @@ const state = {
 };
 
 async function loadOperationalState() {
-  const response = await fetch('/api/state', { cache: 'no-store' });
-  if (!response.ok) throw new Error('Não foi possível carregar os dados locais.');
-  const persisted = await response.json();
-  state.products = Array.isArray(persisted.products) ? persisted.products : clone(seedProducts);
-  state.customers = Array.isArray(persisted.customers) ? persisted.customers : clone(seedCustomers);
-  state.orders = Array.isArray(persisted.orders) ? persisted.orders : clone(seedOrders);
-  state.serverConnected = true;
-  state.serverError = null;
+  try {
+    const response = await fetch('/api/state', { cache: 'no-store' });
+    if (!response.ok) throw new Error('Não foi possível carregar os dados locais.');
+    const persisted = await response.json();
+    state.products = Array.isArray(persisted.products) ? persisted.products : clone(seedProducts);
+    state.customers = Array.isArray(persisted.customers) ? persisted.customers : clone(seedCustomers);
+    state.orders = Array.isArray(persisted.orders) ? persisted.orders : clone(seedOrders);
+    state.serverConnected = true;
+    state.serverError = null;
+    return true;
+  } catch (error) {
+    state.serverConnected = false;
+    state.serverError = friendlyErrorMessage(error, 'Não foi possível conectar ao PrismaStore. Verifique se o sistema está iniciado.');
+    return false;
+  }
 }
 
 async function persist() {
@@ -492,13 +499,8 @@ let operationalRuntimeStarted = false;
 async function bootstrapOperationalRuntime() {
   if (operationalRuntimeStarted) return;
   operationalRuntimeStarted = true;
-  try {
-    await loadOperationalState();
-    window.dispatchEvent(new CustomEvent('prismastore:runtime-ready'));
-  } catch (error) {
-    state.serverConnected = false;
-    state.serverError = friendlyErrorMessage(error, 'Não foi possível conectar ao PrismaStore. Verifique se o sistema está iniciado.');
-  }
+  const loaded = await loadOperationalState();
+  if (loaded) window.dispatchEvent(new CustomEvent('prismastore:runtime-ready'));
   render();
 }
 

@@ -25,3 +25,13 @@ test('hero waits for authentication before revealing the dashboard', () => {
   assert.match(source, /ensureAuthenticated/);
   assert.match(source, /await/);
 });
+
+
+test('successful login resumes the pending dashboard access without reloading the page', () => {
+  const source = readFileSync(new URL('../src/auth-ui.js', import.meta.url), 'utf8');
+  const loginStart = source.indexOf('async function login(form)');
+  const logoutStart = source.indexOf('async function logout()');
+  const loginSource = source.slice(loginStart, logoutStart);
+  assert.match(loginSource, /settleLogin\(true\)/);
+  assert.doesNotMatch(loginSource, /window\.location\.reload\(\)/);
+});
