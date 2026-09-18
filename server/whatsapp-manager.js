@@ -135,7 +135,8 @@ export function createWhatsAppManager({
         }
 
         if (connection === 'close') {
-          if (socket === activeSocket) socket = null;
+          if (socket !== activeSocket) return;
+          socket = null;
           const loggedOut = disconnectStatusCode(lastDisconnect) === disconnectReasonLoggedOut;
           setStatus({
             status: 'disconnected',
@@ -209,6 +210,20 @@ export function createWhatsAppManager({
     return getStatus();
   }
 
+  async function restartConnection() {
+    manualDisconnect = true;
+    clearReconnect();
+    const activeSocket = socket;
+    socket = null;
+    if (activeSocket?.end) {
+      await Promise.resolve(activeSocket.end(new Error('PrismaStore reiniciando conexão')));
+    }
+    setStatus({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null });
+    manualDisconnect = false;
+    connectPromise = null;
+    return connect();
+  }
+
   async function sendText(phoneOrJid, text) {
     if (!socket || status.status !== 'connected') throw new Error('WhatsApp não conectado.');
     return socket.sendMessage(normalizeDevOutboundRecipient(phoneOrJid), { text: String(text) });
@@ -228,5 +243,5 @@ export function createWhatsAppManager({
     throw new Error('Mídia do WhatsApp inválida.');
   }
 
-  return { connect, requestPairingCode, disconnect, getStatus, sendText, sendMedia };
+  return { connect, restartConnection, requestPairingCode, disconnect, getStatus, sendText, sendMedia };
 }
