@@ -22,7 +22,6 @@ const BRAND_ICON_SOURCES = {
   '/icons/apple-touch-icon.png': 'icons/generated/apple-touch-icon.b64',
   '/icons/icon-192.png': 'icons/generated/icon-192.b64',
   '/icons/icon-512.png': 'icons/generated/icon-512.b64',
-  '/icons/prismastore-logo.png': 'icons/generated/prismastore-logo.b64',
 };
 
 function sendJson(res, statusCode, value, headers = {}) {
