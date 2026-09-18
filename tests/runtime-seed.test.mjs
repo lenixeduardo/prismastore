@@ -45,6 +45,13 @@ test('catalog defaults keep the requested prices and stock', () => {
       { name: 'Dry 5g', price: 175, stock: 10 },
       { name: 'Gisele', price: 70, stock: 20 },
       { name: '@ 4un (abacaxi)', price: 130, stock: 10 },
+      { name: 'Item A', price: 150, stock: 10 },
+      { name: 'Item B', price: 175, stock: 10 },
+      { name: 'Item C', price: 125, stock: 10 },
+      { name: 'Item D', price: 60, stock: 10 },
+      { name: 'Item E', price: 130, stock: 10 },
+      { name: 'Item F', price: 150, stock: 10 },
+      { name: 'Item G', price: 100, stock: 10 },
     ],
   );
 });
