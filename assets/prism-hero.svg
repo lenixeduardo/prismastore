@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 220">
+<defs>
+<linearGradient id="a" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#19f596"/><stop offset=".55" stop-color="#08764a"/><stop offset="1" stop-color="#02150e"/></linearGradient>
+<linearGradient id="b" x1="1" y1="0" x2="0" y2="1"><stop stop-color="#65ffc0"/><stop offset="1" stop-color="#063d27"/></linearGradient>
+<filter id="gl"><feGaussianBlur stdDeviation="3"/></filter>
+</defs>
+<path d="M120 10 220 188 120 150 20 188Z" fill="url(#a)" opacity=".72"/>
+<path d="M120 10 120 150 20 188Z" fill="#0a8552" opacity=".48"/>
+<path d="M120 10 220 188 120 150Z" fill="url(#b)" opacity=".42"/>
+<path d="M120 10 120 150 20 188M120 10 220 188 120 150M20 188 120 150 220 188" fill="none" stroke="#2dffa2" stroke-opacity=".7" stroke-width="1.5"/>
+<circle cx="120" cy="10" r="4" fill="#d8ffe9" filter="url(#gl)"/>
+</svg>
