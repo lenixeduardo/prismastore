@@ -25,23 +25,23 @@
 
 .hero-enter {
   position: absolute;
-  left: 75.2%;
-  top: 71.1%;
+  left: 50%;
+  top: 89.4%;
   transform: translate(-50%, -50%);
-  width: min(24vw, 390px);
-  height: clamp(58px, 5vw, 80px);
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: rgba(13, 117, 69, .025);
+  width: min(44vw, 460px);
+  height: clamp(48px, 7.8vw, 118px);
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
   color: transparent;
   cursor: pointer;
   font-size: 0;
   z-index: 2;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .hero-enter:hover {
-  background: rgba(24, 197, 110, .07);
-  box-shadow: 0 0 30px rgba(34, 220, 126, .12);
+  background: rgba(24, 197, 110, .035);
 }
 
 .hero-enter:focus-visible {
@@ -76,11 +76,15 @@
     object-fit: contain;
     background: #020806;
   }
+
   .hero-enter {
-    left: 75%;
-    top: 69.8%;
-    width: 30vw;
+    left: 50%;
+    top: 83.3%;
+    width: 44vw;
     min-width: 150px;
-    height: 54px;
+    max-width: 260px;
+    height: 12vw;
+    min-height: 44px;
+    max-height: 64px;
   }
 }
