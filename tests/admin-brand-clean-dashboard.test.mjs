@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const app = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
-const server = readFileSync(new URL('../server/app-server.js', import.meta.url), 'utf8');
+const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8');
 const sw = readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
 
 test('admin shell uses the PrismaStore logo asset in the sidebar brand', () => {
   assert.match(app, /\/icons\/prismastore-logo\.png/);
-  assert.doesNotMatch(app, /brand-mark::after/);
-  assert.match(server, /\/icons\/prismastore-logo\.png/);
+  assert.match(styles, /\.brand-mark img/);
+  assert.doesNotMatch(styles, /\.brand-mark::after/);
   assert.match(sw, /\/icons\/prismastore-logo\.png/);
 });
 
