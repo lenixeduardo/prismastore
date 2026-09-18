@@ -50,5 +50,7 @@ test('service worker cache is bumped and includes both raster fallbacks and pris
   const source = readFileSync(resolve(root, 'service-worker.js'), 'utf8');
   assert.match(source, /prismastore-shell-v0\.9\.2/);
   assert.match(source, /\/icons\/icon-192\.png/);
-  assert.match(source, /\/icons\/icon-512\.png/);\n  assert.match(source, /\/icons\/icon-192\.svg/);\n  assert.match(source, /\/icons\/icon-512\.svg/);
+  assert.match(source, /\/icons\/icon-512\.png/);
+  assert.match(source, /\/icons\/icon-192\.svg/);
+  assert.match(source, /\/icons\/icon-512\.svg/);
 });
