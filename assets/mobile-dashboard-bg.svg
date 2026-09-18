@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 932" preserveAspectRatio="xMidYMid slice">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#03110c"/><stop offset=".55" stop-color="#052016"/><stop offset="1" stop-color="#020906"/></linearGradient>
+  <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#13f28b" stop-opacity=".72"/><stop offset="1" stop-color="#047946" stop-opacity="0"/></linearGradient>
+  <filter id="glow"><feGaussianBlur stdDeviation="7"/></filter>
+</defs>
+<rect width="430" height="932" fill="url(#bg)"/>
+<path d="M430 62 320 196 372 316 430 214Z" fill="#0b6f43" opacity=".20"/><path d="M430 62 350 215 430 156Z" fill="url(#g)" opacity=".35"/>
+<path d="M0 642 116 730 78 932 0 932Z" fill="#0b6f43" opacity=".17"/><path d="m0 748 116-18L55 900Z" fill="url(#g)" opacity=".25"/>
+<path d="M430 62 320 196M0 642l116 88M116 730 55 900" stroke="#13f28b" stroke-opacity=".23" stroke-width="1"/>
+<circle cx="350" cy="156" r="3" fill="#7fffc2" filter="url(#glow)"/><circle cx="115" cy="730" r="2.5" fill="#7fffc2" filter="url(#glow)"/>
+</svg>
