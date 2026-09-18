@@ -133,7 +133,11 @@ async function login(form) {
     settleLogin(true);
     window.location.reload();
   } catch (error) {
-    if (errorTarget) errorTarget.textContent = error instanceof Error ? error.message : 'Falha ao entrar.';
+    if (errorTarget) {
+      errorTarget.textContent = error instanceof TypeError
+        ? 'Servidor local indisponível. Inicie o PrismaStore e tente novamente.'
+        : error instanceof Error ? error.message : 'Falha ao entrar.';
+    }
   } finally {
     submit.disabled = false;
   }
@@ -192,4 +196,3 @@ window.PrismastoreAuth = {
   getState: () => ({ ...authState }),
 };
 
-refreshStatus().catch(() => {});
