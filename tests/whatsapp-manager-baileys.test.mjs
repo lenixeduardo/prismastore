@@ -17,6 +17,8 @@ function createSocket() {
     ev,
     sent,
     user: { id: '5511000000000@s.whatsapp.net', name: 'Prisma Store' },
+    pairingRequests: [],
+    async requestPairingCode(phone) { this.pairingRequests.push(phone); return 'ABCD-1234'; },
     async sendMessage(jid, payload) { sent.push({ jid, payload }); },
     async end() { this.endCalls = (this.endCalls || 0) + 1; },
   };
@@ -169,4 +171,27 @@ test('send operations fail clearly while disconnected', async () => {
   const { manager } = harness();
   await assert.rejects(() => manager.sendText('5511999999999', 'oi'), /WhatsApp não conectado/);
   await assert.rejects(() => manager.sendMedia('5511999999999', '/tmp/a.png'), /WhatsApp não conectado/);
+});
+
+
+test('recoverable reconnect keeps an issued pairing code visible until WhatsApp connects', async () => {
+  const { manager, socket, scheduled } = harness();
+  await manager.connect();
+  const pairing = await manager.requestPairingCode('(11) 99999-9999');
+  assert.equal(pairing.status, 'pairing');
+  assert.equal(pairing.pairingCode, 'ABCD-1234');
+
+  await socket.ev.emit('connection.update', {
+    connection: 'close',
+    lastDisconnect: { error: { output: { statusCode: 500 } } },
+  });
+
+  assert.equal(manager.getStatus().status, 'pairing');
+  assert.equal(manager.getStatus().pairingCode, 'ABCD-1234');
+  assert.equal(scheduled.length, 1);
+
+  await scheduled[0].fn();
+
+  assert.equal(manager.getStatus().status, 'pairing');
+  assert.equal(manager.getStatus().pairingCode, 'ABCD-1234');
 });
