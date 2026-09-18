@@ -42,3 +42,10 @@ test('financial receiving account list contains only Pix Oscar', () => {
   assert.doesNotMatch(data, /Asaas Principal/);
   assert.doesNotMatch(data, /Conta Secundária/);
 });
+
+
+test('WhatsApp settings allow restarting the connection process', () => {
+  assert.match(app, /\/api\/whatsapp\/restart/);
+  assert.match(app, /data-whatsapp-restart/);
+  assert.match(app, /Reiniciar conexão/);
+});
