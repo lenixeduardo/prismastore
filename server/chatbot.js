@@ -3,7 +3,7 @@ import { availableStock, calculateCart, formatCurrencyBRL, reserveCartStock } fr
 import { resolveChatbotMessage } from './chatbot-messages.js';
 
 function digits(value = '') { return String(value).replace(/\D/g, ''); }
-function isPrivateChat(chatId = '') { return String(chatId).endsWith('@c.us') || String(chatId).endsWith('@lid'); }
+function isPrivateChat(chatId = '') { const value = String(chatId); return value.endsWith('@s.whatsapp.net') || value.endsWith('@c.us') || value.endsWith('@lid'); }
 function customerPhoneMatches(customer, phone) { return digits(customer?.phone) === phone; }
 function customerName(contactName, phone) { return String(contactName ?? '').trim() || `Cliente ${phone.slice(-4)}`; }
 
