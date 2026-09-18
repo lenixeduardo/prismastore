@@ -168,29 +168,49 @@ async function ensureWhatsAppConnection() {
   }
 }
 
-function startStatusPolling() {
-  if (pollTimer) return;
-  pollTimer = window.setInterval(async () => {
-    if (!dashboardOpened) return;
-    try {
-      await fetchWhatsAppStatus();
-    } catch (error) {
-      latestStatus = {
-        status: 'error',
-        qrDataUrl: null,
-        pairingCode: null,
-        account: null,
-        error: error instanceof Error ? error.message : 'Falha ao consultar o WhatsApp.',
-      };
-      renderWhatsAppDashboardCard(latestStatus);
-    }
-  }, 1500);
+function stopStatusPolling() {
+  if (pollTimer) window.clearTimeout(pollTimer);
+  pollTimer = null;
 }
 
-window.addEventListener('prismastore:dashboard-opened', () => {
+async function pollWhatsAppStatus() {
+  pollTimer = null;
+  if (!dashboardOpened || !isDashboardVisible()) return;
+  try {
+    const status = await fetchWhatsAppStatus();
+    if (status.status === 'connected') return;
+    pollTimer = window.setTimeout(pollWhatsAppStatus, 2500);
+  } catch (error) {
+    latestStatus = {
+      status: 'error',
+      qrDataUrl: null,
+      pairingCode: null,
+      account: null,
+      error: error instanceof Error ? error.message : 'Falha ao consultar o WhatsApp.',
+    };
+    renderWhatsAppDashboardCard(latestStatus);
+    stopStatusPolling();
+  }
+}
+
+function startStatusPolling() {
+  if (pollTimer || !dashboardOpened || !isDashboardVisible() || latestStatus.status === 'connected') return;
+  pollTimer = window.setTimeout(pollWhatsAppStatus, 2500);
+}
+
+window.addEventListener('prismastore:dashboard-opened', async () => {
   dashboardOpened = true;
+  await ensureWhatsAppConnection();
   startStatusPolling();
-  ensureWhatsAppConnection();
+});
+
+window.addEventListener('prismastore:view-changed', (event) => {
+  if (event.detail?.view === 'dashboard') {
+    renderWhatsAppDashboardCard(latestStatus);
+    startStatusPolling();
+    return;
+  }
+  stopStatusPolling();
 });
 
 document.addEventListener('click', (event) => {
@@ -199,7 +219,7 @@ document.addEventListener('click', (event) => {
     const card = pairButton.closest(`#${CARD_ID}`);
     const phone = card?.querySelector('[data-whatsapp-pair-phone]')?.value?.trim() || '';
     pairButton.disabled = true;
-    requestWhatsAppPairing(phone).catch((error) => {
+    requestWhatsAppPairing(phone).then(() => startStatusPolling()).catch((error) => {
       latestStatus = {
         ...latestStatus,
         status: 'error',
@@ -220,7 +240,7 @@ document.addEventListener('click', (event) => {
 
   const connectButton = event.target.closest?.('[data-dashboard-whatsapp-connect]');
   if (!connectButton) return;
-  requestWhatsAppConnection().catch((error) => {
+  requestWhatsAppConnection().then(() => startStatusPolling()).catch((error) => {
     latestStatus = {
       status: 'error',
       qrDataUrl: null,
