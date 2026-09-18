@@ -32,7 +32,7 @@ test('service worker caches only static shell and bypasses API', () => {
 test('PWA module registers only in secure contexts and supports install/update/iOS', () => {
   const js = read('src/pwa.js');
   assert.match(js, /window\.isSecureContext/);
-  assert.match(js, /serviceWorker\.register\('\/service-worker\.js'\)/);
+  assert.match(js, /serviceWorker\.register\('\/service-worker\.js',\s*\{\s*updateViaCache:\s*'none'\s*\}\)/);
   assert.match(js, /beforeinstallprompt/);
   assert.match(js, /navigator\.standalone/);
   assert.match(js, /Adicionar à Tela de Início/);
