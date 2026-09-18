@@ -133,7 +133,6 @@ async function login(form) {
     sessionStorage.setItem('prismastore:resume-panel', 'auth-login');
     hideOverlay();
     settleLogin(true);
-    window.location.reload();
   } catch (error) {
     if (errorTarget) errorTarget.textContent = friendlyErrorMessage(error, 'Não foi possível entrar. Confira os dados e tente novamente.');
   } finally {
