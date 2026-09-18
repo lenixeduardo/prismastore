@@ -110,14 +110,17 @@ function header(title, subtitle, actions='') {
 
 function dashboardView() {
   const low = state.products.filter(isLowStock).length;
-  const paidMonth = state.orders.filter(o=>o.paidAt?.startsWith('2026-09'));
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthLabel = new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(now);
+  const paidMonth = state.orders.filter(o=>o.paidAt?.startsWith(monthKey));
   const revenue = paidMonth.reduce((s,o)=>s+o.total,0);
   const pendingPacking = state.orders.filter(o=>['PAID','PACKING'].includes(o.status)).length;
-  const avg = paidMonth.length ? revenue/paidMonth.length : 0;
+  const revenueKpi = paidMonth.length ? kpi('Faturamento do mês',formatCurrencyBRL(revenue),'Pagamentos confirmados no mês','positive') : '';
   return shell(`${header('Visão geral','Acompanhe a operação do atendimento ao pós-pagamento em uma única visão.')}
     <div class="grid cols-4">
-      ${kpi('Faturamento do mês',formatCurrencyBRL(revenue),'↑ 12,8% vs. mês anterior','positive')}
-      ${kpi('Pedidos pagos',String(paidMonth.length),'Setembro de 2026','')}
+      ${revenueKpi}
+      ${kpi('Pedidos pagos',String(paidMonth.length),monthLabel,'')}
       ${kpi('Para embalar',String(pendingPacking),'Prioridade operacional','')}
       ${kpi('Estoque crítico',String(low),low?`${low} item(ns) abaixo de 3 un.`:'Sem alertas','')}
     </div>
@@ -158,8 +161,7 @@ function customersView() {
 
 function productsView() {
   return shell(`${header('Produtos','Catálogo em texto, estoque físico, reserva e alerta automático abaixo de 3 unidades.','<button class="btn primary" id="add-demo-product">+ Produto demo</button>')}
-    <div class="notice">No MVP de validação não há imagens de produtos. O catálogo do chatbot é textual por decisão de produto.</div>
-    <div class="section table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Preço</th><th>Físico</th><th>Reservado</th><th>Disponível</th><th>Status</th><th>Ajuste</th></tr></thead><tbody>${state.products.map(p=>`<tr><td><div class="product-name">${esc(p.name)}</div><div class="category">ID ${p.id}</div></td><td>${esc(p.category)}</td><td class="mono">${formatCurrencyBRL(p.price)}</td><td class="mono">${p.stock}</td><td class="mono">${p.reserved}</td><td class="mono"><strong>${availableStock(p)}</strong></td><td>${productBadge(p)}</td><td><div class="qty-controls"><button data-stock-dec="${p.id}">−</button><span></span><button data-stock-inc="${p.id}">+</button></div></td></tr>`).join('')}</tbody></table></div>`);
+    <div class="section table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Preço</th><th>Físico</th><th>Reservado</th><th>Disponível</th><th>Status</th><th>Ajuste</th></tr></thead><tbody>${state.products.map(p=>`<tr><td><div class="product-name">${esc(p.name)}</div><div class="category">ID ${p.id}</div></td><td>${esc(p.category)}</td><td class="mono">${formatCurrencyBRL(p.price)}</td><td class="mono">${p.stock}</td><td class="mono">${p.reserved}</td><td class="mono"><strong>${availableStock(p)}</strong></td><td>${productBadge(p)}</td><td><div class="qty-controls stock-control"><button type="button" aria-label="Subtrair estoque" data-stock-dec="${p.id}">−</button><input type="number" min="0" step="1" inputmode="numeric" aria-label="Estoque físico de ${esc(p.name)}" data-stock-input="${p.id}" value="${p.stock}" /><button type="button" aria-label="Adicionar estoque" data-stock-inc="${p.id}">+</button></div></td></tr>`).join('')}</tbody></table></div>`);
 }
 
 function reportsView() {
@@ -365,6 +367,7 @@ function bind() {
   document.querySelectorAll('[data-advance-order]').forEach(b=>b.addEventListener('click',()=>{const o=state.orders.find(x=>x.id===b.dataset.advanceOrder);o.status=nextOrderStatus(o);persist();state.selectedOrder=o.id;render();}));
   document.querySelectorAll('[data-stock-inc]').forEach(b=>b.addEventListener('click',()=>{const p=state.products.find(x=>x.id===b.dataset.stockInc);p.stock+=1;persist();render();}));
   document.querySelectorAll('[data-stock-dec]').forEach(b=>b.addEventListener('click',()=>{const p=state.products.find(x=>x.id===b.dataset.stockDec);p.stock=Math.max(0,p.stock-1);persist();render();}));
+  document.querySelectorAll('[data-stock-input]').forEach(input=>input.addEventListener('change',()=>{const p=state.products.find(x=>x.id===input.dataset.stockInput);const value=Math.max(0,Number.parseInt(input.value,10)||0);p.stock=value;persist();render();}));
   document.querySelector('#add-demo-product')?.addEventListener('click',()=>{state.products.push({id:`p${Date.now()}`,name:'Novo produto de demonstração',category:'Acessórios',price:19.9,stock:5,reserved:0,active:true});persist();render();});
   document.querySelectorAll('[data-cart-inc]').forEach(b=>b.addEventListener('click',()=>{const p=state.products.find(x=>x.id===b.dataset.cartInc);const current=state.chatbot.cart[p.id]||0;if(current<availableStock(p)) state.chatbot.cart[p.id]=current+1;render();}));
   document.querySelectorAll('[data-cart-dec]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.cartDec;state.chatbot.cart[id]=Math.max(0,(state.chatbot.cart[id]||0)-1);render();}));
