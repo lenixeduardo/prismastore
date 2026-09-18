@@ -478,6 +478,12 @@ function chatAction(action){
 }
 
 async function bootstrap() {
+  const auth = window.PrismastoreAuth;
+  if (auth?.ensureAuthenticated) {
+    const allowed = await auth.ensureAuthenticated();
+    if (!allowed) return;
+  }
+
   try {
     await loadOperationalState();
     await refreshWhatsAppStatus();
