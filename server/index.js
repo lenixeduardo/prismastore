@@ -8,7 +8,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
-import { seedProducts, seedCustomers, seedOrders, receivingAccounts } from '../src/data.js';
+import { seedProducts, seedCustomers, seedOrders, catalogProducts, receivingAccounts } from '../src/data.js';
 import { createStateStore } from './state-store.js';
 import { createChatbotEngine } from './chatbot.js';
 import { createWhatsAppChatAdapter } from './whatsapp-chat-adapter.js';
@@ -24,7 +24,7 @@ import { createBackupService } from './backup-service.js';
 import { createBackupScheduler } from './backup-scheduler.js';
 import { createAuthService } from './auth-service.js';
 import { createGoogleDriveAccessTokenProvider, createGoogleDriveBackupStore } from './google-drive-backup.js';
-import { createStartupState, createTerminalQrEncoder, clearLegacyDemoState } from './startup-config.js';
+import { createStartupState, createTerminalQrEncoder, clearLegacyDemoState, ensureCatalogProducts } from './startup-config.js';
 import { createRuntimeLogBuffer } from './runtime-log.js';
 
 const runtimeLog = createRuntimeLogBuffer();
@@ -37,7 +37,7 @@ const dataDir = join(root, 'data');
 const authPath = join(dataDir, 'whatsapp-auth');
 const assetsDir = join(root, 'assets');
 const port = Number(process.env.PORT || 4173);
-const adminUser = String(process.env.PRISMASTORE_ADMIN_USER || 'admin').trim() || 'admin';
+const adminUser = 'admin';
 const adminPassword = String(process.env.PRISMASTORE_ADMIN_PASSWORD || '');
 const requestedHost = process.env.HOST || '127.0.0.1';
 const host = adminPassword ? requestedHost : '127.0.0.1';
@@ -66,6 +66,7 @@ const stateStore = createStateStore({
   seedState: startupState,
 });
 clearLegacyDemoState({ stateStore, seedState: legacySeedState, useDemoData });
+ensureCatalogProducts({ stateStore, products: catalogProducts });
 
 const paymentService = createPaymentService({
   stateStore,
