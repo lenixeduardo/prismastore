@@ -133,7 +133,7 @@ function dashboardView() {
       </section>
 
       <div class="dashboard-kpis">
-        ${dashboardKpi('money','Faturamento do mês',formatCurrencyBRL(revenue),'↑ 12,8% vs. mês anterior','positive',0)}
+        ${dashboardKpi('money','Faturamento do mês',formatCurrencyBRL(revenue),monthLabel,'',0)}
         ${dashboardKpi('cart','Pedidos pagos',String(paidMonth.length),monthLabel,'',Math.min(5,paidMonth.length))}
         ${dashboardKpi('box','Para embalar',String(pendingPacking),'Prioridade operacional','warning',Math.min(5,pendingPacking))}
         ${dashboardKpi('alert','Estoque crítico',String(low),low?`${low} item(ns) abaixo do limite`:'Sem alertas no momento','danger',criticalBars)}
