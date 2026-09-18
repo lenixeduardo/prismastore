@@ -62,9 +62,11 @@ test('Passo 4 não duplica pedido nem reserva para o mesmo checkout', async () =
   } finally { h.close(); }
 });
 
-test('módulo live-sync consulta o estado local e atualiza automaticamente quando ele muda', () => {
+test('módulo live-sync só inicia após runtime autenticado e atualiza quando o estado muda', () => {
   const source = fs.readFileSync(new URL('../src/live-sync.js', import.meta.url), 'utf8');
   assert.match(source, /fetch\('\/api\/state'/);
-  assert.match(source, /setInterval\(checkForServerChanges, 2000\)/);
+  assert.match(source, /prismastore:runtime-ready/);
+  assert.match(source, /setTimeout\(runLiveSync, 3000\)/);
+  assert.doesNotMatch(source, /setInterval\(checkForServerChanges/);
   assert.match(source, /window\.location\.reload\(\)/);
 });
