@@ -108,7 +108,14 @@ export function createWhatsAppManager({
   async function performConnect() {
     manualDisconnect = false;
     clearReconnect();
-    setStatus({ status: 'connecting', qrDataUrl: null, pairingCode: null, account: null, error: null });
+    const pendingPairingCode = status.pairingCode || null;
+    setStatus({
+      status: pendingPairingCode ? 'pairing' : 'connecting',
+      qrDataUrl: null,
+      pairingCode: pendingPairingCode,
+      account: null,
+      error: null,
+    });
 
     try {
       const { state, saveCreds } = await authStateLoader();
@@ -138,10 +145,11 @@ export function createWhatsAppManager({
           if (socket !== activeSocket) return;
           socket = null;
           const loggedOut = disconnectStatusCode(lastDisconnect) === disconnectReasonLoggedOut;
+          const pendingPairingCode = loggedOut ? null : status.pairingCode;
           setStatus({
-            status: 'disconnected',
+            status: pendingPairingCode ? 'pairing' : 'disconnected',
             qrDataUrl: null,
-            pairingCode: null,
+            pairingCode: pendingPairingCode,
             account: null,
             error: loggedOut ? 'Sessão do WhatsApp encerrada.' : null,
           });
