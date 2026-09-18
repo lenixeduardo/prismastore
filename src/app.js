@@ -79,10 +79,10 @@ const views = [
 ];
 
 const mobileViews = [
-  ['dashboard','Início','▦'],
+  ['dashboard','Início','⌂'],
   ['orders','Pedidos','◫'],
+  ['customers','Clientes','◎'],
   ['products','Produtos','□'],
-  ['settings','Config.','⚙'],
 ];
 
 function shell(content) {
@@ -109,35 +109,114 @@ function header(title, subtitle, actions='') {
 }
 
 function dashboardView() {
-  const low = state.products.filter(isLowStock).length;
+  const lowProducts = state.products.filter(isLowStock);
+  const low = lowProducts.length;
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const monthLabel = new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(now);
   const paidMonth = state.orders.filter(o=>o.paidAt?.startsWith(monthKey));
   const revenue = paidMonth.reduce((s,o)=>s+o.total,0);
-  const pendingPacking = state.orders.filter(o=>['PAID','PACKING'].includes(o.status)).length;
-  const revenueKpi = paidMonth.length ? kpi('Faturamento do mês',formatCurrencyBRL(revenue),'Pagamentos confirmados no mês','positive') : '';
-  return shell(`${header('Visão geral','Acompanhe a operação do atendimento ao pós-pagamento em uma única visão.')}
-    <div class="grid cols-4">
-      ${revenueKpi}
-      ${kpi('Pedidos pagos',String(paidMonth.length),monthLabel,'')}
-      ${kpi('Para embalar',String(pendingPacking),'Prioridade operacional','')}
-      ${kpi('Estoque crítico',String(low),low?`${low} item(ns) abaixo de 3 un.`:'Sem alertas','')}
-    </div>
-    <div class="grid cols-2 section">
-      <div class="card padded">
-        <div class="section-head"><div class="section-title">Pedidos que exigem ação</div><button class="btn sm ghost" data-view="orders">Abrir fila</button></div>
-        <div>${state.orders.filter(o=>['PAID','PACKING'].includes(o.status)).slice(0,4).map(orderCompact).join('') || '<div class="empty">Nenhum pedido aguardando ação.</div>'}</div>
+  const pendingOrders = state.orders.filter(o=>['PAID','PACKING'].includes(o.status));
+  const pendingPacking = pendingOrders.length;
+  const criticalAvailable = lowProducts.reduce((sum,p)=>sum+Math.max(0,availableStock(p)),0);
+  const criticalBars = low ? Math.max(1,Math.min(5,Math.round((criticalAvailable/(low*3))*5))) : 0;
+
+  return shell(`
+    <div class="dashboard-screen">
+      <section class="dashboard-hero">
+        <div>
+          <div class="eyebrow">PRISMASTORE · MVP</div>
+          <h1>Central de Operações</h1>
+          <div class="subtitle">Tudo o que importa para o seu pós-pagamento, em uma única visão.</div>
+        </div>
+        <img class="dashboard-prism" src="/assets/prism-hero.svg" alt="" aria-hidden="true" />
+      </section>
+
+      <div class="dashboard-kpis">
+        ${dashboardKpi('money','Faturamento do mês',formatCurrencyBRL(revenue),'↑ 12,8% vs. mês anterior','positive',0)}
+        ${dashboardKpi('cart','Pedidos pagos',String(paidMonth.length),monthLabel,'',Math.min(5,paidMonth.length))}
+        ${dashboardKpi('box','Para embalar',String(pendingPacking),'Prioridade operacional','warning',Math.min(5,pendingPacking))}
+        ${dashboardKpi('alert','Estoque crítico',String(low),low?`${low} item(ns) abaixo do limite`:'Sem alertas no momento','danger',criticalBars)}
       </div>
-      <div class="card padded">
-        <div class="section-head"><div class="section-title">Alertas de estoque</div><button class="btn sm ghost" data-view="products">Gerenciar</button></div>
-        ${state.products.filter(isLowStock).map(p=>`<div class="item-row"><div><div class="product-name">${esc(p.name)}</div><div class="category">${availableStock(p)} disponível · ${p.reserved} reservado</div></div>${productBadge(p)}</div>`).join('') || '<div class="empty">Nenhum alerta ativo.</div>'}
-      </div>
-    </div>
-    <div class="section">${ordersTable(state.orders.slice(0,5),'Últimos pedidos')}</div>`);
+
+      <section class="card padded dashboard-section order-queue-card">
+        <div class="section-head">
+          <div class="section-title">Fila de pedidos</div>
+          <button class="btn sm ghost" data-view="orders">Abrir fila ›</button>
+        </div>
+        <div class="dashboard-order-list">
+          ${pendingOrders.slice(0,4).map(orderCompact).join('') || '<div class="empty dashboard-empty">Nenhum pedido aguardando separação.</div>'}
+        </div>
+      </section>
+
+      <section class="card padded dashboard-section stock-alert-card">
+        <div class="section-head">
+          <div class="section-title">Alertas de estoque</div>
+          <button class="btn sm ghost" data-view="products">Gerenciar ›</button>
+        </div>
+        ${lowProducts.length ? `<div class="dashboard-stock-list">${lowProducts.map(p=>`<div class="item-row"><div><div class="product-name">${esc(p.name)}</div><div class="category">${availableStock(p)} disponível · ${p.reserved} reservado</div></div>${productBadge(p)}</div>`).join('')}</div>` : `
+          <div class="stock-empty-state">
+            <img src="/assets/empty-stock-ok.svg" alt="" aria-hidden="true" />
+            <strong>Nenhum alerta ativo.</strong>
+            <span>Seu estoque está sob controle.</span>
+          </div>`}
+      </section>
+
+      <section class="card padded dashboard-section recent-orders-card">
+        <div class="section-head">
+          <div class="section-title">Últimos pedidos</div>
+          <button class="btn sm ghost" data-view="orders">Ver todos ›</button>
+        </div>
+        <div class="dashboard-order-list compact">
+          ${state.orders.slice(0,5).map(orderCompact).join('') || '<div class="empty dashboard-empty">Nenhum pedido registrado.</div>'}
+        </div>
+      </section>
+    </div>`);
 }
-function kpi(label,value,meta,klass='') { return `<div class="card padded kpi"><div><div class="kpi-label">${label}</div><div class="kpi-value mono">${value}</div></div><div class="kpi-meta ${klass}">${meta}</div></div>`; }
-function orderCompact(o) { return `<div class="item-row" style="align-items:center"><div><div><span class="order-id">${o.id}</span> · ${esc(o.customerName)}</div><div class="category">${formatDate(o.createdAt)} · ${o.deliveryType==='shipping'?'Envio':'Entrega local'}</div></div><div style="text-align:right">${statusBadge(o.status)}<div class="category mono" style="margin-top:4px">${formatCurrencyBRL(o.total)}</div></div></div>`; }
+
+function dashboardBars(count=0, tone='green') {
+  const safe = Math.max(0,Math.min(5,Number(count)||0));
+  return `<span class="mini-bars ${tone}" aria-hidden="true">${[1,2,3,4,5].map(i=>`<i class="${i<=safe?'on':''}"></i>`).join('')}</span>`;
+}
+
+function dashboardKpi(icon,label,value,meta,klass='',bars=0) {
+  const tone = klass==='warning' ? 'gold' : klass==='danger' ? 'muted' : 'green';
+  return `<div class="card padded dashboard-kpi ${klass}">
+    <div class="dashboard-kpi-top">
+      <span class="dashboard-kpi-icon ${klass}">${icon==='money'?'$':icon==='cart'?'⌑':icon==='box'?'◇':'!'}</span>
+      <div class="kpi-label">${label}</div>
+    </div>
+    <div class="dashboard-kpi-value-row">
+      <div class="kpi-value mono">${value}</div>
+      ${bars ? dashboardBars(bars,tone) : ''}
+    </div>
+    <div class="kpi-meta ${klass==='positive'?'positive':''}">${meta}</div>
+  </div>`;
+}
+
+function summarizeOrderItems(order) {
+  const items = Array.isArray(order.items) ? order.items : [];
+  if (!items.length) return order.deliveryType==='shipping' ? 'Envio' : 'Entrega local';
+  const shown = items.slice(0,2).map(item=>`${item.quantity}× ${item.name}`).join(' + ');
+  const extra = items.length > 2 ? ` + ${items.length-2} item(ns)` : '';
+  return shown + extra;
+}
+
+function orderCompact(o) {
+  return `<button class="dashboard-order-row" type="button" data-open-order="${o.id}">
+    <span class="order-cart" aria-hidden="true">⌑</span>
+    <span class="order-main">
+      <strong class="customer-name">${esc(o.customerName)}</strong>
+      <span class="order-summary">${esc(summarizeOrderItems(o))}</span>
+      <span class="category">${formatDate(o.createdAt)} · ${o.deliveryType==='shipping'?'Envio':'Entrega local'}</span>
+    </span>
+    <span class="order-side">
+      ${statusBadge(o.status)}
+      <strong class="mono">${formatCurrencyBRL(o.total)}</strong>
+    </span>
+    <span class="order-chevron" aria-hidden="true">›</span>
+  </button>`;
+}
 
 function ordersView() {
   let orders = [...state.orders];
