@@ -81,6 +81,9 @@ test('chatbot guides item, quantity, delivery, address and confirmation without 
 
     await h.incoming('Rua Exemplo, 123 - Centro - São Paulo/SP - 01000-000');
     assert.equal(h.store.getChatSession('5511999999999').step, 'confirm');
+    const customerAfterAddress = h.store.load().customers[0];
+    assert.equal(customerAfterAddress.addresses.length, 1);
+    assert.equal(customerAfterAddress.addresses[0].formatted, 'Rua Exemplo, 123 - Centro - São Paulo/SP - 01000-000');
     assert.match(h.sent.at(-1).text, /CONFIRME SEU PEDIDO/i);
     assert.match(h.sent.at(-1).text, /R\$\s*20,00/);
 

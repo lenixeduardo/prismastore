@@ -282,6 +282,7 @@ export function createChatbotEngine({ stateStore, now = () => new Date() }) {
     if (session.step === 'address_input') {
       if (input.length < 8) { await sendText(message(stateStore, 'addressInputPrompt')); return { handled: true, step: session.step }; }
       session.address = { formatted: input }; session.newAddress = true; session.step = 'confirm'; saveSession(stateStore, phone, session, now);
+      storeConfirmedAddress(stateStore, phone, session, now);
       await sendText(confirmationText(stateStore, session));
       return { handled: true, step: session.step };
     }

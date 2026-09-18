@@ -9,35 +9,6 @@ function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent || '');
 }
 
-function ensureStatusPill() {
-  let pill = document.querySelector('.pwa-status');
-  if (!pill) {
-    pill = document.createElement('div');
-    pill.className = 'pwa-status';
-    pill.innerHTML = '<i></i><span>Verificando servidor…</span>';
-    document.body.appendChild(pill);
-  }
-  return pill;
-}
-
-async function refreshServerStatus() {
-  const pill = ensureStatusPill();
-  if (!navigator.onLine) {
-    pill.classList.add('offline');
-    pill.querySelector('span').textContent = 'Sem conexão';
-    return;
-  }
-  try {
-    const response = await fetch('/api/state', { cache: 'no-store' });
-    if (!response.ok) throw new Error('Servidor indisponível');
-    pill.classList.remove('offline');
-    pill.querySelector('span').textContent = 'Servidor online';
-  } catch {
-    pill.classList.add('offline');
-    pill.querySelector('span').textContent = 'Servidor indisponível';
-  }
-}
-
 function closeInstallCard() {
   installCard?.remove();
   installCard = null;
@@ -135,10 +106,6 @@ window.addEventListener('appinstalled', () => {
   closeInstallCard();
 });
 
-window.addEventListener('online', refreshServerStatus);
-window.addEventListener('offline', refreshServerStatus);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshServerStatus(); });
-
 document.addEventListener('click', async (event) => {
   if (event.target.closest('[data-pwa-more]')) return openMoreSheet();
   if (event.target === document.querySelector('.pwa-more-backdrop')) return closeMoreSheet();
@@ -162,7 +129,6 @@ observer.observe(document.documentElement, { childList: true, subtree: true });
 
 document.addEventListener('DOMContentLoaded', () => {
   enhanceRenderedUI();
-  refreshServerStatus();
   if (window.isSecureContext && isIOS() && !isStandalone()) setTimeout(() => showInstallCard({ ios: true }), 1200);
   registerServiceWorker().catch((error) => console.warn('PWA indisponível:', error));
 });
