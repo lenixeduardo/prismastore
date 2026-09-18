@@ -10,24 +10,50 @@ function ensureOverlay() {
   overlay.dataset.authOverlay = 'true';
   overlay.hidden = true;
   overlay.innerHTML = `
-    <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <div class="auth-shell">
       <div class="auth-brand">
-        <img src="/icons/icon-192.png" alt="" />
-        <div><strong>PrismaStore</strong><span>Painel administrativo</span></div>
+        <img src="/icons/prismastore-logo.png" alt="" aria-hidden="true" />
+        <div class="auth-brand-copy">
+          <strong>PrismaStore</strong>
+          <span>Operations</span>
+        </div>
       </div>
-      <h1 id="auth-title">Entrar no painel</h1>
-      <p>Use o acesso administrativo configurado para esta loja.</p>
-      <form class="auth-form" data-auth-form>
-        <label class="auth-field">Usuário
-          <input name="username" autocomplete="username" value="admin" required />
-        </label>
-        <label class="auth-field">Senha
-          <input name="password" type="password" autocomplete="current-password" required />
-        </label>
-        <div class="auth-error" data-auth-error aria-live="polite"></div>
-        <button class="auth-submit" type="submit">Entrar</button>
-      </form>
-      <button class="auth-back" type="button" data-auth-back>Voltar</button>
+
+      <img class="auth-prism-art" src="/assets/login-prism-burst.svg" alt="" aria-hidden="true" />
+
+      <div class="auth-heading">
+        <h1 id="auth-title">Entrar</h1>
+        <p>Acesse o painel de controle da sua operação.</p>
+      </div>
+
+      <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <form class="auth-form" data-auth-form>
+          <label class="auth-field">
+            <span>Usuário</span>
+            <div class="auth-input-wrap">
+              <span class="auth-input-icon" aria-hidden="true">◎</span>
+              <input name="username" autocomplete="username" value="admin" required />
+            </div>
+          </label>
+
+          <label class="auth-field">
+            <span>Senha</span>
+            <div class="auth-input-wrap">
+              <span class="auth-input-icon" aria-hidden="true">◇</span>
+              <input name="password" type="password" autocomplete="current-password" required />
+            </div>
+          </label>
+
+          <div class="auth-error" data-auth-error aria-live="polite"></div>
+
+          <button class="auth-submit auth-glass-button" type="submit">
+            <span>Entrar no painel</span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </form>
+
+        <button class="auth-back auth-glass-button secondary" type="button" data-auth-back>Voltar</button>
+      </div>
     </div>`;
   document.body.appendChild(overlay);
   return overlay;
@@ -63,9 +89,11 @@ async function ensureAuthenticated() {
   try {
     if (!authState.loaded || !authState.authenticated) await refreshStatus();
   } catch (error) {
+    authState = { ...authState, loaded: true, configured: true, authenticated: false };
     showOverlay();
     const target = document.querySelector('[data-auth-error]');
-    if (target) target.textContent = error instanceof Error ? error.message : 'Falha ao validar sessão.';
+    if (target) target.textContent = 'Servidor local indisponível. Inicie o PrismaStore e tente novamente.';
+    return false;
   }
 
   if (!authState.configured || authState.authenticated) return true;
