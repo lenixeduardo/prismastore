@@ -25,6 +25,10 @@ import { createBackupScheduler } from './backup-scheduler.js';
 import { createAuthService } from './auth-service.js';
 import { createGoogleDriveAccessTokenProvider, createGoogleDriveBackupStore } from './google-drive-backup.js';
 import { createStartupState, createTerminalQrEncoder, clearLegacyDemoState } from './startup-config.js';
+import { createRuntimeLogBuffer } from './runtime-log.js';
+
+const runtimeLog = createRuntimeLogBuffer();
+runtimeLog.installConsoleCapture();
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -192,6 +196,8 @@ const server = createAppServer({
   whatsappAuthPath: authPath,
   whatsappAuthProvider: 'baileys',
   authService,
+  runtimeLogProvider: runtimeLog,
+  appVersion: '0.9.2',
 });
 
 server.listen(port, host, () => {
