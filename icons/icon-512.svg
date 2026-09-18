@@ -1,1 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><image width="512" height="512" href="/icons/apple-touch-icon.png" preserveAspectRatio="xMidYMid slice"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="PrismaStore">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="44%" r="72%">
+      <stop offset="0" stop-color="#04392d"/>
+      <stop offset=".52" stop-color="#01251d"/>
+      <stop offset="1" stop-color="#00110d"/>
+    </radialGradient>
+    <linearGradient id="frame" x1="65" y1="48" x2="454" y2="462" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#71ffd2"/>
+      <stop offset=".38" stop-color="#00ec8c"/>
+      <stop offset="1" stop-color="#00a965"/>
+    </linearGradient>
+    <linearGradient id="facetA" x1="258" y1="78" x2="410" y2="376" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#eafff6"/>
+      <stop offset=".24" stop-color="#71ffd0"/>
+      <stop offset=".7" stop-color="#10dd86"/>
+      <stop offset="1" stop-color="#00a967"/>
+    </linearGradient>
+    <linearGradient id="facetB" x1="102" y1="385" x2="271" y2="89" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00ad67"/>
+      <stop offset=".5" stop-color="#00ed8c"/>
+      <stop offset="1" stop-color="#8bffda"/>
+    </linearGradient>
+    <linearGradient id="facetC" x1="132" y1="382" x2="401" y2="393" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#16e58b"/>
+      <stop offset=".42" stop-color="#9affda"/>
+      <stop offset="1" stop-color="#00b56b"/>
+    </linearGradient>
+    <filter id="frameGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="prismGlow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="86" fill="url(#bg)"/>
+  <rect x="31" y="31" width="450" height="450" rx="72" fill="none" stroke="url(#frame)" stroke-width="8" filter="url(#frameGlow)"/>
+  <rect x="44" y="44" width="424" height="424" rx="62" fill="none" stroke="#00c678" stroke-opacity=".22" stroke-width="16"/>
+
+  <g filter="url(#prismGlow)" stroke="#8fffd9" stroke-width="2.2" stroke-linejoin="round">
+    <polygon points="257,78 425,376 300,321" fill="url(#facetA)"/>
+    <polygon points="257,78 221,251 97,376" fill="url(#facetB)"/>
+    <polygon points="97,376 221,251 218,333" fill="#00d97f"/>
+    <polygon points="97,376 218,333 244,420" fill="#008b55"/>
+    <polygon points="244,420 218,333 300,321 425,376" fill="url(#facetC)"/>
+    <polygon points="221,251 257,78 300,321" fill="#37f2a1" fill-opacity=".82"/>
+    <polygon points="221,251 300,321 218,333" fill="#002a20" stroke="#00c878"/>
+    <polygon points="300,321 425,376 244,420" fill="#4df5ac" fill-opacity=".7"/>
+    <polygon points="97,376 221,251 167,326" fill="#27f3a0" fill-opacity=".9"/>
+  </g>
+
+  <path d="M257 78 425 376 244 420 97 376Z" fill="none" stroke="#c3ffe9" stroke-opacity=".8" stroke-width="2.2"/>
+  <ellipse cx="258" cy="424" rx="176" ry="22" fill="#00e88a" opacity=".08"/>
+</svg>
