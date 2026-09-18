@@ -2,7 +2,7 @@ let lastStatus = null;
 
 function paymentRow() {
   return [...document.querySelectorAll('.setting-row')]
-    .find((row) => row.querySelector('.product-name')?.textContent?.trim() === 'Pix');
+    .find((row) => row.querySelector('.product-name')?.textContent?.trim()?.startsWith('Pix'));
 }
 
 function renderPaymentStatus(status) {
@@ -39,5 +39,13 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.documentElement, { childList: true, subtree: true });
 
-refreshPaymentStatus();
-setInterval(refreshPaymentStatus, 2000);
+function refreshPaymentStatusWhenVisible() {
+  const app = document.querySelector('#app');
+  if (!app || app.hidden || !paymentRow()) return;
+  refreshPaymentStatus();
+}
+
+window.addEventListener('prismastore:runtime-ready', refreshPaymentStatusWhenVisible);
+window.addEventListener('prismastore:view-changed', (event) => {
+  if (event.detail?.view === 'settings') refreshPaymentStatusWhenVisible();
+});
