@@ -83,7 +83,8 @@ function enhanceRenderedUI() {
 
 async function registerServiceWorker() {
   if (!window.isSecureContext || !('serviceWorker' in navigator)) return null;
-  const registration = await navigator.serviceWorker.register('/service-worker.js');
+  const registration = await navigator.serviceWorker.register('/service-worker.js', { updateViaCache: 'none' });
+  await registration.update().catch(() => {});
   if (registration.waiting) showInstallCard({ update: true });
   registration.addEventListener('updatefound', () => {
     const worker = registration.installing;
