@@ -233,6 +233,10 @@ export function createAppServer({
         const body = await readJson(req);
         return sendJson(res, 200, await whatsappManager.requestPairingCode(body.phone));
       }
+      if (req.method === 'POST' && url.pathname === '/api/whatsapp/restart') {
+        if (!whatsappManager?.restartConnection) return sendJson(res, 503, { status: 'error', error: 'Reinício do WhatsApp não configurado' });
+        return sendJson(res, 200, await whatsappManager.restartConnection());
+      }
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/disconnect') {
         if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
         return sendJson(res, 200, await whatsappManager.disconnect());

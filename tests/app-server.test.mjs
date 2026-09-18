@@ -62,15 +62,17 @@ test('serves the existing admin index from the same process', async () => {
   });
 });
 
-test('WhatsApp API exposes status and triggers connect/disconnect', async () => {
+test('WhatsApp API exposes status and triggers connect/restart/disconnect', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'prismastore-wa-api-'));
   const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });
   let status = { status: 'disconnected', qrDataUrl: null, account: null, error: null };
   let connects = 0;
+  let restarts = 0;
   let disconnects = 0;
   const whatsappManager = {
     getStatus: () => structuredClone(status),
     connect: async () => { connects += 1; status = { ...status, status: 'connecting' }; return status; },
+    restartConnection: async () => { restarts += 1; status = { ...status, status: 'connecting', qrDataUrl: null, pairingCode: null, error: null }; return status; },
     disconnect: async () => { disconnects += 1; status = { ...status, status: 'disconnected' }; return status; },
   };
   const server = createAppServer({ stateStore: store, staticDir: process.cwd(), whatsappManager });
@@ -85,6 +87,11 @@ test('WhatsApp API exposes status and triggers connect/disconnect', async () => 
     response = await fetch(`${baseUrl}/api/whatsapp/connect`, { method: 'POST' });
     assert.equal(response.status, 200);
     assert.equal(connects, 1);
+    assert.equal((await response.json()).status, 'connecting');
+
+    response = await fetch(`${baseUrl}/api/whatsapp/restart`, { method: 'POST' });
+    assert.equal(response.status, 200);
+    assert.equal(restarts, 1);
     assert.equal((await response.json()).status, 'connecting');
 
     response = await fetch(`${baseUrl}/api/whatsapp/disconnect`, { method: 'POST' });
