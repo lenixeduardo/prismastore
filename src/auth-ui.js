@@ -1,3 +1,5 @@
+import { friendlyErrorMessage } from './error-messages.js';
+
 let authState = { loaded: false, configured: false, authenticated: false, username: null };
 let loginPromise = null;
 let loginResolve = null;
@@ -133,11 +135,7 @@ async function login(form) {
     settleLogin(true);
     window.location.reload();
   } catch (error) {
-    if (errorTarget) {
-      errorTarget.textContent = error instanceof TypeError
-        ? 'Servidor local indisponível. Inicie o PrismaStore e tente novamente.'
-        : error instanceof Error ? error.message : 'Falha ao entrar.';
-    }
+    if (errorTarget) errorTarget.textContent = friendlyErrorMessage(error, 'Não foi possível entrar. Confira os dados e tente novamente.');
   } finally {
     submit.disabled = false;
   }
