@@ -176,3 +176,22 @@ test('conversation start and catalog restart never send visual assets', async ()
     assert.match(h.sent[0].text, /CARDÁPIO PRISMA STORE/);
   } finally { h.cleanup(); }
 });
+
+
+test('standard Baileys individual JID starts the real chatbot flow', async () => {
+  const h = harness();
+  try {
+    h.sent.length = 0;
+    const result = await h.bot.handleIncoming({
+      chatId: '5511999999999@s.whatsapp.net',
+      text: 'Oi',
+      contactName: 'Eduardo',
+      sendText: async (text) => h.sent.push({ type: 'text', text }),
+      sendMedia: async (path) => h.sent.push({ type: 'media', path }),
+    });
+    assert.equal(result.handled, true);
+    assert.equal(result.step, 'catalog');
+    assert.match(h.sent[0].text, /Eduardo/);
+    assert.match(h.sent.at(-1).text, /Produto A/);
+  } finally { h.cleanup(); }
+});
