@@ -20,7 +20,7 @@ test('manifest has installable identity and 192/512 icons', () => {
 
 test('service worker caches only static shell and bypasses API', () => {
   const sw = read('service-worker.js');
-  assert.match(sw, /prismastore-shell-v0\.9\.2-login-fix/);
+  assert.match(sw, /prismastore-shell-v0\.9\.2-prism-icon/);
   assert.match(sw, /url\.pathname\.startsWith\('\/api\/'\)/);
   const shell = sw.match(/const APP_SHELL = \[[\s\S]*?\n\];/)?.[0] || '';
   assert.doesNotMatch(shell, /['"]\/api\//);
@@ -52,7 +52,7 @@ test('mobile CSS hides sidebar, pins bottom nav and turns tables into cards', ()
 
 test('index references manifest and PWA progressive enhancement assets', () => {
   const html = read('index.html');
-  assert.match(html, /rel="manifest" href="\/manifest\.webmanifest"/);
+  assert.match(html, /rel="manifest" href="\/manifest\.webmanifest(?:\?[^"]*)?"/);
   assert.match(html, /apple-mobile-web-app-capable/);
   assert.match(html, /src\/pwa\.css/);
   assert.match(html, /src\/pwa\.js/);
