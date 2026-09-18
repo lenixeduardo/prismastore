@@ -27,7 +27,10 @@ test('runtime terminal hides demo status and identifies the configured Pix as Pi
   assert.doesNotMatch(server, /Pix local:/);
 });
 
-test('admin settings reflect Baileys session and Pix Oscar instead of stale Asaas copy', () => {
+test('admin settings support same-phone pairing and reflect Baileys session plus Pix Oscar', () => {
+  assert.match(app, /\/api\/whatsapp\/pair/);
+  assert.match(app, /data-whatsapp-pair-phone/);
+  assert.match(app, /Gerar código neste celular/);
   assert.match(app, /Pix Oscar/);
   assert.match(app, /data\/whatsapp-auth/);
   assert.doesNotMatch(app, /Asaas API \+ webhook/);
