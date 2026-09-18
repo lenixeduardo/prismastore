@@ -89,14 +89,14 @@ function shell(content) {
   return `
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><div class="brand-mark"></div><div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div></div>
+      <div class="brand"><div class="brand-mark"><img src="/icons/prismastore-logo.png" alt="" aria-hidden="true" /></div><div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div></div>
       <div class="nav-group">
         <div class="nav-label">Operação</div>
         ${views.map(([id,label,icon])=>`<button class="nav-btn ${state.view===id?'active':''}" data-view="${id}"><span class="nav-icon">${icon}</span>${label}</button>`).join('')}
         <div class="nav-label">Sistema</div>
         <button class="nav-btn ${state.view==='settings'?'active':''}" data-view="settings"><span class="nav-icon">⚙</span>Configurações</button>
       </div>
-      <div class="sidebar-footer"><div class="status-row"><span>WhatsApp</span><span style="display:flex;gap:8px;align-items:center"><i class="status-dot ${state.whatsapp.status==='connected'?'':'offline'}"></i>${whatsappStatusLabel()}</span></div><div class="version">SQLite local · sessão persistente</div></div>
+      <div class="sidebar-footer"><div class="status-row"><span>WhatsApp</span><span style="display:flex;gap:8px;align-items:center"><i class="status-dot ${state.whatsapp.status==='connected'?'':'offline'}"></i>${whatsappStatusLabel()}</span></div></div>
     </aside>
     <main class="main">${content}</main>
     <nav class="mobile-bottom">${mobileViews.map(([id,label,icon])=>`<button class="${state.view===id?'active':''}" data-view="${id}"><span class="mob-icon">${icon}</span>${label}</button>`).join('')}<button type="button" data-pwa-more><span class="mob-icon">•••</span>Mais</button></nav>
@@ -105,7 +105,7 @@ function shell(content) {
 }
 
 function header(title, subtitle, actions='') {
-  return `<div class="topbar"><div><div class="eyebrow">PrismaStore · MVP</div><h1>${title}</h1><div class="subtitle">${subtitle}</div></div><div class="top-actions">${actions}</div></div>`;
+  return `<div class="topbar"><div><h1>${title}</h1><div class="subtitle">${subtitle}</div></div>${actions ? `<div class="top-actions">${actions}</div>` : ''}</div>`;
 }
 
 function dashboardView() {
@@ -114,7 +114,7 @@ function dashboardView() {
   const revenue = paidMonth.reduce((s,o)=>s+o.total,0);
   const pendingPacking = state.orders.filter(o=>['PAID','PACKING'].includes(o.status)).length;
   const avg = paidMonth.length ? revenue/paidMonth.length : 0;
-  return shell(`${header('Visão geral','Acompanhe a operação do atendimento ao pós-pagamento em uma única visão.','<button class="btn" data-view="chatbot">Testar fluxo</button><button class="btn primary" data-view="orders">Ver pedidos</button>')}
+  return shell(`${header('Visão geral','Acompanhe a operação do atendimento ao pós-pagamento em uma única visão.')}
     <div class="grid cols-4">
       ${kpi('Faturamento do mês',formatCurrencyBRL(revenue),'↑ 12,8% vs. mês anterior','positive')}
       ${kpi('Pedidos pagos',String(paidMonth.length),'Setembro de 2026','')}
