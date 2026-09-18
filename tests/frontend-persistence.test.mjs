@@ -15,9 +15,11 @@ test('admin renders one-line addresses captured by the WhatsApp chatbot', () => 
   assert.match(source, /a\.formatted/);
 });
 
-test('admin polls operational state so WhatsApp orders appear without a manual page reload', () => {
+test('admin sincroniza o estado somente depois que o runtime do painel está ativo', () => {
   assert.match(liveSync, /fetch\('\/api\/state'/);
-  assert.match(liveSync, /setInterval\(checkForServerChanges, 2000\)/);
+  assert.match(liveSync, /prismastore:runtime-ready/);
+  assert.match(liveSync, /setTimeout\(runLiveSync, 3000\)/);
+  assert.doesNotMatch(liveSync, /setInterval\(checkForServerChanges/);
 });
 
 test('orders view exposes a payment-pending filter for newly confirmed WhatsApp orders', () => {

@@ -1,9 +1,11 @@
 let lastSignature = null;
 let checking = false;
+let syncTimer = null;
+let syncActive = false;
 
 async function currentSignature() {
   const response = await fetch('/api/state', { cache: 'no-store' });
-  if (!response.ok) return null;
+  if (!response.ok) throw new Error('Falha ao sincronizar estado do PrismaStore.');
   const state = await response.json();
   return JSON.stringify({
     orders: state.orders ?? [],
@@ -31,22 +33,50 @@ function ensurePendingPaymentFilter() {
 
 async function checkForServerChanges() {
   ensurePendingPaymentFilter();
-  if (checking || document.hidden) return;
+  if (checking || document.hidden) return true;
   checking = true;
   try {
     const signature = await currentSignature();
-    if (signature == null) return;
     if (lastSignature == null) {
       lastSignature = signature;
-      return;
+      return true;
     }
-    if (signature !== lastSignature) window.location.reload();
+    if (signature !== lastSignature) {
+      window.location.reload();
+      return false;
+    }
+    return true;
   } catch {
-    // O painel principal já exibe o estado da conexão local.
+    return false;
   } finally {
     checking = false;
   }
 }
 
-checkForServerChanges();
-setInterval(checkForServerChanges, 2000);
+function stopLiveSync() {
+  syncActive = false;
+  if (syncTimer) window.clearTimeout(syncTimer);
+  syncTimer = null;
+}
+
+async function runLiveSync() {
+  if (!syncActive) return;
+  const healthy = await checkForServerChanges();
+  if (!healthy) {
+    stopLiveSync();
+    return;
+  }
+  syncTimer = window.setTimeout(runLiveSync, 3000);
+}
+
+function startLiveSync() {
+  if (syncActive) return;
+  syncActive = true;
+  runLiveSync();
+}
+
+window.addEventListener('prismastore:runtime-ready', startLiveSync);
+window.addEventListener('focus', () => {
+  const app = document.querySelector('#app');
+  if (app && !app.hidden && !syncActive) startLiveSync();
+});

@@ -133,7 +133,7 @@ function dashboardView() {
       </section>
 
       <div class="dashboard-kpis">
-        ${dashboardKpi('money','Faturamento do mês',formatCurrencyBRL(revenue),'↑ 12,8% vs. mês anterior','positive',0)}
+        ${dashboardKpi('money','Faturamento do mês',formatCurrencyBRL(revenue),monthLabel,'',0)}
         ${dashboardKpi('cart','Pedidos pagos',String(paidMonth.length),monthLabel,'',Math.min(5,paidMonth.length))}
         ${dashboardKpi('box','Para embalar',String(pendingPacking),'Prioridade operacional','warning',Math.min(5,pendingPacking))}
         ${dashboardKpi('alert','Estoque crítico',String(low),low?`${low} item(ns) abaixo do limite`:'Sem alertas no momento','danger',criticalBars)}
@@ -438,7 +438,13 @@ function render() {
 }
 
 function bind() {
-  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{state.view=b.dataset.view;state.selectedOrder=null;render();}));
+  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
+    state.view=b.dataset.view;
+    state.selectedOrder=null;
+    render();
+    window.dispatchEvent(new CustomEvent('prismastore:view-changed', { detail: { view: state.view } }));
+    if (state.view === 'settings') refreshWhatsAppStatus({ rerender: true });
+  }));
   document.querySelectorAll('[data-order-filter]').forEach(b=>b.addEventListener('click',()=>{state.orderFilter=b.dataset.orderFilter;render();}));
   document.querySelector('#order-search')?.addEventListener('input',(e)=>{state.search=e.target.value; render(); requestAnimationFrame(()=>{const input=document.querySelector('#order-search');input?.focus();input?.setSelectionRange(state.search.length,state.search.length);});});
   document.querySelectorAll('[data-open-order]').forEach(b=>b.addEventListener('click',()=>{state.selectedOrder=b.dataset.openOrder;render();}));
@@ -477,25 +483,21 @@ function chatAction(action){
   }
 }
 
-async function bootstrap() {
-  const auth = window.PrismastoreAuth;
-  if (auth?.ensureAuthenticated) {
-    const allowed = await auth.ensureAuthenticated();
-    if (!allowed) return;
-  }
+let operationalRuntimeStarted = false;
 
+async function bootstrapOperationalRuntime() {
+  if (operationalRuntimeStarted) return;
+  operationalRuntimeStarted = true;
   try {
     await loadOperationalState();
-    await refreshWhatsAppStatus();
+    window.dispatchEvent(new CustomEvent('prismastore:runtime-ready'));
   } catch (error) {
     state.serverConnected = false;
     state.serverError = error instanceof Error ? error.message : 'Falha ao conectar ao servidor local.';
-    console.error(error);
   }
   render();
 }
 
-bootstrap();
-setInterval(() => {
-  if (state.view === 'settings') refreshWhatsAppStatus({ rerender: true });
-}, 5000);
+render();
+window.addEventListener('prismastore:dashboard-opened', bootstrapOperationalRuntime, { once: true });
+if (!document.querySelector('#app')?.hidden) bootstrapOperationalRuntime();
