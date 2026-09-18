@@ -18,7 +18,7 @@ test('mobile bottom navigation exposes Configurações directly and keeps second
 });
 
 test('service worker cache revision changes with the mobile navigation release', () => {
-  assert.match(sw, /prismastore-shell-v0\.9\.2-mobile-secure-3/);
+  assert.match(sw, /prismastore-shell-v0\.9\.2-mobile-secure-4/);
 });
 
 test('runtime terminal hides demo status and identifies the configured Pix as Pix Oscar', () => {
