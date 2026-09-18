@@ -78,6 +78,13 @@ const views = [
   ['dashboard','Visão geral','▦'],['orders','Pedidos','◫'],['customers','Clientes','◎'],['products','Produtos','□'],['reports','Relatórios','⌁'],['chatbot','Simular chatbot','◌']
 ];
 
+const mobileViews = [
+  ['dashboard','Início','▦'],
+  ['orders','Pedidos','◫'],
+  ['products','Produtos','□'],
+  ['settings','Config.','⚙'],
+];
+
 function shell(content) {
   return `
   <div class="app-shell">
@@ -92,7 +99,7 @@ function shell(content) {
       <div class="sidebar-footer"><div class="status-row"><span>WhatsApp</span><span style="display:flex;gap:8px;align-items:center"><i class="status-dot ${state.whatsapp.status==='connected'?'':'offline'}"></i>${whatsappStatusLabel()}</span></div><div class="version">SQLite local · sessão persistente</div></div>
     </aside>
     <main class="main">${content}</main>
-    <nav class="mobile-bottom">${views.slice(0,5).map(([id,label,icon])=>`<button class="${state.view===id?'active':''}" data-view="${id}"><span class="mob-icon">${icon}</span>${label}</button>`).join('')}</nav>
+    <nav class="mobile-bottom">${mobileViews.map(([id,label,icon])=>`<button class="${state.view===id?'active':''}" data-view="${id}"><span class="mob-icon">${icon}</span>${label}</button>`).join('')}<button type="button" data-pwa-more><span class="mob-icon">•••</span>Mais</button></nav>
     ${state.selectedOrder ? orderDrawer(state.selectedOrder) : ''}
   </div>`;
 }
@@ -225,8 +232,18 @@ function whatsappStatusBadge() {
   return `<span class="badge ${cls}">${whatsappStatusLabel().toUpperCase()}</span>`;
 }
 
+function whatsappRenderKey(whatsapp = state.whatsapp) {
+  return JSON.stringify({
+    status: whatsapp.status ?? null,
+    pairingCode: whatsapp.pairingCode ?? null,
+    account: whatsapp.account ?? null,
+    error: whatsapp.error ?? null,
+    hasQr: Boolean(whatsapp.qrDataUrl),
+  });
+}
+
 async function refreshWhatsAppStatus({ rerender = false } = {}) {
-  const before = JSON.stringify(state.whatsapp);
+  const before = whatsappRenderKey(state.whatsapp);
   try {
     const response = await fetch('/api/whatsapp/status', { cache: 'no-store' });
     state.whatsapp = await response.json();
@@ -234,7 +251,7 @@ async function refreshWhatsAppStatus({ rerender = false } = {}) {
   } catch (error) {
     state.whatsapp = { status: 'error', qrDataUrl: null, account: null, error: error instanceof Error ? error.message : 'Falha ao consultar WhatsApp' };
   }
-  if (rerender && state.view === 'settings' && before !== JSON.stringify(state.whatsapp)) render();
+  if (rerender && state.view === 'settings' && before !== whatsappRenderKey(state.whatsapp)) render();
   return state.whatsapp;
 }
 
@@ -251,6 +268,21 @@ async function connectWhatsApp() {
   render();
 }
 
+async function pairWhatsAppByPhone(phone) {
+  try {
+    const response = await fetch('/api/whatsapp/pair', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+    state.whatsapp = await response.json();
+    if (!response.ok) throw new Error(state.whatsapp.error || 'Falha ao gerar código de pareamento');
+  } catch (error) {
+    state.whatsapp = { ...state.whatsapp, status: 'error', pairingCode: null, error: error instanceof Error ? error.message : 'Falha ao gerar código de pareamento' };
+  }
+  render();
+}
+
 async function disconnectWhatsApp() {
   try {
     const response = await fetch('/api/whatsapp/disconnect', { method: 'POST' });
@@ -261,27 +293,33 @@ async function disconnectWhatsApp() {
   render();
 }
 
+function whatsappPairingForm() {
+  return `<div class="wa-pairing-form"><label class="wa-pairing-label">Número deste celular<input type="tel" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999" data-whatsapp-pair-phone /></label><button class="btn primary" type="button" data-whatsapp-pair>Gerar código neste celular</button></div>`;
+}
+
 function whatsappConnectionPanel() {
   const w = state.whatsapp;
+  if (w.status === 'pairing' && w.pairingCode) {
+    return `<div class="wa-connection-panel success"><strong>Digite este código no próprio WhatsApp</strong><div class="wa-pairing-code-row"><code class="wa-pairing-code">${esc(w.pairingCode)}</code></div><div class="category">No celular: WhatsApp → Aparelhos conectados → Conectar aparelho → Conectar com número de telefone.</div></div>`;
+  }
   if (w.status === 'qr' && w.qrDataUrl) {
-    return `<div class="wa-connection-panel"><div class="wa-step">1. Abra o WhatsApp no celular</div><div class="wa-step">2. Vá em <strong>Aparelhos conectados</strong> → <strong>Conectar aparelho</strong></div><img class="wa-qr" src="${esc(w.qrDataUrl)}" alt="QR Code para conectar o WhatsApp" /><div class="category">A tela atualiza sozinha após a leitura.</div></div>`;
+    return `<div class="wa-connection-panel"><strong>Conectar usando este mesmo celular</strong><div class="category">Informe o número abaixo. Não é necessário ter um segundo aparelho.</div>${whatsappPairingForm()}<details class="wa-qr-fallback"><summary>Alternativa: QR Code em outro dispositivo</summary><img class="wa-qr" src="${esc(w.qrDataUrl)}" alt="QR Code para conectar o WhatsApp" /></details></div>`;
   }
   if (w.status === 'connected') {
     return `<div class="wa-connection-panel success"><strong>WhatsApp conectado</strong><div class="category">${esc(w.account?.name || 'Conta ativa')}${w.account?.number ? ` · +${esc(w.account.number)}` : ''}</div><button class="btn" data-whatsapp-disconnect>Desconectar</button></div>`;
   }
   if (['connecting', 'authenticated'].includes(w.status)) {
-    return `<div class="wa-connection-panel"><strong>${whatsappStatusLabel()}</strong><div class="category">Aguarde alguns segundos. Não é necessário usar o terminal.</div></div>`;
+    return `<div class="wa-connection-panel"><strong>${whatsappStatusLabel()}</strong><div class="category">Preparando o pareamento por número deste celular.</div></div>`;
   }
   if (w.status === 'error') {
-    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(w.error || 'Verifique a conexão do servidor.')}</div><button class="btn primary" data-whatsapp-connect>Tentar novamente</button></div>`;
+    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(w.error || 'Verifique a conexão do servidor.')}</div>${whatsappPairingForm()}<button class="btn" data-whatsapp-connect>Tentar QR Code</button></div>`;
   }
-  return `<div class="wa-connection-panel"><strong>Conexão ainda não iniciada</strong><div class="category">Clique abaixo. O QR Code aparecerá nesta mesma tela.</div><button class="btn primary" data-whatsapp-connect>Conectar WhatsApp</button></div>`;
+  return `<div class="wa-connection-panel"><strong>Conectar WhatsApp</strong><div class="category">Use o número do WhatsApp deste próprio celular para gerar o código de vínculo.</div>${whatsappPairingForm()}<button class="btn" data-whatsapp-connect>Alternativa: usar QR Code</button></div>`;
 }
 
-function settingsView() { return shell(`${header('Configurações','Conexão simples: abra esta tela e escaneie o QR Code uma única vez. A sessão fica salva neste servidor.')}
-  <div class="grid cols-2"><div class="card padded"><div class="section-head"><div class="section-title">WhatsApp Web</div>${whatsappStatusBadge()}</div>${whatsappConnectionPanel()}<div class="settings-list"><div class="setting-row"><div><div class="product-name">Sessão persistente</div><div class="category">LocalAuth salvo em .wwebjs_auth</div></div><span class="badge green">ATIVA</span></div><div class="setting-row"><div><div class="product-name">Reconexão</div><div class="category">A sessão é restaurada ao iniciar o PrismaStore</div></div><span class="badge green">AUTOMÁTICA</span></div></div></div>
-  <div class="card padded"><div class="section-title">Sistema local</div><div class="settings-list"><div class="setting-row"><div><div class="product-name">Banco de dados</div><div class="category">SQLite · data/prismastore.db</div></div><span class="badge green">ATIVO</span></div><div class="setting-row"><div><div class="product-name">Pix</div><div class="category">Asaas API + webhook</div></div><span class="badge orange">PRÓXIMO PASSO</span></div><div class="setting-row"><div><div class="product-name">Alerta de estoque</div><div class="category">Disponível &lt; 3 unidades</div></div><span class="badge green">ATIVO</span></div></div></div></div>
-  <div class="section notice">O conector usa WhatsApp Web via biblioteca não oficial. A operação deve validar as políticas comerciais aplicáveis antes do uso em produção.</div>`); }
+function settingsView() { return shell(`${header('Configurações','Pensado para uso no celular: conecte o WhatsApp por código no próprio aparelho e gerencie o sistema daqui.')}
+  <div class="grid cols-2"><div class="card padded"><div class="section-head"><div class="section-title">WhatsApp</div>${whatsappStatusBadge()}</div>${whatsappConnectionPanel()}<div class="settings-list"><div class="setting-row"><div><div class="product-name">Sessão persistente</div><div class="category">Baileys · data/whatsapp-auth</div></div><span class="badge green">ATIVA</span></div><div class="setting-row"><div><div class="product-name">Reconexão</div><div class="category">A sessão é restaurada automaticamente ao iniciar o PrismaStore</div></div><span class="badge green">AUTOMÁTICA</span></div></div></div>
+  <div class="card padded"><div class="section-title">Sistema</div><div class="settings-list"><div class="setting-row"><div><div class="product-name">Banco de dados</div><div class="category">SQLite · data/prismastore.db</div></div><span class="badge green">ATIVO</span></div><div class="setting-row"><div><div class="product-name">Pix Oscar</div><div class="category">Validação do comprovante por valor, destinatário, data e horário</div></div><span class="badge green">ATIVO</span></div><div class="setting-row"><div><div class="product-name">Alerta de estoque</div><div class="category">Disponível &lt; 3 unidades</div></div><span class="badge green">ATIVO</span></div></div></div></div>`); }
 
 function orderDrawer(orderId) {
   const o=state.orders.find(x=>x.id===orderId); if(!o) return '';
@@ -322,6 +360,12 @@ function bind() {
   document.querySelectorAll('[data-chat-action]').forEach(b=>b.addEventListener('click',()=>chatAction(b.dataset.chatAction)));
   document.querySelector('#reset-chat')?.addEventListener('click',resetChat); document.querySelector('#reset-chat-2')?.addEventListener('click',resetChat);
   document.querySelector('[data-whatsapp-connect]')?.addEventListener('click', connectWhatsApp);
+  document.querySelector('[data-whatsapp-pair]')?.addEventListener('click', (event) => {
+    const button = event.currentTarget;
+    const phone = document.querySelector('[data-whatsapp-pair-phone]')?.value?.trim() || '';
+    button.disabled = true;
+    pairWhatsAppByPhone(phone).finally(() => { button.disabled = false; });
+  });
   document.querySelector('[data-whatsapp-disconnect]')?.addEventListener('click', disconnectWhatsApp);
 }
 function resetChat(){state.chatbot={step:'welcome',cart:{},deliveryType:null,addressMode:null,paymentConfirmed:false};render();}
@@ -332,7 +376,7 @@ function chatAction(action){
     const t=calculateCart(state.products,state.chatbot.cart);const fee=state.chatbot.deliveryType==='shipping'?24.9:18;
     const id=`PS-${1050+state.orders.length}`;
     const items=Object.entries(state.chatbot.cart).filter(([,q])=>q>0).map(([pid,q])=>{const p=state.products.find(x=>x.id===pid);return{productId:pid,name:p.name,quantity:q,unitPrice:p.price}});
-    state.orders.unshift({id,customerId:'c1',customerName:'Lucas Almeida',phone:'+55 11 98888-1204',status:'PAID',deliveryType:state.chatbot.deliveryType,total:t.subtotal+fee,createdAt:new Date().toISOString(),paidAt:new Date().toISOString(),receivingAccountId:'asaas-main',items,address:chatAddress(),newAddress:state.chatbot.addressMode==='new',deliveryFee:fee});
+    state.orders.unshift({id,customerId:'c1',customerName:'Lucas Almeida',phone:'+55 11 98888-1204',status:'PAID',deliveryType:state.chatbot.deliveryType,total:t.subtotal+fee,createdAt:new Date().toISOString(),paidAt:new Date().toISOString(),receivingAccountId:'pix-local',items,address:chatAddress(),newAddress:state.chatbot.addressMode==='new',deliveryFee:fee});
     state.chatbot.step='paid';state.chatbot.paymentConfirmed=true;persist();render();
   }
 }
