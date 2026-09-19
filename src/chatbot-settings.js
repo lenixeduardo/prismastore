@@ -11,9 +11,9 @@ export const CHATBOT_MESSAGE_DEFAULTS = Object.freeze({
   addressInputPrompt: 'Envie seu *endereço completo em uma única mensagem*: rua, número, complemento (se houver), bairro, cidade/UF e CEP.',
   confirmationPrompt: '1 — Confirmar pedido\n2 — Alterar endereço\n0 — Cancelar',
   cancelled: 'Pedido cancelado. Voltamos ao catálogo.',
-  paymentPending: 'Pedido *{pedido}* criado. Aguardando pagamento.',
-  paymentConfirmed: '✅ Pagamento confirmado para o pedido *{pedido}*.',
-  orderFinished: '✅ *Seu pedido foi finalizado!*\nPedido: *{pedido}*\nObrigado por comprar com a Prisma Store.',
+  paymentPending: 'Pedido criado. Aguardando pagamento.',
+  paymentConfirmed: '✅ Pagamento confirmado.',
+  orderFinished: '✅ *Seu pedido foi finalizado!*\nObrigado por comprar com a Prisma Store.',
 });
 
 export const CHATBOT_MESSAGE_FIELDS = Object.freeze([
@@ -29,9 +29,9 @@ export const CHATBOT_MESSAGE_FIELDS = Object.freeze([
   { key: 'addressInputPrompt', label: 'Solicitação de endereço', placeholders: [] },
   { key: 'confirmationPrompt', label: 'Confirmação do pedido', placeholders: ['{subtotal}', '{endereco}'] },
   { key: 'cancelled', label: 'Pedido cancelado', placeholders: [] },
-  { key: 'paymentPending', label: 'Aguardando pagamento', placeholders: ['{pedido}', '{subtotal}', '{endereco}'] },
-  { key: 'paymentConfirmed', label: 'Pagamento confirmado', placeholders: ['{pedido}'] },
-  { key: 'orderFinished', label: 'Pedido finalizado', placeholders: ['{pedido}'] },
+  { key: 'paymentPending', label: 'Aguardando pagamento', placeholders: ['{subtotal}', '{endereco}'] },
+  { key: 'paymentConfirmed', label: 'Pagamento confirmado', placeholders: [] },
+  { key: 'orderFinished', label: 'Pedido finalizado', placeholders: [] },
 ]);
 
 export function messageValue(settings, key) {

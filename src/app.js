@@ -232,15 +232,15 @@ function orderCompact(o) {
 function ordersView() {
   let orders = [...state.orders];
   if(state.orderFilter!=='all') orders=orders.filter(o=>o.status===state.orderFilter);
-  if(state.search) orders=orders.filter(o=>`${o.id} ${o.customerName} ${o.phone}`.toLowerCase().includes(state.search.toLowerCase()));
+  if(state.search) orders=orders.filter(o=>`${o.customerName} ${o.phone}`.toLowerCase().includes(state.search.toLowerCase()));
   return shell(`${header('Pedidos','Do pagamento confirmado até envio ou entrega no endereço do cliente.','<button class="btn primary" data-view="chatbot">+ Simular pedido</button>')}
     <div class="toolbar">
       <div class="tabs">${[['all','Todos'],['PAID','Embalar'],['PACKING','Embalando'],['SHIPPED','Enviados'],['OUT_FOR_DELIVERY','Em rota'],['DELIVERED','Entregues']].map(([id,l])=>`<button class="tab ${state.orderFilter===id?'active':''}" data-order-filter="${id}">${l}</button>`).join('')}</div>
-      <label class="searchbar"><span>⌕</span><input id="order-search" value="${esc(state.search)}" placeholder="Pedido, cliente ou celular" /></label>
+      <label class="searchbar"><span>⌕</span><input id="order-search" value="${esc(state.search)}" placeholder="Cliente ou celular" /></label>
     </div>
     ${ordersTable(orders,'Fila de pedidos')}`);
 }
-function ordersTable(orders,title) { return `<div class="section-head"><div class="section-title">${title}</div><div class="section-note">${orders.length} registro(s)</div></div><div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Modalidade</th><th>Status</th><th>Endereço</th><th>Total</th><th></th></tr></thead><tbody>${orders.map(o=>`<tr><td><span class="order-id">${o.id}</span><div class="category">${formatDate(o.createdAt)}</div></td><td><div class="customer-name">${esc(o.customerName)}</div><div class="category">${esc(o.phone)}</div></td><td>${o.deliveryType==='shipping'?'Envio':'Entrega'} </td><td>${statusBadge(o.status)}</td><td><div class="address">${o.newAddress?'<span class="badge gold" style="margin-right:5px">NOVO ENDEREÇO</span>':''}${esc(`${o.address.street}, ${o.address.number} · ${o.address.neighborhood}`)}</div></td><td class="mono"><strong>${formatCurrencyBRL(o.total)}</strong></td><td><button class="btn sm" data-open-order="${o.id}">Detalhes</button></td></tr>`).join('')}</tbody></table></div>`; }
+function ordersTable(orders,title) { return `<div class="section-head"><div class="section-title">${title}</div><div class="section-note">${orders.length} registro(s)</div></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Cliente</th><th>Modalidade</th><th>Status</th><th>Endereço</th><th>Total</th><th></th></tr></thead><tbody>${orders.map(o=>`<tr><td><div class="category">${formatDate(o.createdAt)}</div></td><td><div class="customer-name">${esc(o.customerName)}</div><div class="category">${esc(o.phone)}</div></td><td>${o.deliveryType==='shipping'?'Envio':'Entrega'} </td><td>${statusBadge(o.status)}</td><td><div class="address">${o.newAddress?'<span class="badge gold" style="margin-right:5px">NOVO ENDEREÇO</span>':''}${esc(`${o.address.street}, ${o.address.number} · ${o.address.neighborhood}`)}</div></td><td class="mono"><strong>${formatCurrencyBRL(o.total)}</strong></td><td><button class="btn sm" data-open-order="${o.id}">Detalhes</button></td></tr>`).join('')}</tbody></table></div>`; }
 
 function customersView() {
   return shell(`${header('Clientes','Cadastro unificado pelo número do WhatsApp, histórico de endereço e pedidos anteriores.')}
@@ -431,7 +431,7 @@ function orderDrawer(orderId) {
   const canAdvance=['PAID','PACKING','SHIPPED','OUT_FOR_DELIVERY'].includes(o.status);
   const next=nextOrderStatus(o);
   const label={PACKING:'Marcar como embalando',SHIPPED:'Marcar como enviado',OUT_FOR_DELIVERY:'Saiu para entrega',DELIVERED:'Marcar como entregue'}[next]||'Atualizar';
-  return `<div class="drawer-backdrop" data-close-drawer><aside class="drawer" onclick="event.stopPropagation()"><div class="drawer-head"><div><div class="eyebrow">Pedido</div><h2>${o.id}</h2><div class="subtitle">${formatDate(o.createdAt)} · ${esc(o.customerName)}</div></div><button class="btn" data-close-drawer>${icons.close}</button></div>
+  return `<div class="drawer-backdrop" data-close-drawer><aside class="drawer" onclick="event.stopPropagation()"><div class="drawer-head"><div><div class="eyebrow">Pedido</div><h2>Detalhes do pedido</h2><div class="subtitle">${formatDate(o.createdAt)} · ${esc(o.customerName)}</div></div><button class="btn" data-close-drawer>${icons.close}</button></div>
     <div>${statusBadge(o.status)} ${o.newAddress?'<span class="badge gold">NOVO ENDEREÇO</span>':''}</div>
     <div class="detail-block"><div class="detail-label">Cliente</div><div class="customer-name">${esc(o.customerName)}</div><div class="category">${esc(o.phone)}</div></div>
     <div class="detail-block"><div class="detail-label">Endereço do pedido</div><div class="subtitle">${esc(addressText(o.address))}</div></div>

@@ -35,3 +35,10 @@ test('successful login resumes the pending dashboard access without reloading th
   assert.match(loginSource, /settleLogin\(true\)/);
   assert.doesNotMatch(loginSource, /window\.location\.reload\(\)/);
 });
+
+
+test('login keeps the username locked to admin', () => {
+  const source = readFileSync(new URL('../src/auth-ui.js', import.meta.url), 'utf8');
+  assert.match(source, /value="admin" readonly aria-readonly="true"/);
+  assert.match(source, /username: 'admin'/);
+});

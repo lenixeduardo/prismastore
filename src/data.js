@@ -7,6 +7,19 @@ export const seedProducts = [
   { id: 'p6', name: 'Case Hermético Pocket', category: 'Armazenamento', price: 28.5, stock: 12, reserved: 0, active: true },
 ];
 
+export const catalogProducts = [
+  { id: 'catalog-dry-5g', name: 'Dry 5g', category: 'Catálogo', price: 175, stock: 10, reserved: 0, active: true },
+  { id: 'catalog-gisele', name: 'Gisele', category: 'Catálogo', price: 70, stock: 20, reserved: 0, active: true },
+  { id: 'catalog-4un-abacaxi', name: '@ 4un (abacaxi)', category: 'Catálogo', price: 130, stock: 10, reserved: 0, active: true },
+  { id: 'catalog-generic-01', name: 'Item A', category: 'Catálogo', price: 150, stock: 10, reserved: 0, active: true },
+  { id: 'catalog-generic-02', name: 'Item B', category: 'Catálogo', price: 175, stock: 10, reserved: 0, active: true },
+  { id: 'catalog-generic-03', name: 'Item C', category: 'Catálogo', price: 125, stock: 10, reserved: 0, active: true },
+  { id: 'catalog-generic-04', name: 'Item D', category: 'Catálogo', price: 60, stock: 10, reserved: 0, active: true },
+  { id: 'catalog-generic-05', name: 'Item E', category: 'Catálogo', price: 130, stock: 10, reserved: 0, active: true },
+  { id: 'catalog-generic-06', name: 'Item F', category: 'Catálogo', price: 150, stock: 10, reserved: 0, active: true },
+  { id: 'catalog-generic-07', name: 'Item G', category: 'Catálogo', price: 100, stock: 10, reserved: 0, active: true },
+];
+
 export const seedCustomers = [
   {
     id: 'c1', name: 'Lucas Almeida', phone: '+55 11 98888-1204', totalSpent: 684.4, orderCount: 9,

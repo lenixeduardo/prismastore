@@ -11,9 +11,9 @@ export const DEFAULT_CHATBOT_MESSAGES = Object.freeze({
   addressInputPrompt: 'Envie seu *endereço completo em uma única mensagem*: rua, número, complemento (se houver), bairro, cidade/UF e CEP.',
   confirmationPrompt: '1 — Confirmar pedido\n2 — Alterar endereço\n0 — Cancelar',
   cancelled: 'Pedido cancelado. Voltamos ao cardápio.',
-  paymentPending: 'Pedido *{pedido}* criado. Aguardando pagamento.',
-  paymentConfirmed: '✅ Pagamento confirmado para o pedido *{pedido}*.',
-  orderFinished: '✅ *Seu pedido foi finalizado!*\nPedido: *{pedido}*\nObrigado por comprar com a Prisma Store.',
+  paymentPending: 'Pedido criado. Aguardando pagamento.',
+  paymentConfirmed: '✅ Pagamento confirmado.',
+  orderFinished: '✅ *Seu pedido foi finalizado!*\nObrigado por comprar com a Prisma Store.',
 });
 
 export function normalizeChatbotMessages(messages = {}) {
@@ -30,6 +30,6 @@ export function resolveChatbotMessage(state, key, values = {}) {
   const fallback = DEFAULT_CHATBOT_MESSAGES[key] ?? '';
   const template = typeof configured === 'string' && configured.trim() ? configured : fallback;
   return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, token) => (
-    Object.prototype.hasOwnProperty.call(values, token) ? String(values[token]) : match
+    Object.prototype.hasOwnProperty.call(values, token) ? String(values[token]) : (token === 'pedido' ? '' : match)
   ));
 }

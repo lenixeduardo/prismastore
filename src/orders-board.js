@@ -209,11 +209,11 @@ function openWhatsapp(order, text) {
 }
 
 function messageDemand(order) {
-  openWhatsapp(order, `Olá, ${order.customerName || 'cliente'}. Estamos atendendo o pedido ${order.id}. Se precisar complementar alguma informação, responda por aqui.`);
+  openWhatsapp(order, `Olá, ${order.customerName || 'cliente'}. Estamos atendendo seu pedido. Se precisar complementar alguma informação, responda por aqui.`);
 }
 
 function messageQueue(order, position) {
-  openWhatsapp(order, `Olá, ${order.customerName || 'cliente'}. Seu pedido ${order.id} está na posição ${position} da fila de atendimento.`);
+  openWhatsapp(order, `Olá, ${order.customerName || 'cliente'}. Seu pedido está na posição ${position} da fila de atendimento.`);
 }
 
 if (typeof document !== 'undefined' && typeof window !== 'undefined') {

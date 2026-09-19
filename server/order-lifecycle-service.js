@@ -16,7 +16,7 @@ export function buildOrderTracker(order) {
   const stage = trackerStage(order);
   const transportLabel = order.deliveryType === 'local_delivery' ? 'Saiu para entrega' : 'Pedido enviado';
   return [
-    `📍 *ACOMPANHAMENTO · ${order.id}*`,
+    '📍 *ACOMPANHAMENTO*',
     '',
     `${marker(stage >= 0)} Pagamento confirmado`,
     `${marker(stage >= 1)} Em preparação`,
@@ -26,12 +26,12 @@ export function buildOrderTracker(order) {
 }
 
 function statusIntro(state, order) {
-  if (order.status === 'PACKING') return `📦 Seu pedido *${order.id}* está *Em preparação*.`;
-  if (order.status === 'OUT_FOR_DELIVERY') return `🛵 Seu pedido *${order.id}* *Saiu para entrega* no seu endereço.`;
-  if (order.status === 'SHIPPED') return `🚚 Seu *Pedido enviado* (${order.id}) já está em transporte.`;
-  if (order.status === 'DELIVERED') return resolveChatbotMessage(state, 'orderFinished', { pedido: order.id });
-  if (order.status === 'PAID') return resolveChatbotMessage(state, 'paymentConfirmed', { pedido: order.id });
-  return `Pedido *${order.id}* atualizado.`;
+  if (order.status === 'PACKING') return '📦 Seu pedido está *Em preparação*.';
+  if (order.status === 'OUT_FOR_DELIVERY') return '🛵 Seu pedido *Saiu para entrega* no seu endereço.';
+  if (order.status === 'SHIPPED') return '🚚 Seu *pedido enviado* já está em transporte.';
+  if (order.status === 'DELIVERED') return resolveChatbotMessage(state, 'orderFinished');
+  if (order.status === 'PAID') return resolveChatbotMessage(state, 'paymentConfirmed');
+  return 'Pedido atualizado.';
 }
 
 export function createOrderLifecycleService({ stateStore, messenger = null, finalArtworkPath = null, now = () => new Date() }) {
