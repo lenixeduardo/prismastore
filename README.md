@@ -197,3 +197,16 @@ npm test
 ```
 
 > Baileys é uma integração não oficial com o WhatsApp. Valide as políticas comerciais aplicáveis antes do uso em produção.
+
+
+## Staging contínuo
+
+Para manter uma instância de homologação rodando continuamente com PM2, allowlist obrigatória de WhatsApp e smoke test do motor real de conversa, consulte `docs/STAGING.md`.
+
+Comandos principais:
+
+```bash
+npm run smoke:conversation
+npm run staging:start
+npm run staging:logs
+```

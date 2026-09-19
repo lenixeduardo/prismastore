@@ -8,7 +8,12 @@
   },
   "scripts": {
     "start": "node server/index.js",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "smoke:conversation": "node scripts/smoke-conversation.mjs",
+    "staging:start": "pm2 start ecosystem.staging.config.cjs",
+    "staging:restart": "pm2 restart prismastore-staging --update-env",
+    "staging:logs": "pm2 logs prismastore-staging",
+    "staging:stop": "pm2 stop prismastore-staging"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.16",
