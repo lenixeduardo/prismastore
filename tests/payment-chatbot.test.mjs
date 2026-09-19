@@ -54,6 +54,8 @@ test('CPF/CNPJ válido gera QR, Copia e Cola e não fica salvo na sessão', asyn
   assert.equal(h.paymentCalls[0].cpfCnpj, '12345678901');
   assert.equal(h.media[0].base64, 'BASE64PNG');
   assert.match(h.sent.at(-1), /000201PIX/);
+  assert.doesNotMatch(h.sent.at(-1), /PS-1001/);
+  assert.equal(h.media[0].filename, 'pix-prismastore.png');
   assert.doesNotMatch(JSON.stringify(h.sessions.get('5511999999999')), /12345678901/);
 });
 
@@ -70,4 +72,15 @@ test('estado awaiting_payment informa que não precisa comprovante', async () =>
   h.sessions.set('5511999999999', { step: 'awaiting_payment', orderId: 'PS-1001' });
   await h.incoming('oi');
   assert.match(h.sent.at(-1), /não precisa enviar comprovante/i);
+});
+
+
+test('mensagens de pagamento não expõem o ID interno do pedido', async () => {
+  const h = harness({ needsDocument: false });
+  await h.incoming('1');
+  assert.equal(h.sent.some((message) => /PS-1001/.test(message)), false);
+  h.sent.length = 0;
+  h.sessions.set('5511999999999', { step: 'awaiting_payment', orderId: 'PS-1001' });
+  await h.incoming('oi');
+  assert.equal(h.sent.some((message) => /PS-1001/.test(message)), false);
 });
