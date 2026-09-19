@@ -17,11 +17,11 @@ function harness() {
     },
   });
   store.saveChatSession('5511999999999', { step: 'awaiting_payment', orderId: 'PS-1001' });
-  const calls = { customer: 0, payment: 0, qr: 0 };
+  const calls = { customer: 0, payment: 0, qr: 0, paymentInput: null };
   const asaasClient = {
     environment: 'sandbox', configured: true,
     createCustomer: async () => { calls.customer += 1; return { id: 'cus_1' }; },
-    createPixPayment: async () => { calls.payment += 1; return { id: 'pay_1', status: 'PENDING' }; },
+    createPixPayment: async (input) => { calls.payment += 1; calls.paymentInput = input; return { id: 'pay_1', status: 'PENDING' }; },
     getPixQrCode: async () => { calls.qr += 1; return { encodedImage: 'PNGDATA', payload: 'PIX-COPIA-COLA', expirationDate: '2026-09-14 23:59:59' }; },
   };
   const service = createPaymentService({ stateStore: store, asaasClient, now: () => new Date('2026-09-14T15:00:00Z') });
@@ -38,6 +38,9 @@ test('generates Pix idempotently, stores provider IDs and does not persist raw C
     assert.equal(h.calls.customer, 1);
     assert.equal(h.calls.payment, 1);
     assert.equal(h.calls.qr, 2);
+    assert.equal(h.calls.paymentInput.description, 'PrismaStore');
+    assert.equal(h.calls.paymentInput.externalReference, 'PS-1001');
+    assert.doesNotMatch(h.calls.paymentInput.description, /PS-1001/);
     const state = h.store.load();
     assert.equal(state.customers[0].asaasCustomerId, 'cus_1');
     assert.equal(state.orders[0].asaasPaymentId, 'pay_1');
