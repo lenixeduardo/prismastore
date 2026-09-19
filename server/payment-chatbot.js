@@ -132,7 +132,7 @@ export function createPaymentChatbot({ baseChatbot, stateStore, paymentService }
       return { ...result, step: nextSession.step };
     }
 
-    await args.sendText(`Vou gerar o Pix do pedido *${result.orderId}* agora.`);
+    await args.sendText('Vou gerar o Pix do seu pedido agora.');
     try {
       const { session: nextSession, pix } = await sendPix({
         phone,
