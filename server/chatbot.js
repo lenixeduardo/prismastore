@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { availableStock, calculateCart, formatCurrencyBRL, reserveCartStock } from '../src/domain.js';
 import { resolveChatbotMessage } from './chatbot-messages.js';
+import { classifyInboundJid } from './whatsapp-jid.js';
 
 function digits(value = '') { return String(value).replace(/\D/g, ''); }
-function isPrivateChat(chatId = '') { return String(chatId).endsWith('@c.us') || String(chatId).endsWith('@lid'); }
+function isPrivateChat(chatId = '') {
+  const value = String(chatId);
+  if (value.endsWith('@c.us')) return true;
+  return classifyInboundJid(value).supported;
+}
 function customerPhoneMatches(customer, phone) { return digits(customer?.phone) === phone; }
 function customerName(contactName, phone) { return String(contactName ?? '').trim() || `Cliente ${phone.slice(-4)}`; }
 

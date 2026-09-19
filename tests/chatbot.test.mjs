@@ -147,6 +147,17 @@ test('group messages are ignored', async () => {
   } finally { h.cleanup(); }
 });
 
+test('Baileys individual chats @s.whatsapp.net start the catalog flow', async () => {
+  const h = harness();
+  try {
+    const result = await h.incoming('Oi', { chatId: '5511999999999@s.whatsapp.net' });
+    assert.equal(result.handled, true);
+    assert.equal(result.step, 'catalog');
+    assert.match(h.sent[0].text, /Eduardo/);
+    assert.equal(h.store.getChatSession('5511999999999').step, 'catalog');
+  } finally { h.cleanup(); }
+});
+
 test('does not let repeated cart additions exceed current available stock', async () => {
   const h = harness();
   try {
