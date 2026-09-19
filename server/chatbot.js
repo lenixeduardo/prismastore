@@ -295,7 +295,7 @@ export function createChatbotEngine({ stateStore, now = () => new Date() }) {
         const order = createPendingOrder(stateStore, phone, session, now);
         storeConfirmedAddress(stateStore, phone, session, now);
         session.orderId = order.id; session.confirmedAt = now().toISOString(); session.step = 'confirmed'; saveSession(stateStore, phone, session, now);
-        await sendText(`✅ Pedido confirmado!\n${message(stateStore, 'paymentPending', { pedido: order.id, subtotal: formatCurrencyBRL(order.total), endereco: addressLabel(order.address) })}`);
+        await sendText(`✅ Pedido confirmado!\n${message(stateStore, 'paymentPending', { subtotal: formatCurrencyBRL(order.total), endereco: addressLabel(order.address) })}`);
         return { handled: true, step: session.step, orderId: order.id };
       } catch (error) {
         session.step = 'catalog'; session.selectedProductId = null; saveSession(stateStore, phone, session, now);
@@ -306,7 +306,7 @@ export function createChatbotEngine({ stateStore, now = () => new Date() }) {
     }
 
     if (session.step === 'confirmed') {
-      await sendText(message(stateStore, 'paymentPending', { pedido: session.orderId ?? '' }));
+      await sendText(message(stateStore, 'paymentPending'));
       return { handled: true, step: session.step, orderId: session.orderId };
     }
 

@@ -23,8 +23,10 @@ test('order lifecycle uses configurable payment confirmed and finalization messa
   await service.notifyOrderStatus({ id: 'PS-10', phone: '+5511', status: 'PAID', deliveryType: 'shipping' });
   await service.notifyOrderStatus({ id: 'PS-10', phone: '+5511', status: 'DELIVERED', deliveryType: 'shipping' });
 
-  assert.match(sent[0].text, /^Pagamento OK: PS-10/);
-  assert.match(sent[1].text, /^Finalizado OK: PS-10/);
+  assert.match(sent[0].text, /^Pagamento OK:/);
+  assert.match(sent[1].text, /^Finalizado OK:/);
+  assert.doesNotMatch(sent[0].text, /PS-10/);
+  assert.doesNotMatch(sent[1].text, /PS-10/);
   assert.match(sent[0].text, /ACOMPANHAMENTO/);
   assert.match(sent[1].text, /ACOMPANHAMENTO/);
 });

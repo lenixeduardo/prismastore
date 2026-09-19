@@ -105,7 +105,7 @@ export function createPaymentService({
       recipientName: pixConfig.recipientName,
       recipientCity: pixConfig.recipientCity,
       amount: Number(order.total),
-      txid: String(order.id).replace(/[^A-Za-z0-9]/g, '').slice(0, 25) || '***',
+      txid: '***',
     });
     let encodedImage = null;
     if (qrEncoder) encodedImage = await qrEncoder(payload);
@@ -162,7 +162,7 @@ export function createPaymentService({
         customerId: asaasCustomerId,
         value: Number(order.total),
         dueDate: saoPauloDate(now()),
-        description: `PrismaStore · Pedido ${order.id}`,
+        description: 'PrismaStore',
         externalReference: order.id,
       });
       paymentId = payment.id;
