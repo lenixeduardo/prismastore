@@ -42,6 +42,7 @@ test('gera QR/Copia e Cola local sem CPF/CNPJ nem gateway', async () => {
     const pix = await h.service.generatePixForOrder({ orderId: 'PS-1001' });
     assert.match(pix.payload, /^000201/);
     assert.equal(pix.encodedImage, 'BASE64PNG');
+    assert.doesNotMatch(pix.payload, /PS1001/);
     assert.equal(h.store.load().orders[0].paymentProvider, 'pix-local');
   } finally { h.close(); }
 });
