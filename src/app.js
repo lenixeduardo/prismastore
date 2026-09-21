@@ -354,6 +354,29 @@ function whatsappRenderKey(whatsapp = state.whatsapp) {
   });
 }
 
+const WHATSAPP_ACTIVE_STATUSES = new Set(['connecting', 'authenticated', 'qr', 'pairing']);
+const WHATSAPP_STATUS_POLL_MS = 2500;
+let whatsappStatusPollTimer = null;
+
+function stopWhatsAppStatusPolling() {
+  if (whatsappStatusPollTimer) window.clearTimeout(whatsappStatusPollTimer);
+  whatsappStatusPollTimer = null;
+}
+
+function syncWhatsAppStatusPolling() {
+  const visibleControllerView = ['dashboard', 'settings'].includes(state.view);
+  if (!visibleControllerView || !WHATSAPP_ACTIVE_STATUSES.has(state.whatsapp.status)) {
+    stopWhatsAppStatusPolling();
+    return;
+  }
+  if (whatsappStatusPollTimer) return;
+  whatsappStatusPollTimer = window.setTimeout(async () => {
+    whatsappStatusPollTimer = null;
+    await refreshWhatsAppStatus({ rerender: true });
+    syncWhatsAppStatusPolling();
+  }, WHATSAPP_STATUS_POLL_MS);
+}
+
 async function refreshWhatsAppStatus({ rerender = false } = {}) {
   const before = whatsappRenderKey(state.whatsapp);
   try {
@@ -594,6 +617,7 @@ function render() {
   const renderer={dashboard:dashboardView,orders:ordersView,customers:customersView,products:productsView,reports:reportsView,chatbot:chatbotView,settings:settingsView}[state.view]||dashboardView;
   app.innerHTML=renderer();
   bind();
+  syncWhatsAppStatusPolling();
 }
 
 function openView(view) {
