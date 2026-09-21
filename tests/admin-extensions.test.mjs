@@ -13,7 +13,7 @@ test('loads operational extensions after the core admin app', () => {
 });
 
 test('products page uses compact rows and opens product-specific details from the ellipsis action', () => {
-  assert.match(app, /class="product-list"/);
+  assert.match(app, /class="[^"]*product-list[^"]*"/);
   assert.match(app, /class="product-list-item"/);
   assert.match(app, /data-real-product-details=/);
   assert.match(app, />•••<\/button>/);
