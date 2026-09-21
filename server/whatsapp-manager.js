@@ -273,7 +273,10 @@ export function createWhatsAppManager({
           const pendingPairingCode = loggedOut ? null : status.pairingCode;
           logWhatsApp('socket:close', `code=${code ?? 'unknown'} registered=${sessionRegistered} pairing=${Boolean(pendingPairingCode)}`);
 
-          if (restartRequired && pendingPairingCode) {
+          if (restartRequired) {
+            // Baileys/WhatsApp uses 515 as a normal post-link handshake:
+            // after a QR scan or pairing-code confirmation the socket must be
+            // recreated with the credentials that were just persisted.
             setStatus({ status: 'connecting', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: code });
             scheduleReconnectOnce(code);
             return;
