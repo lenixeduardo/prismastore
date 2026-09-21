@@ -379,9 +379,9 @@ export function createWhatsAppManager({
     const phone = normalizePairingPhone(phoneNumber);
     if (pairingPromise) return pairingPromise;
 
-    async function attemptPairing({ recoverLoggedOut = true } = {}) {
+    async function attemptPairing({ recoverLoggedOut = true, recoverTransient503 = true } = {}) {
       try {
-        logWhatsApp('pairing:start', `phone=${maskedPhone(phone)} recover401=${recoverLoggedOut}`);
+        logWhatsApp('pairing:start', `phone=${maskedPhone(phone)} recover401=${recoverLoggedOut} recover503=${recoverTransient503}`);
         if (!socket) await connect();
         if (status.status === 'connected') throw new Error('WhatsApp já está conectado.');
         if (!socket?.requestPairingCode) throw new Error('Pareamento por telefone não está disponível nesta sessão do WhatsApp.');
@@ -404,7 +404,21 @@ export function createWhatsAppManager({
           sessionRegistered = false;
           await clearInvalidAuthState('pairing-401');
           setStatus({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: null });
-          return attemptPairing({ recoverLoggedOut: false });
+          return attemptPairing({ recoverLoggedOut: false, recoverTransient503 });
+        }
+
+        if (code === 503 && recoverTransient503) {
+          logWhatsApp('pairing:recover-503');
+          clearReconnect();
+          const failedSocket = socket;
+          socket = null;
+          pairingReady = false;
+          setStatus({ status: 'connecting', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: null });
+          if (failedSocket?.end) {
+            try { await Promise.resolve(failedSocket.end(new Error('PrismaStore recuperando stream 503 do pareamento'))); } catch {}
+          }
+          await connect();
+          return attemptPairing({ recoverLoggedOut, recoverTransient503: false });
         }
 
         const message = pairingErrorMessage(error);
