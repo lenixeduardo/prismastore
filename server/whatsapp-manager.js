@@ -278,18 +278,18 @@ export function createWhatsAppManager({
           const pendingPairingCode = loggedOut ? null : status.pairingCode;
           logWhatsApp('socket:close', `code=${code ?? 'unknown'} registered=${sessionRegistered} pairing=${Boolean(pendingPairingCode)}`);
 
-          if (restartRequired && pendingPairingCode) {
+          if (restartRequired) {
             setStatus({ status: 'connecting', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: code });
             try {
               await saveCredsPromise;
-              logWhatsApp('pairing:credentials-saved-before-restart');
+              logWhatsApp('pairing:credentials-saved-before-restart', `method=${pendingPairingCode ? 'phone-code' : 'qr'}`);
             } catch (error) {
               setStatus({
                 status: 'error',
                 qrDataUrl: null,
                 pairingCode: null,
                 account: null,
-                error: 'O código foi aceito, mas não foi possível salvar as credenciais do vínculo antes do reinício.',
+                error: 'O vínculo foi aceito, mas não foi possível salvar as credenciais antes do reinício exigido pelo WhatsApp.',
                 errorCode: code,
               });
               return;
