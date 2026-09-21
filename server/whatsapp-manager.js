@@ -282,6 +282,23 @@ export function createWhatsAppManager({
             return;
           }
 
+          if (code === 503 && pendingPairingCode) {
+            // A transient stream restart can happen after a link code has
+            // already been issued. Keep the code visible and recreate the
+            // socket with the persisted pairing credentials instead of
+            // replacing the UI with an error before the operator can type it.
+            setStatus({
+              status: 'pairing',
+              qrDataUrl: null,
+              pairingCode: pendingPairingCode,
+              account: null,
+              error: null,
+              errorCode: null,
+            });
+            scheduleReconnectOnce(code);
+            return;
+          }
+
           if (loggedOut) {
             sessionRegistered = false;
             clearReconnect();
