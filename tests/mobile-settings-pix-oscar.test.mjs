@@ -21,6 +21,12 @@ test('service worker cache revision changes with the mobile navigation release',
   assert.match(sw, /prismastore-shell-v0\.9\.2-[^'"]+/);
 });
 
+test('WhatsApp pairing uses a canonical Baileys browser identity', () => {
+  assert.match(server, /Browsers/);
+  assert.match(server, /browser:\s*Browsers\.macOS\(['"]Desktop['"]\)/);
+  assert.doesNotMatch(server, /browser:\s*\[['"]PrismaStore['"]/);
+});
+
 test('runtime terminal hides demo status and identifies the configured Pix as Pix Oscar', () => {
   assert.doesNotMatch(server, /Dados demo:/);
   assert.match(server, /Pix Oscar: CONFIGURADO/);
