@@ -73,3 +73,9 @@ test('mobile order cards keep the content column wide enough for customer and it
   assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.order-main \.customer-name\s*\{[\s\S]*?white-space:\s*nowrap[\s\S]*?text-overflow:\s*ellipsis/);
   assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.order-main \.category\s*\{[\s\S]*?white-space:\s*nowrap[\s\S]*?text-overflow:\s*ellipsis/);
 });
+
+
+test('recent orders keep customer name and order description on a single line', () => {
+  assert.match(styles, /\.recent-orders-card \.order-main\s*\{[^}]*overflow:\s*hidden/);
+  assert.match(styles, /\.recent-orders-card \.customer-name,\s*\.recent-orders-card \.order-summary\s*\{[\s\S]*?display:\s*block[\s\S]*?max-width:\s*100%[\s\S]*?white-space:\s*nowrap[\s\S]*?overflow:\s*hidden[\s\S]*?text-overflow:\s*ellipsis/);
+});
