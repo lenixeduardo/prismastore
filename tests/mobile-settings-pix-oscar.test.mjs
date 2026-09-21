@@ -8,14 +8,17 @@ const sw = readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8'
 const server = readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
 const data = readFileSync(new URL('../src/data.js', import.meta.url), 'utf8');
 
-test('mobile bottom navigation exposes Configurações directly and keeps secondary views in Mais', () => {
+test('mobile bottom navigation keeps Configurações direct and Mais only exposes PrismaStore installation', () => {
   const mobileViews = app.match(/const mobileViews = \[([\s\S]*?)\n\];/)?.[1] || '';
   assert.match(mobileViews, /['"]settings['"]\s*,\s*['"]Configurações['"]/);
   assert.doesNotMatch(mobileViews, /['"]customers['"]/);
   assert.match(app, /data-pwa-more/);
-  assert.match(pwa, /data-pwa-view="customers"/);
-  assert.match(pwa, /data-pwa-view="reports"/);
-  assert.match(pwa, /data-pwa-view="chatbot"/);
+  assert.match(pwa, /data-pwa-install-entry/);
+  assert.doesNotMatch(pwa, /data-pwa-view=/);
+  assert.doesNotMatch(pwa, />◎ Clientes</);
+  assert.doesNotMatch(pwa, />⌁ Relatórios</);
+  assert.doesNotMatch(pwa, />◌ Simular chatbot</);
+  assert.doesNotMatch(pwa, />⚙ Configurações</);
 });
 
 test('service worker cache revision changes with the mobile navigation release', () => {

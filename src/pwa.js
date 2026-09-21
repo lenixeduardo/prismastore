@@ -49,20 +49,11 @@ function closeMoreSheet() {
   document.querySelector('.pwa-more-backdrop')?.remove();
 }
 
-function navigateTo(view) {
-  const handled = window.PrismastoreApp?.openView?.(view);
-  if (!handled) {
-    const target = document.querySelector(`.sidebar [data-view="${view}"]`) || document.querySelector(`[data-view="${view}"]`);
-    target?.click();
-  }
-  closeMoreSheet();
-}
-
 function openMoreSheet() {
   closeMoreSheet();
   const backdrop = document.createElement('div');
   backdrop.className = 'pwa-more-backdrop';
-  backdrop.innerHTML = `<div class="pwa-more-sheet"><div class="pwa-more-handle"></div><div class="pwa-more-grid"><button data-pwa-view="customers">◎ Clientes</button><button data-pwa-view="reports">⌁ Relatórios</button><button data-pwa-view="chatbot">◌ Simular chatbot</button><button data-pwa-view="settings">⚙ Configurações</button>${!isStandalone() && (deferredInstallPrompt || isIOS()) ? '<button data-pwa-install-entry>＋ Instalar PrismaStore</button>' : ''}</div></div>`;
+  backdrop.innerHTML = '<div class="pwa-more-sheet"><div class="pwa-more-handle"></div><div class="pwa-more-grid"><button data-pwa-install-entry>＋ Instalar PrismaStore</button></div></div>';
   document.body.appendChild(backdrop);
 }
 
@@ -113,12 +104,12 @@ window.addEventListener('appinstalled', () => {
 document.addEventListener('click', async (event) => {
   if (event.target.closest('[data-pwa-more]')) return openMoreSheet();
   if (event.target === document.querySelector('.pwa-more-backdrop')) return closeMoreSheet();
-  const view = event.target.closest('[data-pwa-view]')?.getAttribute('data-pwa-view');
-  if (view) return navigateTo(view);
   if (event.target.closest('[data-pwa-install-entry]')) {
     closeMoreSheet();
+    if (isStandalone()) return;
     if (deferredInstallPrompt) return installPWA();
     if (isIOS()) return showInstallCard({ ios: true });
+    return showInstallCard();
   }
   if (event.target.closest('[data-pwa-install]')) return installPWA();
   if (event.target.closest('[data-pwa-dismiss]')) return closeInstallCard();
