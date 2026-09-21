@@ -33,10 +33,10 @@ function harness({ deliveryType = 'local_delivery', status = 'PAID' } = {}) {
   return { store, service, sent, close: () => store.close() };
 }
 
-test('tracker representa Pago, Embalando, Transporte e Finalizado', () => {
+test('tracker representa Pago, Produto embalado, Transporte e Finalizado', () => {
   const tracker = buildOrderTracker({ id: 'PS-1', status: 'PACKING', deliveryType: 'local_delivery' });
   assert.match(tracker, /✅ Pagamento confirmado/);
-  assert.match(tracker, /✅ Em preparação/);
+  assert.match(tracker, /✅ Produto embalado/);
   assert.match(tracker, /○ Saiu para entrega/);
   assert.match(tracker, /○ Finalizado/);
 });
@@ -50,7 +50,7 @@ test('avança PAID para PACKING e envia tracker ao WhatsApp', async () => {
     assert.equal(h.store.load().orders[0].status, 'PACKING');
     assert.equal(h.sent.length, 1);
     assert.equal(h.sent[0].type, 'text');
-    assert.match(h.sent[0].text, /Em preparação/);
+    assert.match(h.sent[0].text, /embalado/);
   } finally { h.close(); }
 });
 
