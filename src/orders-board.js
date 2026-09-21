@@ -85,7 +85,7 @@ function paidCard(order, lane, now) {
     <div class="order-board-items">${itemLines(order)}</div>
     <div class="order-board-customer">${esc(order.customerName || 'Cliente')}</div>
     ${address ? `<div class="order-board-address">${address}</div>` : ''}
-    ${lane === 'shipping' ? `<button class="order-board-action" type="button" data-board-advance="${esc(order.id)}">${icon('package')}<span>Pedido pronto para envio</span>${icon('chevron')}</button>` : ''}
+    <button class="order-board-action" type="button" data-board-advance="${esc(order.id)}">${icon('package')}<span>Marcar como embalando</span>${icon('chevron')}</button>
   </article>`;
 }
 
@@ -148,12 +148,13 @@ async function fetchJson(url, options) {
 }
 
 async function loadBoardState() {
-  const [stateResult, whatsappResult] = await Promise.allSettled([
-    fetchJson('/api/state', { cache: 'no-store' }),
-    fetchJson('/api/whatsapp/status', { cache: 'no-store' }),
-  ]);
-  const state = stateResult.status === 'fulfilled' ? stateResult.value : { orders: [] };
-  const whatsapp = whatsappResult.status === 'fulfilled' ? whatsappResult.value : { status: 'disconnected' };
+  const state = await fetchJson('/api/state', { cache: 'no-store' });
+  let whatsapp = { status: 'disconnected' };
+  try {
+    whatsapp = await fetchJson('/api/whatsapp/status', { cache: 'no-store' });
+  } catch {
+    // A fila continua funcional mesmo quando o WhatsApp estiver indisponível.
+  }
   return { orders: Array.isArray(state.orders) ? state.orders : [], whatsappStatus: whatsapp.status || 'disconnected' };
 }
 
@@ -185,12 +186,16 @@ export async function enhanceOrdersView({ force = false } = {}) {
 }
 
 async function advancePaidOrder(orderId) {
-  await fetchJson(`/api/orders/${encodeURIComponent(orderId)}/advance`, {
+  const result = await fetchJson(`/api/orders/${encodeURIComponent(orderId)}/advance`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ expectedStatus: 'PAID' }),
   });
+  window.dispatchEvent(new CustomEvent('prismastore:orders-updated', {
+    detail: { orderId, status: result.order?.status || null, changed: Boolean(result.changed), stale: Boolean(result.stale) },
+  }));
   await enhanceOrdersView({ force: true });
+  return result;
 }
 
 function orderById(orderId) {
@@ -257,10 +262,12 @@ if (typeof document !== 'undefined' && typeof window !== 'undefined') {
   }
 
   window.addEventListener('prismastore:dashboard-opened', () => queueMicrotask(() => enhanceOrdersView()));
+  window.addEventListener('prismastore:state-updated', () => queueMicrotask(() => enhanceOrdersView({ force: true })));
+  window.addEventListener('prismastore:orders-updated', () => queueMicrotask(() => enhanceOrdersView({ force: true })));
   window.setInterval(() => {
     const main = document.querySelector('#app .main');
     if (main?.querySelector('.orders-board-page')) enhanceOrdersView({ force: true });
-  }, 30000);
+  }, 5000);
 
   queueMicrotask(() => enhanceOrdersView());
 }
