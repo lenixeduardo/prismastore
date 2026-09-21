@@ -215,3 +215,23 @@ test('restart-required 515 after pairing schedules one controlled reconnect', as
   assert.equal(scheduled.length, 1);
   assert.equal(scheduled[0].ms, 3000);
 });
+
+test('logged out 401 clears stale auth and returns to a clean disconnected state', async () => {
+  let resets = 0;
+  const { manager, socket, scheduled } = harness({
+    resetAuthState: async () => { resets += 1; },
+  });
+
+  await manager.connect();
+  await socket.ev.emit('connection.update', {
+    connection: 'close',
+    lastDisconnect: { error: { output: { statusCode: 401 } } },
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(resets, 1);
+  assert.equal(manager.getStatus().status, 'disconnected');
+  assert.equal(manager.getStatus().error, null);
+  assert.equal(manager.getStatus().errorCode, null);
+  assert.equal(scheduled.length, 0);
+});
