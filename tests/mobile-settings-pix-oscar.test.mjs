@@ -9,8 +9,9 @@ const server = readFileSync(new URL('../server/index.js', import.meta.url), 'utf
 const data = readFileSync(new URL('../src/data.js', import.meta.url), 'utf8');
 
 test('mobile bottom navigation exposes Configurações directly and keeps secondary views in Mais', () => {
-  assert.match(app, /const mobileViews = \[[\s\S]*?['"]settings['"]/);
-  assert.match(app, /data-view="settings"/);
+  const mobileViews = app.match(/const mobileViews = \[([\s\S]*?)\n\];/)?.[1] || '';
+  assert.match(mobileViews, /['"]settings['"]\s*,\s*['"]Configurações['"]/);
+  assert.doesNotMatch(mobileViews, /['"]customers['"]/);
   assert.match(app, /data-pwa-more/);
   assert.match(pwa, /data-pwa-view="customers"/);
   assert.match(pwa, /data-pwa-view="reports"/);
