@@ -524,6 +524,7 @@ async function refreshSettingsHealth() {
     const auth = await authResponse.json();
     if (auth.configured && !auth.authenticated) {
       state.settingsHealth = { ...state.settingsHealth, loading: false, error: 'Sua sessão expirou. Entre novamente para continuar.' };
+      if (state.view === 'settings') render();
       window.dispatchEvent(new CustomEvent('prismastore:auth-required'));
       return;
     }
@@ -700,4 +701,7 @@ async function bootstrapOperationalRuntime() {
 
 render();
 window.addEventListener('prismastore:dashboard-opened', bootstrapOperationalRuntime, { once: true });
+window.addEventListener('prismastore:auth-restored', () => {
+  if (state.view === 'settings') refreshSettingsHealth();
+});
 if (!document.querySelector('#app')?.hidden) bootstrapOperationalRuntime();
