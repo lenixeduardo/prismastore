@@ -70,3 +70,10 @@ test('core settings view performs real server health checks', () => {
   assert.match(app, /data-refresh-settings-health/);
   assert.match(app, /Salvar mensagens/);
 });
+
+test('WhatsApp resolves the live WA Web revision before falling back to the Baileys repository version', () => {
+  assert.match(server, /fetchLatestWaWebVersion/);
+  assert.match(server, /fetchLatestBaileysVersion/);
+  assert.match(server, /WhatsApp Web version \(live\)/);
+  assert.match(server, /shouldSyncHistoryMessage:\s*\(\)\s*=>\s*false/);
+});
