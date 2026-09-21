@@ -3,7 +3,7 @@ import { resolveChatbotMessage } from './chatbot-messages.js';
 
 function trackerStage(order) {
   if (order.status === 'DELIVERED') return 3;
-  if (['SHIPPED', 'OUT_FOR_DELIVERY'].includes(order.status)) return 2;
+  if (order.status === 'SHIPPED') return 2;
   if (order.status === 'PACKING') return 1;
   return 0;
 }
@@ -14,20 +14,21 @@ function marker(done) {
 
 export function buildOrderTracker(order) {
   const stage = trackerStage(order);
-  const transportLabel = order.deliveryType === 'local_delivery' ? 'Saiu para entrega' : 'Pedido enviado';
-  return [
+  const steps = [
     '📍 *ACOMPANHAMENTO*',
     '',
     `${marker(stage >= 0)} Pagamento confirmado`,
     `${marker(stage >= 1)} Produto embalado`,
-    `${marker(stage >= 2)} ${transportLabel}`,
-    `${marker(stage >= 3)} Finalizado`,
-  ].join('\n');
+  ];
+  if (order.deliveryType === 'shipping') {
+    steps.push(`${marker(stage >= 2)} Pedido enviado`);
+  }
+  steps.push(`${marker(stage >= 3)} Concluído`);
+  return steps.join('\n');
 }
 
 function statusIntro(state, order) {
   if (order.status === 'PACKING') return '📦 Seu pedido está *embalado*.';
-  if (order.status === 'OUT_FOR_DELIVERY') return '🛵 Seu pedido *Saiu para entrega* no seu endereço.';
   if (order.status === 'SHIPPED') return '🚚 Seu *pedido enviado* já está em transporte.';
   if (order.status === 'DELIVERED') return resolveChatbotMessage(state, 'orderFinished');
   if (order.status === 'PAID') return resolveChatbotMessage(state, 'paymentConfirmed');

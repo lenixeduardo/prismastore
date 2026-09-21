@@ -31,7 +31,7 @@ function monthLabel(monthKey) {
 function statusLabel(status) {
   return ({
     PAYMENT_PENDING: 'Aguardando Pix', PAID: 'Pago · Embalar', PACKING: 'Produto embalado',
-    SHIPPED: 'Enviado', OUT_FOR_DELIVERY: 'Saiu para entrega', DELIVERED: 'Entregue', CANCELLED: 'Cancelado',
+    SHIPPED: 'Enviado', OUT_FOR_DELIVERY: 'Concluído', DELIVERED: 'Concluído', CANCELLED: 'Cancelado',
   })[status] || status;
 }
 

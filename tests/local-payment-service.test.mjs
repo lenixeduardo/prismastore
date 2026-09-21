@@ -15,7 +15,7 @@ function harness() {
   const store = createStateStore({
     dbPath: join(dir, 'db.sqlite'),
     seedState: {
-      products: [{ id: 'p1', name: 'Produto', price: 10, stock: 3, reserved: 2, active: true }],
+      products: [{ id: 'p1', name: 'Produto', price: 10, stock: 1, active: true }],
       customers: [{ id: 'c1', name: 'Cliente', phone: '+5511999999999', addresses: [], totalSpent: 0, orderCount: 0, lastOrderAt: null }],
       orders: [{
         id: 'PS-1001', customerId: 'c1', customerName: 'Cliente', phone: '+5511999999999',
@@ -47,7 +47,7 @@ test('gera QR/Copia e Cola local sem CPF/CNPJ nem gateway', async () => {
   } finally { h.close(); }
 });
 
-test('comprovante válido marca PAID, consome reserva e libera sessão para embalagem', async () => {
+test('comprovante válido marca PAID sem baixar estoque novamente e libera sessão para embalagem', async () => {
   const h = harness();
   try {
     await h.service.generatePixForOrder({ orderId: 'PS-1001' });
@@ -58,13 +58,13 @@ test('comprovante válido marca PAID, consome reserva e libera sessão para emba
     assert.equal(state.orders[0].receivingAccountId, 'pix-local');
     assert.equal(state.orders[0].paymentReceiptFingerprint, 'receipt-1');
     assert.equal(state.products[0].stock, 1);
-    assert.equal(state.products[0].reserved, 0);
+    assert.equal('reserved' in state.products[0], false);
     assert.equal(state.customers[0].orderCount, 1);
     assert.equal(h.store.getChatSession('5511999999999').step, 'paid');
   } finally { h.close(); }
 });
 
-test('comprovante com horário não posterior ao pedido fica em revisão manual e não baixa estoque', async () => {
+test('comprovante com horário não posterior ao pedido fica em revisão manual e preserva estoque', async () => {
   const h = harness();
   try {
     const result = h.service.validateReceiptForOrder({ orderId: 'PS-1001', text: receipt({ time: '17:00:00' }), fingerprint: 'receipt-2' });
@@ -74,7 +74,7 @@ test('comprovante com horário não posterior ao pedido fica em revisão manual 
     const state = h.store.load();
     assert.equal(state.orders[0].status, 'PAYMENT_PENDING');
     assert.equal(state.orders[0].paymentReview.status, 'MANUAL_REVIEW');
-    assert.equal(state.products[0].stock, 3);
-    assert.equal(state.products[0].reserved, 2);
+    assert.equal(state.products[0].stock, 1);
+    assert.equal('reserved' in state.products[0], false);
   } finally { h.close(); }
 });

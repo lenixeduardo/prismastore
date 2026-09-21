@@ -33,12 +33,12 @@ function harness({ deliveryType = 'local_delivery', status = 'PAID' } = {}) {
   return { store, service, sent, close: () => store.close() };
 }
 
-test('tracker representa Pago, Produto embalado, Transporte e Finalizado', () => {
+test('tracker de entrega local vai de Produto embalado direto para Concluído', () => {
   const tracker = buildOrderTracker({ id: 'PS-1', status: 'PACKING', deliveryType: 'local_delivery' });
   assert.match(tracker, /✅ Pagamento confirmado/);
   assert.match(tracker, /✅ Produto embalado/);
-  assert.match(tracker, /○ Saiu para entrega/);
-  assert.match(tracker, /○ Finalizado/);
+  assert.doesNotMatch(tracker, /Saiu para entrega/);
+  assert.match(tracker, /○ Concluído/);
 });
 
 test('avança PAID para PACKING e envia tracker ao WhatsApp', async () => {
@@ -54,27 +54,28 @@ test('avança PAID para PACKING e envia tracker ao WhatsApp', async () => {
   } finally { h.close(); }
 });
 
-test('PACKING segue para OUT_FOR_DELIVERY em entrega local e SHIPPED em envio', async () => {
+test('PACKING conclui entrega local e mantém SHIPPED para envio', async () => {
   const local = harness({ status: 'PACKING', deliveryType: 'local_delivery' });
   const shipping = harness({ status: 'PACKING', deliveryType: 'shipping' });
   try {
-    assert.equal((await local.service.advanceOrder({ orderId: 'PS-1001', expectedStatus: 'PACKING' })).order.status, 'OUT_FOR_DELIVERY');
+    assert.equal((await local.service.advanceOrder({ orderId: 'PS-1001', expectedStatus: 'PACKING' })).order.status, 'DELIVERED');
     assert.equal((await shipping.service.advanceOrder({ orderId: 'PS-1001', expectedStatus: 'PACKING' })).order.status, 'SHIPPED');
-    assert.match(local.sent[0].text, /Saiu para entrega/);
+    assert.equal(local.sent[0].type, 'media');
+    assert.match(local.sent[1].text, /Concluído/);
     assert.match(shipping.sent[0].text, /Pedido enviado/);
   } finally { local.close(); shipping.close(); }
 });
 
-test('finalização envia primeiro a arte padrão e depois o tracker finalizado', async () => {
-  const h = harness({ status: 'OUT_FOR_DELIVERY' });
+test('entrega ao motoboy envia arte final e conclui o pedido imediatamente', async () => {
+  const h = harness({ status: 'PACKING', deliveryType: 'local_delivery' });
   try {
-    const result = await h.service.advanceOrder({ orderId: 'PS-1001', expectedStatus: 'OUT_FOR_DELIVERY' });
+    const result = await h.service.advanceOrder({ orderId: 'PS-1001', expectedStatus: 'PACKING' });
     assert.equal(result.order.status, 'DELIVERED');
     assert.equal(h.sent[0].type, 'media');
     assert.equal(h.sent[0].source, '/assets/prismastore-order-finished.png');
     assert.equal(h.sent[1].type, 'text');
     assert.match(h.sent[1].text, /Seu pedido foi finalizado/);
-    assert.match(h.sent[1].text, /✅ Finalizado/);
+    assert.match(h.sent[1].text, /✅ Concluído/);
   } finally { h.close(); }
 });
 

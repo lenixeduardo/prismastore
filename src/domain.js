@@ -78,7 +78,7 @@ export function consumeCartStock(products, cart) {
 export function nextOrderStatus(order) {
   if (order.status === 'PAID') return 'PACKING';
   if (order.status === 'PACKING') {
-    return order.deliveryType === 'local_delivery' ? 'OUT_FOR_DELIVERY' : 'SHIPPED';
+    return order.deliveryType === 'local_delivery' ? 'DELIVERED' : 'SHIPPED';
   }
   if (order.status === 'SHIPPED' || order.status === 'OUT_FOR_DELIVERY') return 'DELIVERED';
   return order.status;

@@ -90,9 +90,13 @@ function paidCard(order, lane, now) {
 }
 
 function attendingCard(order, position) {
+  const nextAction = order.deliveryType === 'local_delivery'
+    ? `<button class="order-board-action complete" type="button" data-board-complete-delivery="${esc(order.id)}">${icon('truck')}<span>Entregue ao motoboy · Concluir</span>${icon('chevron')}</button>`
+    : `<button class="order-board-action" type="button" data-board-ready-shipping="${esc(order.id)}">${icon('truck')}<span>Pedido pronto para envio</span>${icon('chevron')}</button>`;
   return `<article class="order-board-card attending" data-order-id="${esc(order.id)}">
     <div class="order-board-person">${icon('user')}<strong>${esc(order.customerName || 'Cliente')}</strong></div>
     <div class="order-board-items">${itemLines(order)}</div>
+    ${nextAction}
     <div class="order-board-actions-stack">
       <button class="order-board-message" type="button" data-board-message="${esc(order.id)}">${icon('message')}<span>Enviar mensagem referente à demanda</span></button>
       <button class="order-board-message secondary" type="button" data-board-queue="${esc(order.id)}" data-queue-position="${position}">${icon('info')}<span>Informar a ordem na fila</span></button>
@@ -198,6 +202,19 @@ async function advancePaidOrder(orderId) {
   return result;
 }
 
+async function advancePackedOrder(orderId) {
+  const result = await fetchJson(`/api/orders/${encodeURIComponent(orderId)}/advance`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ expectedStatus: 'PACKING' }),
+  });
+  window.dispatchEvent(new CustomEvent('prismastore:orders-updated', {
+    detail: { orderId, status: result.order?.status || null, changed: Boolean(result.changed), stale: Boolean(result.stale) },
+  }));
+  await enhanceOrdersView({ force: true });
+  return result;
+}
+
 function orderById(orderId) {
   return lastOrders.find((order) => order.id === orderId) || null;
 }
@@ -235,6 +252,19 @@ if (typeof document !== 'undefined' && typeof window !== 'undefined') {
       target.disabled = true;
       try {
         await advancePaidOrder(target.dataset.boardAdvance);
+      } catch (error) {
+        console.error(error);
+        target.disabled = false;
+        target.title = error instanceof Error ? error.message : 'Falha ao atualizar pedido.';
+      }
+      return;
+    }
+
+    if (target.matches('[data-board-complete-delivery], [data-board-ready-shipping]')) {
+      target.disabled = true;
+      try {
+        const orderId = target.dataset.boardCompleteDelivery || target.dataset.boardReadyShipping;
+        await advancePackedOrder(orderId);
       } catch (error) {
         console.error(error);
         target.disabled = false;

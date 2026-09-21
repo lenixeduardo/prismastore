@@ -72,8 +72,8 @@ mensagem
 → validação local do comprovante
 → PAID / Pago · Embalar
 → Produto embalado
-→ Enviado ou Saiu para entrega
-→ Finalizado + arte final
+→ Enviado (somente pedidos por transportadora)
+→ Concluído + arte final
 ```
 
 O `checkoutId` impede duplicidade de pedido. O comprovante só libera o pedido automaticamente quando o valor bate com o total, o destinatário corresponde ao configurado e a data/hora do Pix é estritamente posterior à criação do pedido. O sistema também bloqueia reutilização do mesmo comprovante ou identificador de transação.
@@ -102,15 +102,15 @@ Depois do pagamento, o operador avança o pedido pelo painel. Cada transição p
 ```text
 ✅ Pagamento confirmado
 ✅/○ Produto embalado
-✅/○ Pedido enviado ou Saiu para entrega
-✅/○ Finalizado
+✅/○ Pedido enviado (somente envio)
+✅/○ Concluído
 ```
 
-O endpoint `POST /api/orders/:id/advance` recebe `expectedStatus`, impedindo que uma retentativa ou clique duplicado avance duas etapas. Para `local_delivery`, o fluxo é `PACKING → OUT_FOR_DELIVERY → DELIVERED`; para `shipping`, é `PACKING → SHIPPED → DELIVERED`. Ao chegar em `DELIVERED`, o WhatsApp envia `assets/prismastore-order-finished.b64` (reconstruída como PNG local ao iniciar) antes da mensagem final.
+O endpoint `POST /api/orders/:id/advance` recebe `expectedStatus`, impedindo que uma retentativa ou clique duplicado avance duas etapas. Para `local_delivery`, o fluxo é `PACKING → DELIVERED`: ao entregar o pedido embalado ao motoboy, ele é concluído imediatamente. Para `shipping`, o fluxo continua `PACKING → SHIPPED → DELIVERED`. Ao chegar em `DELIVERED`, o WhatsApp envia `assets/prismastore-order-finished.b64` (reconstruída como PNG local ao iniciar) antes da mensagem final.
 
 ## Relatórios reais — Passo 7
 
-A tela **Relatórios** usa os pedidos persistidos no SQLite e considera `paidAt` como fonte de verdade financeira. Isso significa que um pedido continua no faturamento mesmo depois de avançar para `PACKING`, `SHIPPED`, `OUT_FOR_DELIVERY` ou `DELIVERED`.
+A tela **Relatórios** usa os pedidos persistidos no SQLite e considera `paidAt` como fonte de verdade financeira. Isso significa que um pedido continua no faturamento mesmo depois de avançar para `PACKING`, `SHIPPED` ou `DELIVERED`.
 
 O painel permite selecionar o mês e exibe:
 
