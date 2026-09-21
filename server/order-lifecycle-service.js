@@ -19,14 +19,14 @@ export function buildOrderTracker(order) {
     '📍 *ACOMPANHAMENTO*',
     '',
     `${marker(stage >= 0)} Pagamento confirmado`,
-    `${marker(stage >= 1)} Em preparação`,
+    `${marker(stage >= 1)} Produto embalado`,
     `${marker(stage >= 2)} ${transportLabel}`,
     `${marker(stage >= 3)} Finalizado`,
   ].join('\n');
 }
 
 function statusIntro(state, order) {
-  if (order.status === 'PACKING') return '📦 Seu pedido está *Em preparação*.';
+  if (order.status === 'PACKING') return '📦 Seu pedido está *embalado*.';
   if (order.status === 'OUT_FOR_DELIVERY') return '🛵 Seu pedido *Saiu para entrega* no seu endereço.';
   if (order.status === 'SHIPPED') return '🚚 Seu *pedido enviado* já está em transporte.';
   if (order.status === 'DELIVERED') return resolveChatbotMessage(state, 'orderFinished');
