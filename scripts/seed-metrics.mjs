@@ -23,6 +23,8 @@ export function buildMetricOrders({ now = new Date(), count = TOTAL_DEMO_ORDERS 
     const hour = String(10 + (index % 8)).padStart(2, '0');
     const deliveryType = index % 2 === 0 ? 'local_delivery' : 'shipping';
     const total = totals[index % totals.length];
+    const deliveryFee = deliveryType === 'shipping' ? 24 : 18;
+    const quantity = 1 + (index % 2);
     const id = `metrics-${year}${month}-${String(ordinal).padStart(2, '0')}`;
     return {
       id,
@@ -41,8 +43,8 @@ export function buildMetricOrders({ now = new Date(), count = TOTAL_DEMO_ORDERS 
       items: [{
         productId: `metrics-demo-product-${(index % 3) + 1}`,
         name: `Produto demonstrativo ${String.fromCharCode(65 + (index % 3))}`,
-        quantity: 1 + (index % 2),
-        unitPrice: total - (deliveryType === 'shipping' ? 24 : 18),
+        quantity,
+        unitPrice: Number(((total - deliveryFee) / quantity).toFixed(2)),
       }],
       address: {
         street: 'Rua de Demonstração',
@@ -54,7 +56,7 @@ export function buildMetricOrders({ now = new Date(), count = TOTAL_DEMO_ORDERS 
         zip: '01000-000',
       },
       newAddress: false,
-      deliveryFee: deliveryType === 'shipping' ? 24 : 18,
+      deliveryFee,
       metricsSeed: true,
       statusHistory: [
         { status: 'PAID', at: `${year}-${month}-${day}T${hour}:05:00-03:00` },
