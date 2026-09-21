@@ -42,6 +42,17 @@ function normalizePairingPhone(value = '') {
   return phone;
 }
 
+function maskedPhone(phone = '') {
+  const digits = String(phone).replace(/\D/g, '');
+  if (digits.length < 6) return '[oculto]';
+  return `${digits.slice(0, 4)}******${digits.slice(-4)}`;
+}
+
+function logWhatsApp(event, details = '') {
+  const suffix = details ? ` · ${details}` : '';
+  console.log(`[WhatsApp] ${event}${suffix}`);
+}
+
 export function createWhatsAppManager({
   socketFactory,
   authStateLoader,
@@ -194,6 +205,7 @@ export function createWhatsAppManager({
     try {
       const { state, saveCreds } = await authStateLoader();
       sessionRegistered = state?.creds?.registered !== false;
+      logWhatsApp('connect:start', `registered=${sessionRegistered}`);
       const activeSocket = await socketFactory({ auth: state });
       socket = activeSocket;
 
@@ -208,6 +220,7 @@ export function createWhatsAppManager({
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
+          logWhatsApp('socket:qr-ready');
           resolvePairingReady();
           try {
             const qrDataUrl = await qrEncoder(qr);
@@ -218,6 +231,7 @@ export function createWhatsAppManager({
         }
 
         if (connection === 'open') {
+          logWhatsApp('socket:open');
           clearReconnect();
           reconnectAttempts = 0;
           sessionRegistered = true;
@@ -237,6 +251,7 @@ export function createWhatsAppManager({
           const loggedOut = code === disconnectReasonLoggedOut;
           const restartRequired = code === disconnectReasonRestartRequired;
           const pendingPairingCode = loggedOut ? null : status.pairingCode;
+          logWhatsApp('socket:close', `code=${code ?? 'unknown'} registered=${sessionRegistered} pairing=${Boolean(pendingPairingCode)}`);
 
           if (restartRequired && pendingPairingCode) {
             setStatus({ status: 'connecting', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: code });
@@ -275,6 +290,7 @@ export function createWhatsAppManager({
 
       return getStatus();
     } catch (error) {
+      logWhatsApp('connect:error', `code=${errorStatusCode(error) ?? 'unknown'} message=${error instanceof Error ? error.message : 'erro desconhecido'}`);
       socket = null;
       setStatus({
         status: 'error',
@@ -305,6 +321,7 @@ export function createWhatsAppManager({
 
     pairingPromise = (async () => {
       try {
+        logWhatsApp('pairing:start', `phone=${maskedPhone(phone)}`);
         if (!socket) await connect();
         if (status.status === 'connected') throw new Error('WhatsApp já está conectado.');
         if (!socket?.requestPairingCode) throw new Error('Pareamento por telefone não está disponível nesta sessão do WhatsApp.');
@@ -314,10 +331,12 @@ export function createWhatsAppManager({
 
         const pairingCode = await socket.requestPairingCode(phone);
         if (!pairingCode) throw new Error('WhatsApp não retornou um código de pareamento.');
+        logWhatsApp('pairing:code-generated');
         setStatus({ status: 'pairing', pairingCode: String(pairingCode), qrDataUrl: null, account: null, error: null, errorCode: null });
         return getStatus();
       } catch (error) {
         const message = pairingErrorMessage(error);
+        logWhatsApp('pairing:error', `code=${errorStatusCode(error) ?? 'unknown'} message=${message}`);
         setStatus({
           status: 'error',
           pairingCode: null,
