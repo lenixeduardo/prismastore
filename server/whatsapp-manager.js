@@ -12,6 +12,22 @@ function disconnectStatusCode(lastDisconnect) {
   return lastDisconnect?.error?.output?.statusCode ?? lastDisconnect?.error?.statusCode ?? null;
 }
 
+function errorStatusCode(error) {
+  return error?.output?.statusCode ?? error?.statusCode ?? null;
+}
+
+function pairingErrorMessage(error) {
+  const code = errorStatusCode(error);
+  if (code === 400) return 'WhatsApp recusou a solicitação de vínculo (400). Aguarde alguns minutos e tente novamente ou use QR Code.';
+  if (code === 408) return 'A sessão do WhatsApp expirou antes do vínculo (408). Reinicie a conexão e tente novamente.';
+  if (code === 428) return 'A conexão com o WhatsApp ainda não estava pronta para gerar o código (428). Reinicie a conexão e tente novamente.';
+  if (code === 429) return 'O WhatsApp limitou novas tentativas de vínculo (429). Aguarde antes de tentar novamente para evitar novo bloqueio temporário.';
+  if (code === 515) return 'O WhatsApp solicitou reinício da sessão durante o vínculo (515). Reinicie a conexão e tente novamente.';
+  return error instanceof Error && error.message
+    ? error.message
+    : 'Não foi possível gerar o código de pareamento do WhatsApp.';
+}
+
 function canonicalDevPhone(value = '') {
   const phone = phoneFromJid(String(value));
   if (!phone) return '';
@@ -26,13 +42,28 @@ function normalizePairingPhone(value = '') {
   return phone;
 }
 
+function maskedPhone(phone = '') {
+  const digits = String(phone).replace(/\D/g, '');
+  if (digits.length < 6) return '[oculto]';
+  return `${digits.slice(0, 4)}******${digits.slice(-4)}`;
+}
+
+function logWhatsApp(event, details = '') {
+  const suffix = details ? ` · ${details}` : '';
+  console.log(`[WhatsApp] ${event}${suffix}`);
+}
+
 export function createWhatsAppManager({
   socketFactory,
   authStateLoader,
   qrEncoder,
   messageHandler = null,
   disconnectReasonLoggedOut,
+  disconnectReasonRestartRequired = 515,
   reconnectDelayMs = 3000,
+  maxReconnectAttempts = 3,
+  pairingReadyTimeoutMs = 15000,
+  resetAuthState = null,
   schedule = setTimeout,
   clearSchedule = clearTimeout,
   maxSeenMessageIds = 1000,
@@ -40,9 +71,15 @@ export function createWhatsAppManager({
 }) {
   let socket = null;
   let connectPromise = null;
+  let pairingPromise = null;
+  let authResetPromise = null;
   let reconnectTimer = null;
+  let reconnectAttempts = 0;
   let manualDisconnect = false;
-  let status = { status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null };
+  let sessionRegistered = false;
+  let pairingReady = false;
+  const pairingReadyWaiters = new Set();
+  let status = { status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: null };
   const seenIds = new Set();
   const seenQueue = [];
   const allowedPhone = canonicalDevPhone(devAllowedPhone);
@@ -74,14 +111,80 @@ export function createWhatsAppManager({
     reconnectTimer = null;
   }
 
-  function scheduleReconnectOnce() {
+  async function clearInvalidAuthState(reason = 'unknown') {
+    if (!resetAuthState) return;
+    if (authResetPromise) return authResetPromise;
+    authResetPromise = Promise.resolve()
+      .then(() => resetAuthState())
+      .then(() => {
+        logWhatsApp('auth:cleared', `reason=${reason}`);
+      })
+      .catch((error) => {
+        console.error('[WhatsApp] auth:clear-error', error);
+        throw error;
+      })
+      .finally(() => {
+        authResetPromise = null;
+      });
+    return authResetPromise;
+  }
+
+  function resolvePairingReady() {
+    pairingReady = true;
+    for (const waiter of pairingReadyWaiters) waiter.resolve();
+    pairingReadyWaiters.clear();
+  }
+
+  function rejectPairingReady(error) {
+    pairingReady = false;
+    for (const waiter of pairingReadyWaiters) waiter.reject(error);
+    pairingReadyWaiters.clear();
+  }
+
+  function waitForPairingReady() {
+    if (pairingReady) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const waiter = {
+        resolve: () => {
+          clearTimeout(waiter.timer);
+          resolve();
+        },
+        reject: (error) => {
+          clearTimeout(waiter.timer);
+          reject(error);
+        },
+        timer: null,
+      };
+      waiter.timer = setTimeout(() => {
+        pairingReadyWaiters.delete(waiter);
+        reject(new Error('Tempo esgotado aguardando o WhatsApp ficar pronto para gerar o código.'));
+      }, pairingReadyTimeoutMs);
+      pairingReadyWaiters.add(waiter);
+    });
+  }
+
+  function scheduleReconnectOnce(reasonCode = null) {
     if (manualDisconnect || reconnectTimer) return;
+    if (reasonCode === 429) {
+      setStatus({ status: 'error', error: pairingErrorMessage({ statusCode: 429 }), errorCode: 429 });
+      return;
+    }
+    if (reconnectAttempts >= maxReconnectAttempts) {
+      setStatus({
+        status: 'error',
+        error: 'A conexão do WhatsApp falhou repetidamente. Reconexão automática interrompida para evitar bloqueio temporário.',
+        errorCode: reasonCode,
+      });
+      return;
+    }
+    const delay = reconnectDelayMs * (2 ** reconnectAttempts);
+    reconnectAttempts += 1;
     reconnectTimer = schedule(() => {
       reconnectTimer = null;
       connect().catch((error) => {
-        setStatus({ status: 'error', error: error instanceof Error ? error.message : 'Falha ao reconectar WhatsApp' });
+        setStatus({ status: 'error', error: error instanceof Error ? error.message : 'Falha ao reconectar WhatsApp', errorCode: errorStatusCode(error) });
       });
-    }, reconnectDelayMs);
+    }, delay);
   }
 
   function isAllowedDevMessage(message) {
@@ -108,6 +211,7 @@ export function createWhatsAppManager({
   async function performConnect() {
     manualDisconnect = false;
     clearReconnect();
+    pairingReady = false;
     const pendingPairingCode = status.pairingCode || null;
     setStatus({
       status: pendingPairingCode ? 'pairing' : 'connecting',
@@ -115,45 +219,99 @@ export function createWhatsAppManager({
       pairingCode: pendingPairingCode,
       account: null,
       error: null,
+      errorCode: null,
     });
 
     try {
       const { state, saveCreds } = await authStateLoader();
+      sessionRegistered = state?.creds?.registered !== false;
+      logWhatsApp('connect:start', `registered=${sessionRegistered}`);
       const activeSocket = await socketFactory({ auth: state });
       socket = activeSocket;
 
-      activeSocket.ev.on('creds.update', saveCreds);
+      activeSocket.ev.on('creds.update', async (update = {}) => {
+        if (Object.prototype.hasOwnProperty.call(update, 'registered')) {
+          sessionRegistered = Boolean(update.registered);
+        }
+        await saveCreds();
+      });
 
       activeSocket.ev.on('connection.update', async (update = {}) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
+          logWhatsApp('socket:qr-ready');
+          resolvePairingReady();
           try {
             const qrDataUrl = await qrEncoder(qr);
-            setStatus({ status: status.pairingCode ? 'pairing' : 'qr', qrDataUrl, account: null, error: null });
+            setStatus({ status: status.pairingCode ? 'pairing' : 'qr', qrDataUrl, account: null, error: null, errorCode: null });
           } catch (error) {
             setStatus({ status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: error instanceof Error ? error.message : 'Falha ao gerar QR Code' });
           }
         }
 
         if (connection === 'open') {
+          logWhatsApp('socket:open');
           clearReconnect();
-          setStatus({ status: 'connected', qrDataUrl: null, pairingCode: null, account: accountFromSocket(activeSocket), error: null });
+          reconnectAttempts = 0;
+          sessionRegistered = true;
+          resolvePairingReady();
+          setStatus({ status: 'connected', qrDataUrl: null, pairingCode: null, account: accountFromSocket(activeSocket), error: null, errorCode: null });
         }
 
         if (connection === 'close') {
           if (socket !== activeSocket) return;
+          const code = disconnectStatusCode(lastDisconnect);
+          const closeError = lastDisconnect?.error instanceof Error
+            ? lastDisconnect.error
+            : new Error(code ? `WhatsApp desconectado (${code}).` : 'WhatsApp desconectado.');
+          if (code && errorStatusCode(closeError) == null) closeError.statusCode = code;
+          rejectPairingReady(closeError);
           socket = null;
-          const loggedOut = disconnectStatusCode(lastDisconnect) === disconnectReasonLoggedOut;
+          const loggedOut = code === disconnectReasonLoggedOut;
+          const restartRequired = code === disconnectReasonRestartRequired;
           const pendingPairingCode = loggedOut ? null : status.pairingCode;
-          setStatus({
-            status: pendingPairingCode ? 'pairing' : 'disconnected',
-            qrDataUrl: null,
-            pairingCode: pendingPairingCode,
-            account: null,
-            error: loggedOut ? 'Sessão do WhatsApp encerrada.' : null,
-          });
-          if (!loggedOut) scheduleReconnectOnce();
+          logWhatsApp('socket:close', `code=${code ?? 'unknown'} registered=${sessionRegistered} pairing=${Boolean(pendingPairingCode)}`);
+
+          if (restartRequired && pendingPairingCode) {
+            setStatus({ status: 'connecting', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: code });
+            scheduleReconnectOnce(code);
+            return;
+          }
+
+          if (loggedOut) {
+            sessionRegistered = false;
+            clearReconnect();
+            try {
+              await clearInvalidAuthState('logged-out-401');
+              setStatus({
+                status: 'disconnected',
+                qrDataUrl: null,
+                pairingCode: null,
+                account: null,
+                error: null,
+                errorCode: null,
+              });
+            } catch {
+              setStatus({
+                status: 'error',
+                qrDataUrl: null,
+                pairingCode: null,
+                account: null,
+                error: 'A sessão antiga do WhatsApp foi encerrada, mas não foi possível limpar as credenciais locais.',
+                errorCode: code,
+              });
+            }
+            return;
+          }
+
+          if (pendingPairingCode || !sessionRegistered) {
+            setStatus({ status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: pairingErrorMessage(closeError), errorCode: code });
+            return;
+          }
+
+          setStatus({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: code });
+          scheduleReconnectOnce(code);
         }
       });
 
@@ -172,6 +330,7 @@ export function createWhatsAppManager({
 
       return getStatus();
     } catch (error) {
+      logWhatsApp('connect:error', `code=${errorStatusCode(error) ?? 'unknown'} message=${error instanceof Error ? error.message : 'erro desconhecido'}`);
       socket = null;
       setStatus({
         status: 'error',
@@ -179,6 +338,7 @@ export function createWhatsAppManager({
         pairingCode: null,
         account: null,
         error: error instanceof Error ? error.message : 'Falha ao conectar WhatsApp',
+        errorCode: errorStatusCode(error),
       });
       throw error;
     }
@@ -197,13 +357,54 @@ export function createWhatsAppManager({
 
   async function requestPairingCode(phoneNumber) {
     const phone = normalizePairingPhone(phoneNumber);
-    if (!socket) await connect();
-    if (status.status === 'connected') throw new Error('WhatsApp já está conectado.');
-    if (!socket?.requestPairingCode) throw new Error('Pareamento por telefone não está disponível nesta sessão do WhatsApp.');
-    const pairingCode = await socket.requestPairingCode(phone);
-    if (!pairingCode) throw new Error('WhatsApp não retornou um código de pareamento.');
-    setStatus({ status: 'pairing', pairingCode: String(pairingCode), qrDataUrl: null, account: null, error: null });
-    return getStatus();
+    if (pairingPromise) return pairingPromise;
+
+    async function attemptPairing({ recoverLoggedOut = true } = {}) {
+      try {
+        logWhatsApp('pairing:start', `phone=${maskedPhone(phone)} recover401=${recoverLoggedOut}`);
+        if (!socket) await connect();
+        if (status.status === 'connected') throw new Error('WhatsApp já está conectado.');
+        if (!socket?.requestPairingCode) throw new Error('Pareamento por telefone não está disponível nesta sessão do WhatsApp.');
+
+        await waitForPairingReady();
+        if (status.status === 'connected') throw new Error('WhatsApp já está conectado.');
+
+        const pairingCode = await socket.requestPairingCode(phone);
+        if (!pairingCode) throw new Error('WhatsApp não retornou um código de pareamento.');
+        logWhatsApp('pairing:code-generated');
+        setStatus({ status: 'pairing', pairingCode: String(pairingCode), qrDataUrl: null, account: null, error: null, errorCode: null });
+        return getStatus();
+      } catch (error) {
+        const code = errorStatusCode(error);
+        if (code === disconnectReasonLoggedOut && recoverLoggedOut) {
+          logWhatsApp('pairing:recover-401');
+          clearReconnect();
+          socket = null;
+          pairingReady = false;
+          sessionRegistered = false;
+          await clearInvalidAuthState('pairing-401');
+          setStatus({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: null });
+          return attemptPairing({ recoverLoggedOut: false });
+        }
+
+        const message = pairingErrorMessage(error);
+        logWhatsApp('pairing:error', `code=${code ?? 'unknown'} message=${message}`);
+        setStatus({
+          status: 'error',
+          pairingCode: null,
+          account: null,
+          error: message,
+          errorCode: code,
+        });
+        throw new Error(message);
+      }
+    }
+
+    pairingPromise = attemptPairing().finally(() => {
+      pairingPromise = null;
+    });
+
+    return pairingPromise;
   }
 
   async function disconnect() {
@@ -214,7 +415,10 @@ export function createWhatsAppManager({
     if (activeSocket?.end) {
       await Promise.resolve(activeSocket.end(new Error('PrismaStore desconectado')));
     }
-    setStatus({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null });
+    reconnectAttempts = 0;
+    pairingReady = false;
+    rejectPairingReady(new Error('Conexão do WhatsApp encerrada.'));
+    setStatus({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: null });
     return getStatus();
   }
 
@@ -226,7 +430,10 @@ export function createWhatsAppManager({
     if (activeSocket?.end) {
       await Promise.resolve(activeSocket.end(new Error('PrismaStore reiniciando conexão')));
     }
-    setStatus({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null });
+    reconnectAttempts = 0;
+    pairingReady = false;
+    rejectPairingReady(new Error('Conexão do WhatsApp reiniciada.'));
+    setStatus({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: null });
     manualDisconnect = false;
     connectPromise = null;
     return connect();

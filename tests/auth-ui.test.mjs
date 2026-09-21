@@ -53,3 +53,10 @@ test('login uses the crisp PrismaStore SVG logo and no decorative artwork behind
   assert.match(css, /\.auth-brand img\s*\{[\s\S]*?height:\s*auto/);
   assert.match(css, /object-fit:\s*contain/);
 });
+
+test('login inputs do not render decorative icons inside the fields', () => {
+  const source = readFileSync(new URL('../src/auth-ui.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/auth.css', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /auth-input-icon/);
+  assert.doesNotMatch(css, /\.auth-input-icon/);
+});

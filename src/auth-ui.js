@@ -32,7 +32,6 @@ function ensureOverlay() {
           <label class="auth-field">
             <span>Usuário</span>
             <div class="auth-input-wrap">
-              <span class="auth-input-icon" aria-hidden="true">◎</span>
               <input name="username" autocomplete="username" value="admin" readonly aria-readonly="true" required />
             </div>
           </label>
@@ -40,7 +39,6 @@ function ensureOverlay() {
           <label class="auth-field">
             <span>Senha</span>
             <div class="auth-input-wrap">
-              <span class="auth-input-icon" aria-hidden="true">◇</span>
               <input name="password" type="password" autocomplete="current-password" required />
             </div>
           </label>
@@ -131,6 +129,7 @@ async function login(form) {
     authState = { loaded: true, configured: payload.configured !== false, authenticated: true, username: payload.username || null };
     sessionStorage.setItem('prismastore:resume-panel', 'auth-login');
     hideOverlay();
+    window.dispatchEvent(new CustomEvent('prismastore:auth-restored'));
     settleLogin(true);
   } catch (error) {
     if (errorTarget) errorTarget.textContent = friendlyErrorMessage(error, 'Não foi possível entrar. Confira os dados e tente novamente.');

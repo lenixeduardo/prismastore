@@ -1,3 +1,4 @@
+import { rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import makeWASocket, {
@@ -5,6 +6,7 @@ import makeWASocket, {
   DisconnectReason,
   downloadMediaMessage,
   fetchLatestBaileysVersion,
+  fetchLatestWaWebVersion,
   useMultiFileAuthState,
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
@@ -42,6 +44,7 @@ const adminUser = 'admin';
 const adminPassword = String(process.env.PRISMASTORE_ADMIN_PASSWORD || '');
 const requestedHost = process.env.HOST || '127.0.0.1';
 const host = adminPassword ? requestedHost : '127.0.0.1';
+const publicUrl = String(process.env.PRISMASTORE_PUBLIC_URL || '').trim();
 const useDemoData = process.env.PRISMASTORE_DEMO_DATA === 'true';
 const devWhatsappOnly = process.env.PRISMASTORE_DEV_WHATSAPP_ONLY === 'true';
 const devWhatsappPhone = String(process.env.PRISMASTORE_DEV_WHATSAPP_PHONE || '').trim();
@@ -106,14 +109,38 @@ const messageHandler = createWhatsAppChatAdapter({
 });
 
 const authStateLoader = () => useMultiFileAuthState(authPath);
+let cachedWhatsAppVersion = null;
+
+async function resolveWhatsAppWebVersion() {
+  if (cachedWhatsAppVersion) return cachedWhatsAppVersion;
+
+  const live = await fetchLatestWaWebVersion();
+  if (live?.isLatest && Array.isArray(live.version)) {
+    cachedWhatsAppVersion = live.version;
+    console.log(`WhatsApp Web version (live): ${cachedWhatsAppVersion.join('.')}`);
+    return cachedWhatsAppVersion;
+  }
+
+  const fallback = await fetchLatestBaileysVersion();
+  cachedWhatsAppVersion = fallback.version;
+  console.warn(`WhatsApp Web live version indisponível; usando fallback Baileys: ${cachedWhatsAppVersion.join('.')}`);
+  return cachedWhatsAppVersion;
+}
+
 const socketFactory = async ({ auth }) => {
-  const { version } = await fetchLatestBaileysVersion();
+  const version = await resolveWhatsAppWebVersion();
   return makeWASocket({
     version,
     auth,
     logger,
     printQRInTerminal: false,
     browser: Browsers.macOS('Desktop'),
+    connectTimeoutMs: 60_000,
+    defaultQueryTimeoutMs: 60_000,
+    keepAliveIntervalMs: 10_000,
+    markOnlineOnConnect: false,
+    syncFullHistory: false,
+    shouldSyncHistoryMessage: () => false,
   });
 };
 
@@ -123,6 +150,8 @@ const whatsappManager = createWhatsAppManager({
   qrEncoder: createTerminalQrEncoder({ QRCode }),
   messageHandler: messageHandler.handleMessage,
   disconnectReasonLoggedOut: DisconnectReason.loggedOut,
+  disconnectReasonRestartRequired: DisconnectReason.restartRequired,
+  resetAuthState: () => rmSync(authPath, { recursive: true, force: true }),
   devAllowedPhone: devWhatsappOnly ? devWhatsappPhone : '',
 });
 
@@ -203,14 +232,15 @@ const server = createAppServer({
 });
 
 server.listen(port, host, () => {
-  console.log(`PrismaStore disponível em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+  console.log(`PrismaStore interno em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+  if (publicUrl) console.log(`PrismaStore produção: ${publicUrl}`);
   console.log(paymentService.getStatus().configured ? 'Pix Oscar: CONFIGURADO' : 'Pix Oscar: PENDENTE DE CONFIGURAÇÃO');
   console.log(authService ? `Admin protegido: ${adminUser}` : 'Admin: sem senha; acesso restrito ao próprio dispositivo (127.0.0.1)');
   console.log(driveConfigured ? `Backup Google Drive: AUTOMÁTICO · retenção ${driveRetentionCount}` : 'Backup Google Drive: PENDENTE DE CONFIGURAÇÃO');
   if (devWhatsappOnly) console.log('WhatsApp DEV: allowlist exclusiva ATIVA');
 });
 
-if (process.env.WHATSAPP_AUTO_CONNECT !== 'false') {
+if (process.env.WHATSAPP_AUTO_CONNECT === 'true') {
   whatsappManager.connect().catch((error) => console.error('Falha ao iniciar WhatsApp:', error));
 }
 

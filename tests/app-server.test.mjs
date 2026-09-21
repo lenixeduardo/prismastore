@@ -133,6 +133,41 @@ test('WhatsApp pairing API preserves the real pairing error for the admin UI', a
   }
 });
 
+test('WhatsApp connect API returns the real manager error instead of a generic 400', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismastore-wa-connect-error-'));
+  const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });
+  const whatsappManager = {
+    getStatus: () => ({
+      status: 'error',
+      qrDataUrl: null,
+      pairingCode: null,
+      account: null,
+      error: 'A conexão com o WhatsApp ainda não estava pronta para gerar o código (428).',
+      errorCode: 428,
+    }),
+    connect: async () => {
+      const error = new Error('Connection Closed');
+      error.output = { statusCode: 428 };
+      throw error;
+    },
+  };
+  const server = createAppServer({ stateStore: store, staticDir: process.cwd(), whatsappManager });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const response = await fetch(`${baseUrl}/api/whatsapp/connect`, { method: 'POST' });
+    assert.equal(response.status, 422);
+    const payload = await response.json();
+    assert.equal(payload.code, 'WHATSAPP_CONNECTION_FAILED');
+    assert.equal(payload.errorCode, 428);
+    assert.match(payload.error, /428/);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('payment API exposes local Pix status and no longer exposes Asaas webhook', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'prismastore-local-pix-api-'));
   const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });

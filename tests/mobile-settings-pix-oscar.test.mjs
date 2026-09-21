@@ -9,8 +9,9 @@ const server = readFileSync(new URL('../server/index.js', import.meta.url), 'utf
 const data = readFileSync(new URL('../src/data.js', import.meta.url), 'utf8');
 
 test('mobile bottom navigation exposes Configurações directly and keeps secondary views in Mais', () => {
-  assert.match(app, /const mobileViews = \[[\s\S]*?['"]settings['"]/);
-  assert.match(app, /data-view="settings"/);
+  const mobileViews = app.match(/const mobileViews = \[([\s\S]*?)\n\];/)?.[1] || '';
+  assert.match(mobileViews, /['"]settings['"]\s*,\s*['"]Configurações['"]/);
+  assert.doesNotMatch(mobileViews, /['"]customers['"]/);
   assert.match(app, /data-pwa-more/);
   assert.match(pwa, /data-pwa-view="customers"/);
   assert.match(pwa, /data-pwa-view="reports"/);
@@ -53,4 +54,41 @@ test('WhatsApp settings allow restarting the connection process', () => {
   assert.match(app, /\/api\/whatsapp\/restart/);
   assert.match(app, /data-whatsapp-restart/);
   assert.match(app, /Reiniciar conexão/);
+});
+
+test('WhatsApp has a single UI controller and server autoconnect is opt-in', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(html, /src\/whatsapp-onboarding\.js/);
+  assert.match(server, /WHATSAPP_AUTO_CONNECT\s*===\s*['"]true['"]/);
+  assert.doesNotMatch(server, /WHATSAPP_AUTO_CONNECT\s*!==\s*['"]false['"]/);
+});
+
+test('core settings view performs real server health checks', () => {
+  assert.match(app, /\/api\/payments\/status/);
+  assert.match(app, /\/api\/backups/);
+  assert.match(app, /\/api\/whatsapp\/status/);
+  assert.match(app, /data-refresh-settings-health/);
+  assert.match(app, /Salvar mensagens/);
+});
+
+test('WhatsApp resolves the live WA Web revision before falling back to the Baileys repository version', () => {
+  assert.match(server, /fetchLatestWaWebVersion/);
+  assert.match(server, /fetchLatestBaileysVersion/);
+  assert.match(server, /WhatsApp Web version \(live\)/);
+  assert.match(server, /shouldSyncHistoryMessage:\s*\(\)\s*=>\s*false/);
+});
+
+test('settings extensions cannot enter a self-triggering MutationObserver loop', () => {
+  const backupUi = readFileSync(new URL('../src/backup-ui.js', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(backupUi, /new MutationObserver/);
+  assert.match(backupUi, /prismastore:view-changed/);
+  assert.doesNotMatch(html, /src\/payment-status\.js/);
+});
+
+test('expired auth can recover Configurações without reloading the page', () => {
+  const authUi = readFileSync(new URL('../src/auth-ui.js', import.meta.url), 'utf8');
+  assert.match(authUi, /prismastore:auth-restored/);
+  assert.match(app, /addEventListener\(['"]prismastore:auth-restored['"]/);
+  assert.match(app, /refreshSettingsHealth\(\)/);
 });

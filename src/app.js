@@ -8,6 +8,7 @@ import {
 } from './domain.js';
 import { seedProducts, seedCustomers, seedOrders, receivingAccounts } from './data.js';
 import { friendlyErrorMessage } from './error-messages.js';
+import { CHATBOT_MESSAGE_DEFAULTS, CHATBOT_MESSAGE_FIELDS, messageValue } from './chatbot-settings.js';
 
 const icons = {
   dashboard: '▦', orders: '◫', customers: '◎', products: '□', reports: '⌁', chatbot: '◌', settings: '⚙', search: '⌕', alert: '!', money: 'R$', box: '◇', close: '×'
@@ -23,9 +24,11 @@ const state = {
   products: clone(seedProducts),
   customers: clone(seedCustomers),
   orders: clone(seedOrders),
+  settings: { chatbotMessages: clone(CHATBOT_MESSAGE_DEFAULTS) },
+  settingsHealth: { loading: false, payments: null, backups: null, error: null },
   serverConnected: false,
   serverError: null,
-  whatsapp: { status: 'disconnected', qrDataUrl: null, account: null, error: null },
+  whatsapp: { status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: null },
   chatbot: { step: 'welcome', cart: {}, deliveryType: null, addressMode: null, paymentConfirmed: false },
 };
 
@@ -37,6 +40,9 @@ async function loadOperationalState() {
     state.products = Array.isArray(persisted.products) ? persisted.products : clone(seedProducts);
     state.customers = Array.isArray(persisted.customers) ? persisted.customers : clone(seedCustomers);
     state.orders = Array.isArray(persisted.orders) ? persisted.orders : clone(seedOrders);
+    state.settings = persisted.settings && typeof persisted.settings === 'object'
+      ? persisted.settings
+      : { chatbotMessages: clone(CHATBOT_MESSAGE_DEFAULTS) };
     state.serverConnected = true;
     state.serverError = null;
     return true;
@@ -52,13 +58,14 @@ async function persist() {
     const response = await fetch('/api/state', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ products: state.products, customers: state.customers, orders: state.orders }),
+      body: JSON.stringify({ products: state.products, customers: state.customers, orders: state.orders, settings: state.settings }),
     });
     if (!response.ok) throw new Error('Falha ao salvar dados locais.');
     const saved = await response.json();
     state.products = Array.isArray(saved.products) ? saved.products : state.products;
     state.customers = Array.isArray(saved.customers) ? saved.customers : state.customers;
     state.orders = Array.isArray(saved.orders) ? saved.orders : state.orders;
+    state.settings = saved.settings && typeof saved.settings === 'object' ? saved.settings : state.settings;
     state.serverConnected = true;
     state.serverError = null;
     window.dispatchEvent(new CustomEvent('prismastore:state-updated', { detail: { source: 'persist' } }));
@@ -95,8 +102,8 @@ const views = [
 const mobileViews = [
   ['dashboard','Início','⌂'],
   ['orders','Pedidos','◫'],
-  ['customers','Clientes','◎'],
   ['products','Produtos','□'],
+  ['settings','Configurações','⚙'],
 ];
 
 function shell(content) {
@@ -189,9 +196,9 @@ function dashboardView() {
       </section>
 
       <section class="card padded dashboard-section recent-orders-card">
-        <div class="section-head">
-          <div class="section-title">Últimos pedidos</div>
-          <button class="btn sm ghost" data-view="orders">Ver todos ›</button>
+        <div class="section-head recent-orders-head">
+          <div class="section-title recent-orders-title">Últimos pedidos</div>
+          <button class="btn sm ghost view-all-btn" data-view="orders">Ver todos ›</button>
         </div>
         <div class="dashboard-order-list compact">
           ${state.orders.slice(0,5).map(orderCompact).join('') || '<div class="empty dashboard-empty">Nenhum pedido registrado.</div>'}
@@ -342,6 +349,7 @@ function whatsappRenderKey(whatsapp = state.whatsapp) {
     pairingCode: whatsapp.pairingCode ?? null,
     account: whatsapp.account ?? null,
     error: whatsapp.error ?? null,
+    errorCode: whatsapp.errorCode ?? null,
     hasQr: Boolean(whatsapp.qrDataUrl),
   });
 }
@@ -353,7 +361,7 @@ async function refreshWhatsAppStatus({ rerender = false } = {}) {
     state.whatsapp = await response.json();
     if (!response.ok && state.whatsapp.status !== 'error') throw new Error(state.whatsapp.error || 'Falha ao consultar WhatsApp');
   } catch (error) {
-    state.whatsapp = { status: 'error', qrDataUrl: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível consultar o WhatsApp.') };
+    state.whatsapp = { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível consultar o WhatsApp.'), errorCode: null };
   }
   if (rerender && ['dashboard','settings'].includes(state.view) && before !== whatsappRenderKey(state.whatsapp)) render();
   return state.whatsapp;
@@ -367,7 +375,7 @@ async function connectWhatsApp() {
     state.whatsapp = await response.json();
     if (!response.ok) throw new Error(state.whatsapp.error || 'Falha ao conectar WhatsApp');
   } catch (error) {
-    state.whatsapp = { status: 'error', qrDataUrl: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível conectar o WhatsApp.') };
+    state.whatsapp = { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível conectar o WhatsApp.'), errorCode: null };
   }
   render();
 }
@@ -380,6 +388,10 @@ async function pairWhatsAppByPhone(phone) {
       body: JSON.stringify({ phone }),
     });
     state.whatsapp = await response.json();
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent('prismastore:auth-required'));
+      throw new Error('Autenticação necessária.');
+    }
     if (!response.ok) throw new Error(state.whatsapp.error || 'Falha ao gerar código de pareamento');
   } catch (error) {
     state.whatsapp = { ...state.whatsapp, status: 'error', pairingCode: null, error: friendlyErrorMessage(error, 'Não foi possível gerar o código de pareamento.') };
@@ -392,7 +404,7 @@ async function disconnectWhatsApp() {
     const response = await fetch('/api/whatsapp/disconnect', { method: 'POST' });
     state.whatsapp = await response.json();
   } catch (error) {
-    state.whatsapp = { status: 'error', qrDataUrl: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível desconectar o WhatsApp.') };
+    state.whatsapp = { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível desconectar o WhatsApp.'), errorCode: null };
   }
   render();
 }
@@ -429,13 +441,138 @@ function whatsappConnectionPanel() {
     return `<div class="wa-connection-panel"><strong>${whatsappStatusLabel()}</strong><div class="category">Preparando o pareamento por número deste celular.</div><button class="btn" type="button" data-whatsapp-restart>Reiniciar conexão</button></div>`;
   }
   if (w.status === 'error') {
-    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(friendlyErrorMessage(w.error, 'Não foi possível conectar ao WhatsApp. Tente novamente.'))}</div>${whatsappPairingForm()}<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-whatsapp-restart>Reiniciar conexão</button><button class="btn" data-whatsapp-connect>Tentar QR Code</button></div></div>`;
+    const rateLimited = Number(w.errorCode) === 429;
+    const diagnostic = w.errorCode ? `<div class="category mono">Diagnóstico WhatsApp: ${esc(w.errorCode)}</div>` : '';
+    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(friendlyErrorMessage(w.error, 'Não foi possível conectar ao WhatsApp. Tente novamente.'))}</div>${diagnostic}${rateLimited ? '<div class="notice">Novas tentativas por número estão temporariamente pausadas para evitar ampliar o bloqueio do WhatsApp.</div>' : whatsappPairingForm()}<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-whatsapp-restart>Reiniciar conexão</button><button class="btn" data-whatsapp-connect>Tentar QR Code</button></div></div>`;
   }
   return `<div class="wa-connection-panel"><strong>Conectar WhatsApp</strong><div class="category">Use o número do WhatsApp deste próprio celular para gerar o código de vínculo.</div>${whatsappPairingForm()}<button class="btn" data-whatsapp-connect>Alternativa: usar QR Code</button></div>`;
 }
 
-function settingsView() { return shell(`${header('Configurações','Configurações gerais do sistema. A conexão do WhatsApp agora fica disponível diretamente na tela inicial.')}
-  <div class="card padded"><div class="section-title">Sistema</div><div class="settings-list"><div class="setting-row"><div><div class="product-name">Banco de dados</div><div class="category">SQLite · data/prismastore.db</div></div><span class="badge green">ATIVO</span></div><div class="setting-row"><div><div class="product-name">Pix Oscar</div><div class="category">Validação do comprovante por valor, destinatário, data e horário</div></div><span class="badge green">ATIVO</span></div><div class="setting-row"><div><div class="product-name">Alerta de estoque</div><div class="category">Disponível &lt; 3 unidades</div></div><span class="badge green">ATIVO</span></div></div></div>`); }
+function settingsBadge(ok, pending = false) {
+  if (pending) return '<span class="badge orange">VERIFICANDO</span>';
+  return ok ? '<span class="badge green">ATIVO</span>' : '<span class="badge red">ERRO</span>';
+}
+
+function whatsappSettingsBadge(pending = false) {
+  if (pending) return '<span class="badge orange">VERIFICANDO</span>';
+  if (state.whatsapp.status === 'connected') return '<span class="badge green">CONECTADO</span>';
+  if (state.whatsapp.status === 'error') return '<span class="badge red">ERRO</span>';
+  return '<span class="badge orange">NÃO CONECTADO</span>';
+}
+
+function settingsMessagesMarkup() {
+  const settings = state.settings ?? { chatbotMessages: {} };
+  return `
+    <section class="card padded chatbot-message-settings" data-chatbot-message-settings>
+      <div class="section-head">
+        <div>
+          <div class="section-title">Mensagens do atendimento</div>
+          <div class="category">Estas mensagens são persistidas no SQLite e usadas nos próximos atendimentos.</div>
+        </div>
+        <span class="badge green">PERSISTENTE</span>
+      </div>
+      <div class="message-settings-grid">
+        ${CHATBOT_MESSAGE_FIELDS.map((field) => `
+          <label class="message-setting-field">
+            <span class="message-setting-title">${esc(field.label)}</span>
+            <textarea rows="4" data-message-key="${field.key}">${esc(messageValue(settings, field.key))}</textarea>
+            <span class="message-setting-help">${field.placeholders.length ? `Variáveis: ${field.placeholders.map(esc).join(' · ')}` : 'Sem variáveis nesta etapa.'}</span>
+            <button type="button" class="btn sm ghost" data-reset-message="${field.key}">Restaurar padrão</button>
+          </label>`).join('')}
+      </div>
+      <div class="message-settings-footer">
+        <span class="category" data-message-save-status></span>
+        <button type="button" class="btn primary" data-save-chatbot-messages>Salvar mensagens</button>
+      </div>
+    </section>`;
+}
+
+function settingsView() {
+  const health = state.settingsHealth;
+  const paymentOk = Boolean(health.payments?.configured);
+  const backupOk = Boolean(health.backups && !health.backups.error);
+  const databaseOk = state.serverConnected;
+  return shell(`${header('Configurações','Configurações reais do PrismaStore, com status consultado diretamente no servidor.')}
+    ${health.error ? `<div class="notice settings-health-error">${esc(health.error)}</div>` : ''}
+    <div class="grid cols-2 settings-runtime-grid">
+      <section class="card padded">
+        <div class="section-head"><div class="section-title">Sistema</div><span class="badge gray">TEMPO REAL</span></div>
+        <div class="settings-list">
+          <div class="setting-row"><div><div class="product-name">Banco de dados</div><div class="category">SQLite · data/prismastore.db</div></div>${settingsBadge(databaseOk, health.loading)}</div>
+          <div class="setting-row"><div><div class="product-name">Pix Oscar</div><div class="category">Validação local por valor, destinatário, data e horário</div></div>${settingsBadge(paymentOk, health.loading)}</div>
+          <div class="setting-row"><div><div class="product-name">Backups</div><div class="category">${health.backups?.external?.enabled ? 'Google Drive configurado' : 'Backup local disponível'}</div></div>${settingsBadge(backupOk, health.loading)}</div>
+        </div>
+        <button class="btn sm ghost" type="button" data-refresh-settings-health>Atualizar diagnóstico</button>
+      </section>
+      <section class="card padded">
+        <div class="section-head"><div class="section-title">WhatsApp</div>${whatsappStatusBadge()}</div>
+        <div class="settings-list">
+          <div class="setting-row"><div><div class="product-name">Estado da conexão</div><div class="category">${esc(state.whatsapp.error || whatsappStatusLabel())}</div></div>${whatsappSettingsBadge(health.loading)}</div>
+          <div class="setting-row"><div><div class="product-name">Conexão</div><div class="category">O vínculo e o QR Code ficam na tela inicial para não depender desta página.</div></div><button class="btn sm" type="button" data-view="dashboard">Abrir início</button></div>
+        </div>
+      </section>
+    </div>
+    ${settingsMessagesMarkup()}`);
+}
+
+async function refreshSettingsHealth() {
+  if (state.view !== 'settings') return;
+  state.settingsHealth = { ...state.settingsHealth, loading: true, error: null };
+  render();
+  try {
+    const authResponse = await fetch('/api/auth/status', { cache: 'no-store' });
+    const auth = await authResponse.json();
+    if (auth.configured && !auth.authenticated) {
+      state.settingsHealth = { ...state.settingsHealth, loading: false, error: 'Sua sessão expirou. Entre novamente para continuar.' };
+      if (state.view === 'settings') render();
+      window.dispatchEvent(new CustomEvent('prismastore:auth-required'));
+      return;
+    }
+
+    const [paymentsResponse, backupsResponse, whatsappResponse] = await Promise.all([
+      fetch('/api/payments/status', { cache: 'no-store' }),
+      fetch('/api/backups', { cache: 'no-store' }),
+      fetch('/api/whatsapp/status', { cache: 'no-store' }),
+    ]);
+    const [payments, backups, whatsapp] = await Promise.all([
+      paymentsResponse.json(),
+      backupsResponse.json(),
+      whatsappResponse.json(),
+    ]);
+    if (!paymentsResponse.ok) throw new Error(payments.error || 'Falha ao consultar o Pix.');
+    if (!backupsResponse.ok) throw new Error(backups.error || 'Falha ao consultar backups.');
+    if (!whatsappResponse.ok && whatsapp.status !== 'error') throw new Error(whatsapp.error || 'Falha ao consultar o WhatsApp.');
+    state.whatsapp = whatsapp;
+    state.settingsHealth = { loading: false, payments, backups, error: null };
+  } catch (error) {
+    state.settingsHealth = {
+      ...state.settingsHealth,
+      loading: false,
+      error: friendlyErrorMessage(error, 'Não foi possível validar todas as configurações do servidor.'),
+    };
+  }
+  if (state.view === 'settings') render();
+}
+
+async function saveChatbotMessageSettings() {
+  state.settings = state.settings && typeof state.settings === 'object' ? state.settings : {};
+  state.settings.chatbotMessages = state.settings.chatbotMessages && typeof state.settings.chatbotMessages === 'object'
+    ? state.settings.chatbotMessages
+    : {};
+  document.querySelectorAll('[data-message-key]').forEach((field) => {
+    state.settings.chatbotMessages[field.dataset.messageKey] = field.value;
+  });
+  const saved = await persist();
+  const status = document.querySelector('[data-message-save-status]');
+  if (status) status.textContent = saved
+    ? 'Mensagens salvas no SQLite. O próximo atendimento usará estes textos.'
+    : 'Não foi possível salvar as mensagens.';
+}
+
+function restoreChatbotMessageDefault(key) {
+  const field = document.querySelector(`[data-message-key="${CSS.escape(key)}"]`);
+  if (field) field.value = CHATBOT_MESSAGE_DEFAULTS[key] ?? '';
+}
 
 function orderDrawer(orderId) {
   const o=state.orders.find(x=>x.id===orderId); if(!o) return '';
@@ -466,7 +603,8 @@ function openView(view) {
   state.selectedOrder = null;
   render();
   window.dispatchEvent(new CustomEvent('prismastore:view-changed', { detail: { view: state.view } }));
-  if (['dashboard','settings'].includes(state.view)) refreshWhatsAppStatus({ rerender: true });
+  if (state.view === 'dashboard') refreshWhatsAppStatus({ rerender: true });
+  if (state.view === 'settings') refreshSettingsHealth();
   return true;
 }
 
@@ -530,6 +668,9 @@ function bind() {
   });
   document.querySelector('[data-whatsapp-restart]')?.addEventListener('click', restartWhatsAppConnection);
   document.querySelector('[data-whatsapp-disconnect]')?.addEventListener('click', disconnectWhatsApp);
+  document.querySelector('[data-refresh-settings-health]')?.addEventListener('click', refreshSettingsHealth);
+  document.querySelector('[data-save-chatbot-messages]')?.addEventListener('click', saveChatbotMessageSettings);
+  document.querySelectorAll('[data-reset-message]').forEach((button) => button.addEventListener('click', () => restoreChatbotMessageDefault(button.dataset.resetMessage)));
 }
 function resetChat(){state.chatbot={step:'welcome',cart:{},deliveryType:null,addressMode:null,paymentConfirmed:false};render();}
 async function chatAction(action){
@@ -560,4 +701,7 @@ async function bootstrapOperationalRuntime() {
 
 render();
 window.addEventListener('prismastore:dashboard-opened', bootstrapOperationalRuntime, { once: true });
+window.addEventListener('prismastore:auth-restored', () => {
+  if (state.view === 'settings') refreshSettingsHealth();
+});
 if (!document.querySelector('#app')?.hidden) bootstrapOperationalRuntime();

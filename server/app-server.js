@@ -97,6 +97,20 @@ function secureRequest(req, forceSecureCookies) {
   return String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
 }
 
+function whatsappFailurePayload(whatsappManager, error, code) {
+  const current = whatsappManager?.getStatus?.() ?? {};
+  return {
+    ...current,
+    status: 'error',
+    qrDataUrl: current.qrDataUrl ?? null,
+    pairingCode: current.pairingCode ?? null,
+    account: current.account ?? null,
+    error: current.error || (error instanceof Error && error.message ? error.message : 'Falha na conexão com o WhatsApp.'),
+    errorCode: current.errorCode ?? null,
+    code,
+  };
+}
+
 function sessionCookie({ authService, token, secure = false, clear = false }) {
   const parts = [
     `${authService.cookieName}=${clear ? '' : encodeURIComponent(token || '')}`,
@@ -238,7 +252,12 @@ export function createAppServer({
       }
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/connect') {
         if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
-        return sendJson(res, 200, await whatsappManager.connect());
+        try {
+          return sendJson(res, 200, await whatsappManager.connect());
+        } catch (error) {
+          runtimeLogProvider?.record?.('erro', error);
+          return sendJson(res, 422, whatsappFailurePayload(whatsappManager, error, 'WHATSAPP_CONNECTION_FAILED'));
+        }
       }
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/pair') {
         if (!whatsappManager?.requestPairingCode) return sendJson(res, 503, { error: 'Pareamento por telefone não configurado' });
@@ -247,22 +266,30 @@ export function createAppServer({
           return sendJson(res, 200, await whatsappManager.requestPairingCode(body.phone));
         } catch (error) {
           runtimeLogProvider?.record?.('erro', error);
-          const message = error instanceof Error && error.message
+          const current = whatsappManager.getStatus?.() ?? {};
+          const message = current.error || (error instanceof Error && error.message
             ? error.message
-            : 'Não foi possível gerar o código de pareamento do WhatsApp.';
+            : 'Não foi possível gerar o código de pareamento do WhatsApp.');
           return sendJson(res, 422, {
+            ...current,
             status: 'error',
-            qrDataUrl: null,
+            qrDataUrl: current.qrDataUrl ?? null,
             pairingCode: null,
-            account: null,
+            account: current.account ?? null,
             error: message,
+            errorCode: current.errorCode ?? null,
             code: 'WHATSAPP_PAIRING_FAILED',
           });
         }
       }
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/restart') {
         if (!whatsappManager?.restartConnection) return sendJson(res, 503, { status: 'error', error: 'Reinício do WhatsApp não configurado' });
-        return sendJson(res, 200, await whatsappManager.restartConnection());
+        try {
+          return sendJson(res, 200, await whatsappManager.restartConnection());
+        } catch (error) {
+          runtimeLogProvider?.record?.('erro', error);
+          return sendJson(res, 422, whatsappFailurePayload(whatsappManager, error, 'WHATSAPP_RESTART_FAILED'));
+        }
       }
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/disconnect') {
         if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
