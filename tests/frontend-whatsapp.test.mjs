@@ -51,3 +51,9 @@ test('core WhatsApp controller refreshes active connection states until they set
   assert.match(source, /window\.setTimeout\([\s\S]*?refreshWhatsAppStatus\(\{ rerender: true \}\)[\s\S]*?WHATSAPP_STATUS_POLL_MS/);
   assert.match(source, /function stopWhatsAppStatusPolling\(/);
 });
+
+test('phone pairing request stays single-flight while status rerenders continue', () => {
+  assert.match(source, /whatsappPairingRequestInFlight/);
+  assert.match(source, /if \(whatsappPairingRequestInFlight\) return;/);
+  assert.match(source, /finally \{\s*whatsappPairingRequestInFlight = false;/);
+});
