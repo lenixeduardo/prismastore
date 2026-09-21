@@ -37,6 +37,8 @@ test('PWA module registers only in secure contexts and supports install/update/i
   assert.match(js, /navigator\.standalone/);
   assert.match(js, /Adicionar à Tela de Início/);
   assert.match(js, /data-pwa-more/);
+  assert.match(js, /data-pwa-view="settings"/);
+  assert.match(js, /navigateTo\(view\)/);
   assert.match(js, /setAttribute\('data-label'/);
 });
 
