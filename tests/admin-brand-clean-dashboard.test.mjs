@@ -25,12 +25,13 @@ test('initial sidebar footer does not expose persistent-session implementation c
 });
 
 
-test('dashboard removes static revenue comparison copy and products expose stock controls', () => {
+test('dashboard removes static revenue comparison copy and products keep stock controls out of the summary list', () => {
   assert.doesNotMatch(app, /↑ 12,8% vs\. mês anterior/);
   assert.doesNotMatch(app, /No MVP de validação não há imagens de produtos/);
-  assert.match(app, /data-stock-dec=/);
-  assert.match(app, /data-stock-input=/);
-  assert.match(app, /data-stock-inc=/);
+  assert.doesNotMatch(app, /data-stock-dec=/);
+  assert.doesNotMatch(app, /data-stock-input=/);
+  assert.doesNotMatch(app, /data-stock-inc=/);
+  assert.match(app, /data-real-product-details=/);
 });
 
 test('PWA does not render the server online status badge', () => {
@@ -72,10 +73,4 @@ test('mobile order cards keep the content column wide enough for customer and it
   assert.doesNotMatch(styles, /\.recent-orders-card \.dashboard-order-row\s*\{\s*grid-template-columns:\s*32px\s+minmax\(0,1fr\)/);
   assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.order-main \.customer-name\s*\{[\s\S]*?white-space:\s*nowrap[\s\S]*?text-overflow:\s*ellipsis/);
   assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.order-main \.category\s*\{[\s\S]*?white-space:\s*nowrap[\s\S]*?text-overflow:\s*ellipsis/);
-});
-
-
-test('recent orders keep customer name and order description on a single line', () => {
-  assert.match(styles, /\.recent-orders-card \.order-main\s*\{[^}]*overflow:\s*hidden/);
-  assert.match(styles, /\.recent-orders-card \.customer-name,\s*\.recent-orders-card \.order-summary\s*\{[\s\S]*?display:\s*block[\s\S]*?max-width:\s*100%[\s\S]*?white-space:\s*nowrap[\s\S]*?overflow:\s*hidden[\s\S]*?text-overflow:\s*ellipsis/);
 });
