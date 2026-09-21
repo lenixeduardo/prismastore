@@ -19,12 +19,12 @@
 .message-setting-help { font-size:10px; color:var(--muted-2); line-height:1.4; }
 .message-setting-field .btn { width:max-content; }
 .message-settings-footer { border-top:1px solid var(--border-soft); padding-top:14px; justify-content:space-between; }
-.wa-qr { width:180px !important; max-width:100%; height:auto; aspect-ratio:1; object-fit:contain; background:#fff; padding:8px; border-radius:5px; margin:8px auto; display:block; }
+.wa-qr { width:220px !important; max-width:100%; height:auto; aspect-ratio:1; object-fit:contain; background:#fff; padding:8px; border-radius:5px; margin:8px auto; display:block; }
 .simulator-pix-qr { margin-top:10px; width:148px; max-width:100%; background:#fff; padding:8px; border-radius:5px; color:#26312b; text-align:center; white-space:normal; }
 .simulator-pix-qr svg { display:block; width:100%; height:auto; aspect-ratio:1; }
 .simulator-pix-qr span { display:block; margin-top:5px; font-size:9px; font-weight:700; }
 @media (max-width:700px) { .real-product-grid,.message-settings-grid { grid-template-columns:1fr; } }
-@media (max-width:520px) { .wa-qr { width:160px !important; } .real-product-backdrop { padding:10px; } .real-product-modal { padding:16px; } .message-settings-footer { align-items:flex-start; flex-direction:column; } }
+@media (max-width:520px) { .wa-qr { width:200px !important; } .real-product-backdrop { padding:10px; } .real-product-modal { padding:16px; } .message-settings-footer { align-items:flex-start; flex-direction:column; } }
 
 .product-list { display:grid; gap:8px; }
 .product-list-item {
