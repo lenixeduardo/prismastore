@@ -193,7 +193,7 @@ export function createWhatsAppManager({
 
     try {
       const { state, saveCreds } = await authStateLoader();
-      sessionRegistered = Boolean(state?.creds?.registered);
+      sessionRegistered = state?.creds?.registered !== false;
       const activeSocket = await socketFactory({ auth: state });
       socket = activeSocket;
 
