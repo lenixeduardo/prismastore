@@ -239,6 +239,33 @@ test('restart-required 515 after QR scan is treated as a normal handshake and re
   assert.equal(scheduled[0].ms, 3000);
 });
 
+test('transient 503 after pairing code generation keeps the code visible and reconnects', async () => {
+  const { manager, socket, scheduled } = harness({
+    pairingReadyTimeoutMs: 1000,
+    disconnectReasonRestartRequired: 515,
+  });
+
+  await manager.connect();
+  const pairingPromise = manager.requestPairingCode('(11) 99999-9999');
+  await socket.ev.emit('connection.update', { qr: 'QR-PAIR-503' });
+  const pairing = await pairingPromise;
+  assert.equal(pairing.status, 'pairing');
+  assert.equal(pairing.pairingCode, 'ABCD-1234');
+
+  await socket.ev.emit('connection.update', {
+    connection: 'close',
+    lastDisconnect: { error: { output: { statusCode: 503 } } },
+  });
+
+  const status = manager.getStatus();
+  assert.equal(status.status, 'pairing');
+  assert.equal(status.pairingCode, 'ABCD-1234');
+  assert.equal(status.error, null);
+  assert.equal(status.errorCode, null);
+  assert.equal(scheduled.length, 1);
+  assert.equal(scheduled[0].ms, 3000);
+});
+
 test('logged out 401 clears stale auth and returns to a clean disconnected state', async () => {
   let resets = 0;
   const { manager, socket, scheduled } = harness({
