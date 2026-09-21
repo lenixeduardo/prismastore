@@ -43,14 +43,13 @@ test('login keeps the username locked to admin', () => {
   assert.match(source, /username: 'admin'/);
 });
 
-
-test('login artwork preserves intrinsic proportions instead of stretching raster or vector assets', () => {
+test('login uses the crisp PrismaStore SVG logo and no decorative artwork behind the form', () => {
+  const source = readFileSync(new URL('../src/auth-ui.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../src/auth.css', import.meta.url), 'utf8');
-  const artworkStart = css.indexOf('.auth-prism-art {');
-  const artworkEnd = css.indexOf('}', artworkStart);
-  const artwork = css.slice(artworkStart, artworkEnd + 1);
-  assert.match(artwork, /height:\s*auto/);
-  assert.match(artwork, /object-fit:\s*contain/);
-  assert.match(artwork, /object-position:\s*center/);
-  assert.doesNotMatch(artwork, /height:\s*360px/);
+  assert.match(source, /src="\/icons\/icon-512\.svg"/);
+  assert.doesNotMatch(source, /login-prism-burst\.svg/);
+  assert.doesNotMatch(source, /auth-prism-art/);
+  assert.doesNotMatch(css, /\.auth-prism-art/);
+  assert.match(css, /\.auth-brand img\s*\{[\s\S]*?height:\s*auto/);
+  assert.match(css, /object-fit:\s*contain/);
 });
