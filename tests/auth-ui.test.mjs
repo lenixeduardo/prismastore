@@ -42,3 +42,15 @@ test('login keeps the username locked to admin', () => {
   assert.match(source, /value="admin" readonly aria-readonly="true"/);
   assert.match(source, /username: 'admin'/);
 });
+
+
+test('login artwork preserves intrinsic proportions instead of stretching raster or vector assets', () => {
+  const css = readFileSync(new URL('../src/auth.css', import.meta.url), 'utf8');
+  const artworkStart = css.indexOf('.auth-prism-art {');
+  const artworkEnd = css.indexOf('}', artworkStart);
+  const artwork = css.slice(artworkStart, artworkEnd + 1);
+  assert.match(artwork, /height:\s*auto/);
+  assert.match(artwork, /object-fit:\s*contain/);
+  assert.match(artwork, /object-position:\s*center/);
+  assert.doesNotMatch(artwork, /height:\s*360px/);
+});
