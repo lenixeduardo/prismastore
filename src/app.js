@@ -410,14 +410,28 @@ async function disconnectWhatsApp() {
 }
 
 async function restartWhatsAppConnection() {
-  state.whatsapp = { ...state.whatsapp, status: 'connecting', pairingCode: null, qrDataUrl: null, error: null };
+  state.whatsapp = {
+    status: 'disconnected',
+    qrDataUrl: null,
+    pairingCode: null,
+    account: null,
+    error: null,
+    errorCode: null,
+  };
   render();
   try {
     const response = await fetch('/api/whatsapp/restart', { method: 'POST' });
     state.whatsapp = await response.json();
     if (!response.ok) throw new Error(state.whatsapp.error || 'Falha ao reiniciar conexão do WhatsApp');
   } catch (error) {
-    state.whatsapp = { ...state.whatsapp, status: 'error', pairingCode: null, qrDataUrl: null, error: friendlyErrorMessage(error, 'Não foi possível reiniciar a conexão do WhatsApp.') };
+    state.whatsapp = {
+      status: 'error',
+      qrDataUrl: null,
+      pairingCode: null,
+      account: null,
+      error: friendlyErrorMessage(error, 'Não foi possível reiniciar a conexão do WhatsApp.'),
+      errorCode: null,
+    };
   }
   render();
 }
