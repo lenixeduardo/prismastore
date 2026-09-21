@@ -5,6 +5,7 @@ import makeWASocket, {
   DisconnectReason,
   downloadMediaMessage,
   fetchLatestBaileysVersion,
+  fetchLatestWaWebVersion,
   useMultiFileAuthState,
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
@@ -106,16 +107,38 @@ const messageHandler = createWhatsAppChatAdapter({
 });
 
 const authStateLoader = () => useMultiFileAuthState(authPath);
+let cachedWhatsAppVersion = null;
+
+async function resolveWhatsAppWebVersion() {
+  if (cachedWhatsAppVersion) return cachedWhatsAppVersion;
+
+  const live = await fetchLatestWaWebVersion();
+  if (live?.isLatest && Array.isArray(live.version)) {
+    cachedWhatsAppVersion = live.version;
+    console.log(`WhatsApp Web version (live): ${cachedWhatsAppVersion.join('.')}`);
+    return cachedWhatsAppVersion;
+  }
+
+  const fallback = await fetchLatestBaileysVersion();
+  cachedWhatsAppVersion = fallback.version;
+  console.warn(`WhatsApp Web live version indisponível; usando fallback Baileys: ${cachedWhatsAppVersion.join('.')}`);
+  return cachedWhatsAppVersion;
+}
+
 const socketFactory = async ({ auth }) => {
-  const { version } = await fetchLatestBaileysVersion();
+  const version = await resolveWhatsAppWebVersion();
   return makeWASocket({
     version,
     auth,
     logger,
     printQRInTerminal: false,
     browser: Browsers.macOS('Desktop'),
+    connectTimeoutMs: 60_000,
+    defaultQueryTimeoutMs: 60_000,
+    keepAliveIntervalMs: 10_000,
     markOnlineOnConnect: false,
     syncFullHistory: false,
+    shouldSyncHistoryMessage: () => false,
   });
 };
 
