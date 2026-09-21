@@ -32,6 +32,41 @@ function closeProductEditor() {
   document.querySelector('[data-real-product-editor]')?.remove();
 }
 
+function closeProductDetails() {
+  document.querySelector('[data-real-product-details-panel]')?.remove();
+}
+
+function productDetailsMarkup(product) {
+  const active = product?.active !== false;
+  return `
+    <div class="real-product-backdrop" data-real-product-details-panel>
+      <section class="real-product-modal real-product-details" role="dialog" aria-modal="true" aria-label="Detalhes de ${escapeHtml(product.name)}">
+        <div class="real-product-modal-head">
+          <div><div class="eyebrow">Produto</div><h2>${escapeHtml(product.name)}</h2></div>
+          <button type="button" class="btn sm ghost" data-real-product-details-close>×</button>
+        </div>
+        <div class="real-product-detail-grid">
+          <div><span>Preço</span><strong>R$ ${Number(product.price || 0).toFixed(2).replace('.', ',')}</strong></div>
+          <div><span>Estoque</span><strong>${escapeHtml(product.stock ?? 0)}</strong></div>
+          <div><span>Status</span><strong>${active ? 'Ativo' : 'Inativo'}</strong></div>
+          <div><span>ID</span><strong class="mono">${escapeHtml(product.id)}</strong></div>
+        </div>
+        <div class="real-product-actions">
+          <button type="button" class="btn" data-real-product-edit="${escapeHtml(product.id)}">Editar</button>
+          <button type="button" class="btn ghost" data-real-product-toggle="${escapeHtml(product.id)}">${active ? 'Desativar' : 'Ativar'}</button>
+        </div>
+      </section>
+    </div>`;
+}
+
+async function openProductDetails(productId) {
+  closeProductDetails();
+  const state = await fetchState();
+  const product = state.products.find((item) => item.id === productId);
+  if (!product) throw new Error('Produto não encontrado.');
+  document.body.insertAdjacentHTML('beforeend', productDetailsMarkup(product));
+}
+
 function productEditorMarkup(product = null) {
   const active = product?.active !== false;
   return `
@@ -54,6 +89,7 @@ function productEditorMarkup(product = null) {
 }
 
 async function openProductEditor(productId = null) {
+  closeProductDetails();
   closeProductEditor();
   const state = await fetchState();
   const product = productId ? state.products.find((item) => item.id === productId) : null;
@@ -100,18 +136,6 @@ async function enhanceProducts() {
     replacement.textContent = '+ Cadastrar produto';
     demoButton.replaceWith(replacement);
   }
-
-  const state = await fetchState();
-  document.querySelectorAll('.main tbody tr').forEach((row) => {
-    if (row.querySelector('[data-real-product-edit]')) return;
-    const idText = [...row.querySelectorAll('.category')].map((node) => node.textContent).find((text) => /^ID\s+/.test(text.trim()));
-    const productId = idText?.trim().replace(/^ID\s+/, '');
-    if (!productId) return;
-    const product = state.products.find((item) => item.id === productId);
-    const target = row.lastElementChild;
-    if (!target || !product) return;
-    target.insertAdjacentHTML('beforeend', `<div class="real-product-row-actions"><button class="btn sm" data-real-product-edit="${escapeHtml(productId)}">Editar</button><button class="btn sm ghost" data-real-product-toggle="${escapeHtml(productId)}">${product.active === false ? 'Ativar' : 'Desativar'}</button></div>`);
-  });
 }
 
 
@@ -143,9 +167,11 @@ document.addEventListener('click', async (event) => {
   if (!target) return;
   try {
     if (target.matches('[data-real-product-new]')) { event.preventDefault(); await openProductEditor(); }
+    if (target.matches('[data-real-product-details]')) { event.preventDefault(); await openProductDetails(target.dataset.realProductDetails); }
     if (target.matches('[data-real-product-edit]')) { event.preventDefault(); await openProductEditor(target.dataset.realProductEdit); }
     if (target.matches('[data-real-product-toggle]')) { event.preventDefault(); await toggleProduct(target.dataset.realProductToggle); }
     if (target.matches('[data-real-product-close]')) { event.preventDefault(); closeProductEditor(); }
+    if (target.matches('[data-real-product-details-close]')) { event.preventDefault(); closeProductDetails(); }
   } catch (error) {
     const status = document.querySelector('[data-message-save-status]');
     if (status) status.textContent = error instanceof Error ? error.message : 'Falha ao salvar.';
