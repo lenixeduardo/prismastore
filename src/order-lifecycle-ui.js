@@ -12,6 +12,8 @@ async function advanceOrder(orderId, expectedStatus = null) {
 document.addEventListener('click', async (event) => {
   const button = event.target.closest?.('[data-advance-order]');
   if (!button) return;
+  // Botões atuais trazem o status e são tratados pelo app.js, que atualiza a UI sem recarregar a página.
+  if (button.dataset.orderStatus) return;
 
   event.preventDefault();
   event.stopPropagation();
