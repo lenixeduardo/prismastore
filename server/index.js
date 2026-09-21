@@ -43,6 +43,7 @@ const adminUser = 'admin';
 const adminPassword = String(process.env.PRISMASTORE_ADMIN_PASSWORD || '');
 const requestedHost = process.env.HOST || '127.0.0.1';
 const host = adminPassword ? requestedHost : '127.0.0.1';
+const publicUrl = String(process.env.PRISMASTORE_PUBLIC_URL || '').trim();
 const useDemoData = process.env.PRISMASTORE_DEMO_DATA === 'true';
 const devWhatsappOnly = process.env.PRISMASTORE_DEV_WHATSAPP_ONLY === 'true';
 const devWhatsappPhone = String(process.env.PRISMASTORE_DEV_WHATSAPP_PHONE || '').trim();
@@ -229,7 +230,8 @@ const server = createAppServer({
 });
 
 server.listen(port, host, () => {
-  console.log(`PrismaStore disponível em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+  console.log(`PrismaStore interno em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+  if (publicUrl) console.log(`PrismaStore produção: ${publicUrl}`);
   console.log(paymentService.getStatus().configured ? 'Pix Oscar: CONFIGURADO' : 'Pix Oscar: PENDENTE DE CONFIGURAÇÃO');
   console.log(authService ? `Admin protegido: ${adminUser}` : 'Admin: sem senha; acesso restrito ao próprio dispositivo (127.0.0.1)');
   console.log(driveConfigured ? `Backup Google Drive: AUTOMÁTICO · retenção ${driveRetentionCount}` : 'Backup Google Drive: PENDENTE DE CONFIGURAÇÃO');
