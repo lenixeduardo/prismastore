@@ -105,6 +105,34 @@ test('WhatsApp API exposes status and triggers connect/restart/disconnect', asyn
   }
 });
 
+test('WhatsApp pairing API preserves the real pairing error for the admin UI', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismastore-wa-pair-api-'));
+  const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });
+  const whatsappManager = {
+    getStatus: () => ({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null }),
+    requestPairingCode: async () => { throw new Error('WhatsApp recusou o pareamento por telefone.'); },
+  };
+  const server = createAppServer({ stateStore: store, staticDir: process.cwd(), whatsappManager });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const response = await fetch(`${baseUrl}/api/whatsapp/pair`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ phone: '(11) 99999-9999' }),
+    });
+    assert.equal(response.status, 422);
+    const payload = await response.json();
+    assert.equal(payload.code, 'WHATSAPP_PAIRING_FAILED');
+    assert.equal(payload.status, 'error');
+    assert.match(payload.error, /recusou o pareamento/i);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('payment API exposes local Pix status and no longer exposes Asaas webhook', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'prismastore-local-pix-api-'));
   const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });
