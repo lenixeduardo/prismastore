@@ -70,4 +70,6 @@ test('mobile order cards keep the content column wide enough for customer and it
   assert.match(styles, /@media \(max-width:\s*390px\)[\s\S]*?\.dashboard-order-row\s*\{\s*grid-template-columns:\s*minmax\(0,1fr\) auto;/);
   assert.doesNotMatch(styles, /\.dashboard-order-row\s*\{\s*grid-template-columns:\s*(?:38px|34px)\s+minmax\(0,1fr\)/);
   assert.doesNotMatch(styles, /\.recent-orders-card \.dashboard-order-row\s*\{\s*grid-template-columns:\s*32px\s+minmax\(0,1fr\)/);
+  assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.order-main \.customer-name\s*\{[\s\S]*?white-space:\s*nowrap[\s\S]*?text-overflow:\s*ellipsis/);
+  assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.order-main \.category\s*\{[\s\S]*?white-space:\s*nowrap[\s\S]*?text-overflow:\s*ellipsis/);
 });
