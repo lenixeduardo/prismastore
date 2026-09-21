@@ -1,3 +1,4 @@
+import { rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import makeWASocket, {
@@ -150,6 +151,7 @@ const whatsappManager = createWhatsAppManager({
   messageHandler: messageHandler.handleMessage,
   disconnectReasonLoggedOut: DisconnectReason.loggedOut,
   disconnectReasonRestartRequired: DisconnectReason.restartRequired,
+  resetAuthState: () => rmSync(authPath, { recursive: true, force: true }),
   devAllowedPhone: devWhatsappOnly ? devWhatsappPhone : '',
 });
 
