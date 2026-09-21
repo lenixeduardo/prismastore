@@ -39,6 +39,7 @@ test('PWA module registers only in secure contexts and supports install/update/i
   assert.match(js, /data-pwa-more/);
   assert.match(js, /data-pwa-view="settings"/);
   assert.match(js, /navigateTo\(view\)/);
+  assert.match(js, /PrismastoreApp\?\.openView\?\.\(view\)/);
   assert.match(js, /setAttribute\('data-label'/);
 });
 
@@ -67,4 +68,13 @@ test('server serves webmanifest with manifest MIME and package version matches s
   assert.match(server, /'\.webmanifest': 'application\/manifest\+json; charset=utf-8'/);
   assert.match(server, /appVersion: '0\.9\.2'/);
   assert.equal(pkg.version, '0.9.2');
+});
+
+
+test('core app exposes a stable navigation API including Settings', () => {
+  const app = read('src/app.js');
+  assert.match(app, /function openView\(view\)/);
+  assert.match(app, /'settings'/);
+  assert.match(app, /window\.PrismastoreApp/);
+  assert.match(app, /openView,/);
 });

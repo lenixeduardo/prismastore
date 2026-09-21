@@ -454,14 +454,24 @@ function render() {
   bind();
 }
 
+function openView(view) {
+  const allowed = new Set(['dashboard','orders','customers','products','reports','chatbot','settings']);
+  if (!allowed.has(view)) return false;
+  state.view = view;
+  state.selectedOrder = null;
+  render();
+  window.dispatchEvent(new CustomEvent('prismastore:view-changed', { detail: { view: state.view } }));
+  if (state.view === 'settings') refreshWhatsAppStatus({ rerender: true });
+  return true;
+}
+
+window.PrismastoreApp = {
+  ...(window.PrismastoreApp || {}),
+  openView,
+};
+
 function bind() {
-  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
-    state.view=b.dataset.view;
-    state.selectedOrder=null;
-    render();
-    window.dispatchEvent(new CustomEvent('prismastore:view-changed', { detail: { view: state.view } }));
-    if (state.view === 'settings') refreshWhatsAppStatus({ rerender: true });
-  }));
+  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>openView(b.dataset.view)));
   document.querySelectorAll('[data-order-filter]').forEach(b=>b.addEventListener('click',()=>{state.orderFilter=b.dataset.orderFilter;render();}));
   document.querySelector('#order-search')?.addEventListener('input',(e)=>{state.search=e.target.value; render(); requestAnimationFrame(()=>{const input=document.querySelector('#order-search');input?.focus();input?.setSelectionRange(state.search.length,state.search.length);});});
   document.querySelectorAll('[data-open-order]').forEach(b=>b.addEventListener('click',()=>{state.selectedOrder=b.dataset.openOrder;render();}));
