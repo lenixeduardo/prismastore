@@ -154,6 +154,17 @@ function dashboardView() {
         ${dashboardKpi('alert','Estoque crítico',String(low),low?`${low} item(ns) abaixo do limite`:'Sem alertas no momento','danger')}
       </div>
 
+      <section class="card padded dashboard-section whatsapp-home-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Conectar WhatsApp</div>
+            <div class="section-note">Conexão disponível diretamente na tela inicial, sem depender de Configurações.</div>
+          </div>
+          ${whatsappStatusBadge()}
+        </div>
+        ${whatsappConnectionPanel()}
+      </section>
+
       <section class="card padded dashboard-section order-queue-card">
         <div class="section-head">
           <div class="section-title">Fila de pedidos</div>
@@ -344,7 +355,7 @@ async function refreshWhatsAppStatus({ rerender = false } = {}) {
   } catch (error) {
     state.whatsapp = { status: 'error', qrDataUrl: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível consultar o WhatsApp.') };
   }
-  if (rerender && state.view === 'settings' && before !== whatsappRenderKey(state.whatsapp)) render();
+  if (rerender && ['dashboard','settings'].includes(state.view) && before !== whatsappRenderKey(state.whatsapp)) render();
   return state.whatsapp;
 }
 
@@ -423,9 +434,8 @@ function whatsappConnectionPanel() {
   return `<div class="wa-connection-panel"><strong>Conectar WhatsApp</strong><div class="category">Use o número do WhatsApp deste próprio celular para gerar o código de vínculo.</div>${whatsappPairingForm()}<button class="btn" data-whatsapp-connect>Alternativa: usar QR Code</button></div>`;
 }
 
-function settingsView() { return shell(`${header('Configurações','Pensado para uso no celular: conecte o WhatsApp por código no próprio aparelho e gerencie o sistema daqui.')}
-  <div class="grid cols-2"><div class="card padded"><div class="section-head"><div class="section-title">WhatsApp</div>${whatsappStatusBadge()}</div>${whatsappConnectionPanel()}<div class="settings-list"><div class="setting-row"><div><div class="product-name">Sessão persistente</div><div class="category">Baileys · data/whatsapp-auth</div></div><span class="badge green">ATIVA</span></div><div class="setting-row"><div><div class="product-name">Reconexão</div><div class="category">A sessão é restaurada automaticamente ao iniciar o PrismaStore</div></div><span class="badge green">AUTOMÁTICA</span></div></div></div>
-  <div class="card padded"><div class="section-title">Sistema</div><div class="settings-list"><div class="setting-row"><div><div class="product-name">Banco de dados</div><div class="category">SQLite · data/prismastore.db</div></div><span class="badge green">ATIVO</span></div><div class="setting-row"><div><div class="product-name">Pix Oscar</div><div class="category">Validação do comprovante por valor, destinatário, data e horário</div></div><span class="badge green">ATIVO</span></div><div class="setting-row"><div><div class="product-name">Alerta de estoque</div><div class="category">Disponível &lt; 3 unidades</div></div><span class="badge green">ATIVO</span></div></div></div></div>`); }
+function settingsView() { return shell(`${header('Configurações','Configurações gerais do sistema. A conexão do WhatsApp agora fica disponível diretamente na tela inicial.')}
+  <div class="card padded"><div class="section-title">Sistema</div><div class="settings-list"><div class="setting-row"><div><div class="product-name">Banco de dados</div><div class="category">SQLite · data/prismastore.db</div></div><span class="badge green">ATIVO</span></div><div class="setting-row"><div><div class="product-name">Pix Oscar</div><div class="category">Validação do comprovante por valor, destinatário, data e horário</div></div><span class="badge green">ATIVO</span></div><div class="setting-row"><div><div class="product-name">Alerta de estoque</div><div class="category">Disponível &lt; 3 unidades</div></div><span class="badge green">ATIVO</span></div></div></div>`); }
 
 function orderDrawer(orderId) {
   const o=state.orders.find(x=>x.id===orderId); if(!o) return '';
@@ -456,7 +466,7 @@ function openView(view) {
   state.selectedOrder = null;
   render();
   window.dispatchEvent(new CustomEvent('prismastore:view-changed', { detail: { view: state.view } }));
-  if (state.view === 'settings') refreshWhatsAppStatus({ rerender: true });
+  if (['dashboard','settings'].includes(state.view)) refreshWhatsAppStatus({ rerender: true });
   return true;
 }
 
@@ -543,6 +553,7 @@ async function bootstrapOperationalRuntime() {
   if (operationalRuntimeStarted) return;
   operationalRuntimeStarted = true;
   const loaded = await loadOperationalState();
+  await refreshWhatsAppStatus({ rerender: false });
   if (loaded) window.dispatchEvent(new CustomEvent('prismastore:runtime-ready'));
   render();
 }
