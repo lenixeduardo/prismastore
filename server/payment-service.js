@@ -293,7 +293,6 @@ export function createPaymentService({
         paidOrder = structuredClone(order);
         return state;
       }
-      state.products = consumeReservedOrderStock(state.products, order.items);
       const updated = confirmPayment(order, accountId, now().toISOString());
       updated.paymentStatus = payload.payment?.status || payload.event.replace('PAYMENT_', '');
       Object.assign(order, updated);
