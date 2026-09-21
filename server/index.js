@@ -114,6 +114,8 @@ const socketFactory = async ({ auth }) => {
     logger,
     printQRInTerminal: false,
     browser: Browsers.macOS('Desktop'),
+    markOnlineOnConnect: false,
+    syncFullHistory: false,
   });
 };
 
@@ -123,6 +125,7 @@ const whatsappManager = createWhatsAppManager({
   qrEncoder: createTerminalQrEncoder({ QRCode }),
   messageHandler: messageHandler.handleMessage,
   disconnectReasonLoggedOut: DisconnectReason.loggedOut,
+  disconnectReasonRestartRequired: DisconnectReason.restartRequired,
   devAllowedPhone: devWhatsappOnly ? devWhatsappPhone : '',
 });
 
@@ -210,7 +213,7 @@ server.listen(port, host, () => {
   if (devWhatsappOnly) console.log('WhatsApp DEV: allowlist exclusiva ATIVA');
 });
 
-if (process.env.WHATSAPP_AUTO_CONNECT !== 'false') {
+if (process.env.WHATSAPP_AUTO_CONNECT === 'true') {
   whatsappManager.connect().catch((error) => console.error('Falha ao iniciar WhatsApp:', error));
 }
 
