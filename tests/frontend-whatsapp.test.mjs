@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs';
 
 const source = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
 const heroSource = readFileSync(new URL('../src/hero.js', import.meta.url), 'utf8');
-const onboardingSource = readFileSync(new URL('../src/whatsapp-onboarding.js', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 test('settings UI can connect WhatsApp Web and render the QR status from the local API', () => {
@@ -14,19 +13,19 @@ test('settings UI can connect WhatsApp Web and render the QR status from the loc
   assert.match(source, /qrDataUrl/);
 });
 
-test('opening the admin panel starts WhatsApp linking when the account is not yet connected', () => {
+test('opening the admin panel does not auto-start a WhatsApp link loop', () => {
   assert.match(heroSource, /prismastore:dashboard-opened/);
-  assert.match(onboardingSource, /addEventListener\(['"]prismastore:dashboard-opened['"]/);
-  assert.match(onboardingSource, /ensureWhatsAppConnection/);
-  assert.match(onboardingSource, /\/api\/whatsapp\/connect/);
+  assert.doesNotMatch(html, /src\/whatsapp-onboarding\.js/);
+  assert.match(source, /data-whatsapp-connect/);
+  assert.match(source, /connectWhatsApp/);
 });
 
-test('dashboard surfaces the WhatsApp QR until the account is linked', () => {
-  assert.match(onboardingSource, /function whatsappDashboardCard\(/);
-  assert.match(onboardingSource, /class="wa-qr"/);
-  assert.match(onboardingSource, /Conectar WhatsApp/);
-  assert.match(onboardingSource, /status\s*===\s*['"]connected['"]/);
-  assert.match(html, /src\/whatsapp-onboarding\.js/);
+test('dashboard surfaces the WhatsApp QR from the single core controller until the account is linked', () => {
+  assert.match(source, /function whatsappConnectionPanel\(/);
+  assert.match(source, /class="wa-qr"/);
+  assert.match(source, /Conectar WhatsApp/);
+  assert.match(source, /w\.status\s*===\s*['"]connected['"]/);
+  assert.doesNotMatch(html, /src\/whatsapp-onboarding\.js/);
 });
 
 test('settings UI exposes local Pix receipt configuration status', () => {
