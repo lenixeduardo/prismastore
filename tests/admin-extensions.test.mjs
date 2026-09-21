@@ -17,6 +17,7 @@ test('products page uses compact rows and opens product-specific details from th
   assert.match(app, /class="product-list-item"/);
   assert.match(app, /data-real-product-details=/);
   assert.match(app, />•••<\/button>/);
+  assert.doesNotMatch(app, /product-list-price/);
   assert.doesNotMatch(app, /<th>Disponível<\/th>/);
   assert.doesNotMatch(app, /data-stock-dec=/);
   assert.doesNotMatch(app, /data-stock-input=/);
