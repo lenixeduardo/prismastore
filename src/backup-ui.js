@@ -98,7 +98,15 @@ function render() {
 }
 
 async function refreshBackups() {
+  if (!isSettingsView()) return;
   try {
+    const authResponse = await fetch('/api/auth/status', { cache: 'no-store' });
+    const auth = await authResponse.json();
+    if (auth.configured && !auth.authenticated) {
+      window.dispatchEvent(new CustomEvent('prismastore:auth-required'));
+      return;
+    }
+
     const response = await fetch('/api/backups', { cache: 'no-store' });
     if (response.status === 401) {
       window.dispatchEvent(new CustomEvent('prismastore:auth-required'));
