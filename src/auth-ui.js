@@ -129,6 +129,7 @@ async function login(form) {
     authState = { loaded: true, configured: payload.configured !== false, authenticated: true, username: payload.username || null };
     sessionStorage.setItem('prismastore:resume-panel', 'auth-login');
     hideOverlay();
+    window.dispatchEvent(new CustomEvent('prismastore:auth-restored'));
     settleLogin(true);
   } catch (error) {
     if (errorTarget) errorTarget.textContent = friendlyErrorMessage(error, 'Não foi possível entrar. Confira os dados e tente novamente.');
