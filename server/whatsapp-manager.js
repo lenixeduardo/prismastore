@@ -63,6 +63,7 @@ export function createWhatsAppManager({
   reconnectDelayMs = 3000,
   maxReconnectAttempts = 3,
   pairingReadyTimeoutMs = 15000,
+  resetAuthState = null,
   schedule = setTimeout,
   clearSchedule = clearTimeout,
   maxSeenMessageIds = 1000,
@@ -71,6 +72,7 @@ export function createWhatsAppManager({
   let socket = null;
   let connectPromise = null;
   let pairingPromise = null;
+  let authResetPromise = null;
   let reconnectTimer = null;
   let reconnectAttempts = 0;
   let manualDisconnect = false;
@@ -107,6 +109,24 @@ export function createWhatsAppManager({
     if (!reconnectTimer) return;
     clearSchedule(reconnectTimer);
     reconnectTimer = null;
+  }
+
+  async function clearInvalidAuthState(reason = 'unknown') {
+    if (!resetAuthState) return;
+    if (authResetPromise) return authResetPromise;
+    authResetPromise = Promise.resolve()
+      .then(() => resetAuthState())
+      .then(() => {
+        logWhatsApp('auth:cleared', `reason=${reason}`);
+      })
+      .catch((error) => {
+        console.error('[WhatsApp] auth:clear-error', error);
+        throw error;
+      })
+      .finally(() => {
+        authResetPromise = null;
+      });
+    return authResetPromise;
   }
 
   function resolvePairingReady() {
@@ -261,7 +281,27 @@ export function createWhatsAppManager({
 
           if (loggedOut) {
             sessionRegistered = false;
-            setStatus({ status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'Sessão do WhatsApp encerrada. Faça um novo vínculo.', errorCode: code });
+            clearReconnect();
+            try {
+              await clearInvalidAuthState('logged-out-401');
+              setStatus({
+                status: 'disconnected',
+                qrDataUrl: null,
+                pairingCode: null,
+                account: null,
+                error: null,
+                errorCode: null,
+              });
+            } catch {
+              setStatus({
+                status: 'error',
+                qrDataUrl: null,
+                pairingCode: null,
+                account: null,
+                error: 'A sessão antiga do WhatsApp foi encerrada, mas não foi possível limpar as credenciais locais.',
+                errorCode: code,
+              });
+            }
             return;
           }
 
@@ -319,9 +359,9 @@ export function createWhatsAppManager({
     const phone = normalizePairingPhone(phoneNumber);
     if (pairingPromise) return pairingPromise;
 
-    pairingPromise = (async () => {
+    async function attemptPairing({ recoverLoggedOut = true } = {}) {
       try {
-        logWhatsApp('pairing:start', `phone=${maskedPhone(phone)}`);
+        logWhatsApp('pairing:start', `phone=${maskedPhone(phone)} recover401=${recoverLoggedOut}`);
         if (!socket) await connect();
         if (status.status === 'connected') throw new Error('WhatsApp já está conectado.');
         if (!socket?.requestPairingCode) throw new Error('Pareamento por telefone não está disponível nesta sessão do WhatsApp.');
@@ -335,18 +375,32 @@ export function createWhatsAppManager({
         setStatus({ status: 'pairing', pairingCode: String(pairingCode), qrDataUrl: null, account: null, error: null, errorCode: null });
         return getStatus();
       } catch (error) {
+        const code = errorStatusCode(error);
+        if (code === disconnectReasonLoggedOut && recoverLoggedOut) {
+          logWhatsApp('pairing:recover-401');
+          clearReconnect();
+          socket = null;
+          pairingReady = false;
+          sessionRegistered = false;
+          await clearInvalidAuthState('pairing-401');
+          setStatus({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: null });
+          return attemptPairing({ recoverLoggedOut: false });
+        }
+
         const message = pairingErrorMessage(error);
-        logWhatsApp('pairing:error', `code=${errorStatusCode(error) ?? 'unknown'} message=${message}`);
+        logWhatsApp('pairing:error', `code=${code ?? 'unknown'} message=${message}`);
         setStatus({
           status: 'error',
           pairingCode: null,
           account: null,
           error: message,
-          errorCode: errorStatusCode(error),
+          errorCode: code,
         });
         throw new Error(message);
       }
-    })().finally(() => {
+    }
+
+    pairingPromise = attemptPairing().finally(() => {
       pairingPromise = null;
     });
 
