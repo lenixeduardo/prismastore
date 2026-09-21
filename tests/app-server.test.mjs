@@ -133,6 +133,34 @@ test('WhatsApp pairing API preserves the real pairing error for the admin UI', a
   }
 });
 
+test('WhatsApp QR API starts a fresh pairing session and returns its QR state', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismastore-wa-qr-'));
+  const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });
+  let starts = 0;
+  const whatsappManager = {
+    getStatus: () => ({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null }),
+    startQrPairing: async () => {
+      starts += 1;
+      return { status: 'qr', qrDataUrl: 'data:image/png;base64,QR', pairingCode: null, account: null, error: null };
+    },
+  };
+  const server = createAppServer({ stateStore: store, staticDir: process.cwd(), whatsappManager });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const response = await fetch(`${baseUrl}/api/whatsapp/qr`, { method: 'POST' });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(starts, 1);
+    assert.equal(payload.status, 'qr');
+    assert.match(payload.qrDataUrl, /^data:image\/png/);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('WhatsApp connect API returns the real manager error instead of a generic 400', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'prismastore-wa-connect-error-'));
   const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });

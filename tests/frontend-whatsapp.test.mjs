@@ -34,3 +34,19 @@ test('settings UI owns Pix status in the core without a second DOM controller', 
   assert.doesNotMatch(source, /Asaas|Sandbox|API KEY|WEBHOOK TOKEN/i);
   assert.doesNotMatch(html, /src\/payment-status\.js/);
 });
+
+test('restart action clears the UI back to the phone input instead of entering connecting state', () => {
+  const restartStart = source.indexOf('async function restartWhatsAppConnection()');
+  const restartEnd = source.indexOf('function whatsappPairingForm()', restartStart);
+  const restartSource = source.slice(restartStart, restartEnd);
+  assert.match(restartSource, /status:\s*['"]disconnected['"]/);
+  assert.doesNotMatch(restartSource, /status:\s*['"]connecting['"]/);
+  assert.match(source, /data-whatsapp-pair-phone/);
+});
+
+test('QR alternative requests a fresh server-side QR session and renders a scannable image', () => {
+  assert.match(source, /\/api\/whatsapp\/qr/);
+  assert.match(source, /Gerar QR Code/);
+  assert.match(source, /Escaneie o QR Code no WhatsApp/);
+  assert.match(source, /class="wa-qr"/);
+});

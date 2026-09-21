@@ -259,6 +259,15 @@ export function createAppServer({
           return sendJson(res, 422, whatsappFailurePayload(whatsappManager, error, 'WHATSAPP_CONNECTION_FAILED'));
         }
       }
+      if (req.method === 'POST' && url.pathname === '/api/whatsapp/qr') {
+        if (!whatsappManager?.startQrPairing) return sendJson(res, 503, { status: 'error', error: 'Pareamento por QR Code não configurado' });
+        try {
+          return sendJson(res, 200, await whatsappManager.startQrPairing());
+        } catch (error) {
+          runtimeLogProvider?.record?.('erro', error);
+          return sendJson(res, 422, whatsappFailurePayload(whatsappManager, error, 'WHATSAPP_QR_FAILED'));
+        }
+      }
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/pair') {
         if (!whatsappManager?.requestPairingCode) return sendJson(res, 503, { error: 'Pareamento por telefone não configurado' });
         const body = await readJson(req);
