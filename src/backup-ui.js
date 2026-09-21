@@ -175,9 +175,18 @@ document.addEventListener('click', (event) => {
   }
 });
 
-const observer = new MutationObserver(() => {
-  if (isSettingsView()) render();
+function onSettingsVisible() {
+  if (!isSettingsView()) return;
+  render();
+  refreshBackups();
+}
+
+window.addEventListener('prismastore:view-changed', (event) => {
+  if (event.detail?.view === 'settings') onSettingsVisible();
 });
-observer.observe(document.documentElement, { childList: true, subtree: true });
-refreshBackups();
-setInterval(refreshBackups, 10000);
+
+window.addEventListener('prismastore:runtime-ready', onSettingsVisible);
+
+setInterval(() => {
+  if (isSettingsView()) refreshBackups();
+}, 10000);
