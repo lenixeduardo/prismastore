@@ -218,7 +218,6 @@ function summarizeOrderItems(order) {
 
 function orderCompact(o) {
   return `<button class="dashboard-order-row" type="button" data-open-order="${o.id}">
-    <span class="order-cart" aria-hidden="true">⌑</span>
     <span class="order-main">
       <strong class="customer-name">${esc(o.customerName)}</strong>
       <span class="order-summary">${esc(summarizeOrderItems(o))}</span>
@@ -228,7 +227,6 @@ function orderCompact(o) {
       ${statusBadge(o.status)}
       <strong class="mono">${formatCurrencyBRL(o.total)}</strong>
     </span>
-    <span class="order-chevron" aria-hidden="true">›</span>
   </button>`;
 }
 
