@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.2-whatsapp-qr-20260921-14';
+const CACHE_NAME = 'prismastore-shell-v0.9.2-whatsapp-pairing-stable-20260921-15';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
