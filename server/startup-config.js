@@ -57,7 +57,7 @@ export function createTerminalQrEncoder({ QRCode, log = console.log } = {}) {
     log('==========================================');
     log(terminalQr);
     log('No celular: WhatsApp > Aparelhos conectados > Conectar aparelho.');
-    log('O mesmo QR também fica disponível em Configurações > WhatsApp Web.\n');
+    log('O mesmo QR também fica disponível na tela inicial do PrismaStore.\n');
 
     return qrDataUrl;
   };
