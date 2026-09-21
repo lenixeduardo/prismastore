@@ -135,25 +135,23 @@ function dashboardView() {
   const revenue = paidMonth.reduce((s,o)=>s+o.total,0);
   const pendingOrders = state.orders.filter(o=>['PAID','PACKING'].includes(o.status));
   const pendingPacking = pendingOrders.length;
-  const criticalAvailable = lowProducts.reduce((sum,p)=>sum+Math.max(0,availableStock(p)),0);
-  const criticalBars = low ? Math.max(1,Math.min(5,Math.round((criticalAvailable/(low*3))*5))) : 0;
 
   return shell(`
     <div class="dashboard-screen">
       <section class="dashboard-hero">
         <div>
-          <div class="eyebrow">PRISMASTORE · MVP</div>
+          <div class="eyebrow">PRISMASTORE</div>
           <h1>Central de Operações</h1>
           <div class="subtitle">Tudo o que importa para o seu pós-pagamento, em uma única visão.</div>
         </div>
-        <img class="dashboard-prism" src="/assets/prism-hero.svg" alt="" aria-hidden="true" />
+        <img class="dashboard-prism" src="/assets/dashboard-prism-holographic.webp" alt="" aria-hidden="true" />
       </section>
 
       <div class="dashboard-kpis">
-        ${dashboardKpi('money','Faturamento do mês',formatCurrencyBRL(revenue),monthLabel,'',0)}
-        ${dashboardKpi('cart','Pedidos pagos',String(paidMonth.length),monthLabel,'',Math.min(5,paidMonth.length))}
-        ${dashboardKpi('box','Para embalar',String(pendingPacking),'Prioridade operacional','warning',Math.min(5,pendingPacking))}
-        ${dashboardKpi('alert','Estoque crítico',String(low),low?`${low} item(ns) abaixo do limite`:'Sem alertas no momento','danger',criticalBars)}
+        ${dashboardKpi('money','Faturamento do mês',formatCurrencyBRL(revenue),monthLabel)}
+        ${dashboardKpi('cart','Pedidos pagos',String(paidMonth.length),monthLabel)}
+        ${dashboardKpi('box','Para embalar',String(pendingPacking),'Prioridade operacional','warning')}
+        ${dashboardKpi('alert','Estoque crítico',String(low),low?`${low} item(ns) abaixo do limite`:'Sem alertas no momento','danger')}
       </div>
 
       <section class="card padded dashboard-section order-queue-card">
@@ -191,23 +189,22 @@ function dashboardView() {
     </div>`);
 }
 
-function dashboardBars(count=0, tone='green') {
-  const safe = Math.max(0,Math.min(5,Number(count)||0));
-  return `<span class="mini-bars ${tone}" aria-hidden="true">${[1,2,3,4,5].map(i=>`<i class="${i<=safe?'on':''}"></i>`).join('')}</span>`;
-}
+const DASHBOARD_KPI_ASSETS = {
+  money: '/assets/kpi-revenue.webp',
+  cart: '/assets/kpi-paid-orders.webp',
+  box: '/assets/kpi-packing.webp',
+  alert: '/assets/kpi-critical-stock.webp',
+};
 
-function dashboardKpi(icon,label,value,meta,klass='',bars=0) {
-  const tone = klass==='warning' ? 'gold' : klass==='danger' ? 'muted' : 'green';
+function dashboardKpi(icon,label,value,meta,klass='') {
+  const asset = DASHBOARD_KPI_ASSETS[icon];
   return `<div class="card padded dashboard-kpi ${klass}">
-    <div class="dashboard-kpi-top">
-      <span class="dashboard-kpi-icon ${klass}">${icon==='money'?'$':icon==='cart'?'⌑':icon==='box'?'◇':'!'}</span>
+    <div class="dashboard-kpi-copy">
       <div class="kpi-label">${label}</div>
-    </div>
-    <div class="dashboard-kpi-value-row">
       <div class="kpi-value mono">${value}</div>
-      ${bars ? dashboardBars(bars,tone) : ''}
+      <div class="kpi-meta">${meta}</div>
     </div>
-    <div class="kpi-meta ${klass==='positive'?'positive':''}">${meta}</div>
+    <img class="dashboard-kpi-art" src="${asset}" alt="" aria-hidden="true" />
   </div>`;
 }
 
