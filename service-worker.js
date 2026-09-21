@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.2-recent-nowrap-20260921-11';
+const CACHE_NAME = 'prismastore-shell-v0.9.2-products-list-20260921-13';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',

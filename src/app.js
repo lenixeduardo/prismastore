@@ -269,8 +269,19 @@ function customersView() {
 }
 
 function productsView() {
-  return shell(`${header('Produtos','Catálogo em texto, estoque físico e alerta automático abaixo de 3 unidades.','<button class="btn primary" id="add-demo-product">+ Produto demo</button>')}
-    <div class="section table-wrap"><table><thead><tr><th>Produto</th><th>Preço</th><th>Estoque</th><th>Disponível</th><th>Status</th><th>Ajuste</th></tr></thead><tbody>${state.products.map(p=>`<tr><td><div class="product-name">${esc(p.name)}</div><div class="category">ID ${p.id}</div></td><td class="mono">${formatCurrencyBRL(p.price)}</td><td class="mono">${p.stock}</td><td class="mono"><strong>${availableStock(p)}</strong></td><td>${productBadge(p)}</td><td><div class="qty-controls stock-control"><button type="button" aria-label="Subtrair estoque" data-stock-dec="${p.id}">−</button><input type="number" min="0" step="1" inputmode="numeric" aria-label="Estoque físico de ${esc(p.name)}" data-stock-input="${p.id}" value="${p.stock}" /><button type="button" aria-label="Adicionar estoque" data-stock-inc="${p.id}">+</button></div></td></tr>`).join('')}</tbody></table></div>`);
+  return shell(`${header('Produtos','Resumo do catálogo e estoque atual.','<button class="btn primary" id="add-demo-product">+ Produto demo</button>')}
+    <div class="section product-list">
+      ${state.products.map(p=>`<article class="product-list-item">
+        <div class="product-list-main">
+          <div class="product-name">${esc(p.name)}</div>
+        </div>
+        <div class="product-list-stock">
+          <span>Estoque</span>
+          <strong class="mono">${p.stock}</strong>
+        </div>
+        <button class="product-list-menu" type="button" data-real-product-details="${p.id}" aria-label="Ver detalhes de ${esc(p.name)}">•••</button>
+      </article>`).join('')}
+    </div>`);
 }
 
 function reportsView() {
