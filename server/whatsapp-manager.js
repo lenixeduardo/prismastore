@@ -231,6 +231,7 @@ export function createWhatsAppManager({
           const closeError = lastDisconnect?.error instanceof Error
             ? lastDisconnect.error
             : new Error(code ? `WhatsApp desconectado (${code}).` : 'WhatsApp desconectado.');
+          if (code && errorStatusCode(closeError) == null) closeError.statusCode = code;
           rejectPairingReady(closeError);
           socket = null;
           const loggedOut = code === disconnectReasonLoggedOut;
