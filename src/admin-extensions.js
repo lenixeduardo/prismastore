@@ -1,5 +1,4 @@
 import { normalizeProductInput } from './product-editor.js';
-import { CHATBOT_MESSAGE_DEFAULTS, CHATBOT_MESSAGE_FIELDS, messageValue } from './chatbot-settings.js';
 
 const API_STATE = '/api/state';
 let enhancing = false;
@@ -115,48 +114,6 @@ async function enhanceProducts() {
   });
 }
 
-function messagesMarkup(settings) {
-  return `
-    <section class="card padded chatbot-message-settings" data-chatbot-message-settings>
-      <div class="section-head"><div><div class="section-title">Mensagens do atendimento</div><div class="category">Edite o texto de cada etapa do fluxo. O catálogo continua sendo gerado pelos produtos reais cadastrados.</div></div><span class="badge green">PADRÃO</span></div>
-      <div class="message-settings-grid">
-        ${CHATBOT_MESSAGE_FIELDS.map((field) => `
-          <label class="message-setting-field">
-            <span class="message-setting-title">${escapeHtml(field.label)}</span>
-            <textarea rows="4" data-message-key="${field.key}">${escapeHtml(messageValue(settings, field.key))}</textarea>
-            <span class="message-setting-help">${field.placeholders.length ? `Variáveis: ${field.placeholders.map(escapeHtml).join(' · ')}` : 'Sem variáveis nesta etapa.'}</span>
-            <button type="button" class="btn sm ghost" data-reset-message="${field.key}">Restaurar padrão</button>
-          </label>`).join('')}
-      </div>
-      <div class="message-settings-footer"><span class="category" data-message-save-status></span><button type="button" class="btn primary" data-save-chatbot-messages>Salvar mensagens</button></div>
-    </section>`;
-}
-
-async function enhanceSettings() {
-  const title = document.querySelector('.main h1')?.textContent?.trim();
-  if (title !== 'Configurações' || document.querySelector('[data-chatbot-message-settings]')) return;
-  const state = await fetchState();
-  const notice = document.querySelector('.main .section.notice');
-  if (notice) notice.insertAdjacentHTML('beforebegin', messagesMarkup(state.settings ?? { chatbotMessages: {} }));
-  else document.querySelector('.main')?.insertAdjacentHTML('beforeend', messagesMarkup(state.settings ?? { chatbotMessages: {} }));
-}
-
-async function saveMessageSettings() {
-  const state = await fetchState();
-  state.settings = state.settings && typeof state.settings === 'object' ? state.settings : {};
-  state.settings.chatbotMessages = state.settings.chatbotMessages && typeof state.settings.chatbotMessages === 'object' ? state.settings.chatbotMessages : {};
-  document.querySelectorAll('[data-message-key]').forEach((field) => {
-    state.settings.chatbotMessages[field.dataset.messageKey] = field.value;
-  });
-  await saveState(state);
-  const status = document.querySelector('[data-message-save-status]');
-  if (status) status.textContent = 'Mensagens salvas. O próximo atendimento já usará estes textos.';
-}
-
-function restoreMessageDefault(key) {
-  const field = document.querySelector(`[data-message-key="${CSS.escape(key)}"]`);
-  if (field) field.value = CHATBOT_MESSAGE_DEFAULTS[key] ?? '';
-}
 
 function resumeRequestedView() {
   const view = sessionStorage.getItem('prismastore:resume-panel');
@@ -174,7 +131,6 @@ async function enhance() {
   try {
     if (resumeRequestedView()) return;
     await enhanceProducts();
-    await enhanceSettings();
   } catch (error) {
     console.error('Falha ao aplicar extensões operacionais PrismaStore:', error);
   } finally {
@@ -190,8 +146,6 @@ document.addEventListener('click', async (event) => {
     if (target.matches('[data-real-product-edit]')) { event.preventDefault(); await openProductEditor(target.dataset.realProductEdit); }
     if (target.matches('[data-real-product-toggle]')) { event.preventDefault(); await toggleProduct(target.dataset.realProductToggle); }
     if (target.matches('[data-real-product-close]')) { event.preventDefault(); closeProductEditor(); }
-    if (target.matches('[data-save-chatbot-messages]')) { event.preventDefault(); await saveMessageSettings(); }
-    if (target.matches('[data-reset-message]')) { event.preventDefault(); restoreMessageDefault(target.dataset.resetMessage); }
   } catch (error) {
     const status = document.querySelector('[data-message-save-status]');
     if (status) status.textContent = error instanceof Error ? error.message : 'Falha ao salvar.';
