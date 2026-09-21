@@ -196,9 +196,9 @@ function dashboardView() {
       </section>
 
       <section class="card padded dashboard-section recent-orders-card">
-        <div class="section-head">
-          <div class="section-title">Últimos pedidos</div>
-          <button class="btn sm ghost" data-view="orders">Ver todos ›</button>
+        <div class="section-head recent-orders-head">
+          <div class="section-title recent-orders-title">Últimos pedidos</div>
+          <button class="btn sm ghost view-all-btn" data-view="orders">Ver todos ›</button>
         </div>
         <div class="dashboard-order-list compact">
           ${state.orders.slice(0,5).map(orderCompact).join('') || '<div class="empty dashboard-empty">Nenhum pedido registrado.</div>'}
