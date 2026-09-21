@@ -43,3 +43,10 @@ test('restart action clears the UI back to the phone input instead of entering c
   assert.doesNotMatch(restartSource, /status:\s*['"]connecting['"]/);
   assert.match(source, /data-whatsapp-pair-phone/);
 });
+
+test('QR alternative requests a fresh server-side QR session and renders a scannable image', () => {
+  assert.match(source, /\/api\/whatsapp\/qr/);
+  assert.match(source, /Gerar QR Code/);
+  assert.match(source, /Escaneie o QR Code no WhatsApp/);
+  assert.match(source, /class="wa-qr"/);
+});
