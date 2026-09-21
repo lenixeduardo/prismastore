@@ -1,17 +1,8 @@
-async function currentOrder(orderId) {
-  const response = await fetch('/api/state', { cache: 'no-store' });
-  if (!response.ok) throw new Error('Não foi possível consultar o pedido.');
-  const state = await response.json();
-  return (state.orders ?? []).find((order) => order.id === orderId) ?? null;
-}
-
-async function advanceOrder(orderId) {
-  const order = await currentOrder(orderId);
-  if (!order) throw new Error(`Pedido ${orderId} não encontrado.`);
+async function advanceOrder(orderId, expectedStatus = null) {
   const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/advance`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ expectedStatus: order.status }),
+    body: JSON.stringify({ expectedStatus }),
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Falha ao atualizar pedido.');
@@ -22,18 +13,29 @@ document.addEventListener('click', async (event) => {
   const button = event.target.closest?.('[data-advance-order]');
   if (!button) return;
 
-  // Captura o clique antes do handler legado do app.js e impede avanço local direto.
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation();
+
+  const originalLabel = button.textContent;
   button.disabled = true;
+  button.textContent = 'Atualizando…';
 
   try {
-    await advanceOrder(button.dataset.advanceOrder);
+    const result = await advanceOrder(button.dataset.advanceOrder, button.dataset.orderStatus || null);
+    window.dispatchEvent(new CustomEvent('prismastore:orders-updated', {
+      detail: {
+        orderId: button.dataset.advanceOrder,
+        status: result.order?.status || null,
+        changed: Boolean(result.changed),
+        stale: Boolean(result.stale),
+      },
+    }));
     window.location.reload();
   } catch (error) {
     console.error(error);
     button.disabled = false;
+    button.textContent = originalLabel;
     button.title = error instanceof Error ? error.message : 'Falha ao atualizar pedido.';
   }
 }, true);
