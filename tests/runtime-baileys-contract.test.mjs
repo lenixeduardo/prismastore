@@ -9,13 +9,14 @@ test('runtime composes PrismaStore with Baileys instead of whatsapp-web.js', () 
   assert.match(indexSource, /@whiskeysockets\/baileys/);
   assert.doesNotMatch(indexSource, /whatsapp-web\.js/);
   assert.match(indexSource, /useMultiFileAuthState/);
+  assert.match(indexSource, /fetchLatestWaWebVersion/);
   assert.match(indexSource, /fetchLatestBaileysVersion/);
   assert.match(indexSource, /dataDir, 'whatsapp-auth'/);
   assert.match(indexSource, /DisconnectReason\.loggedOut/);
 });
 
 test('runtime dependencies use Baileys and pino only for WhatsApp transport', () => {
-  assert.match(packageJson.dependencies['@whiskeysockets/baileys'], /^\^/);
+  assert.equal(packageJson.dependencies['@whiskeysockets/baileys'], '6.7.24');
   assert.ok(packageJson.dependencies.pino);
   assert.equal(packageJson.dependencies['whatsapp-web.js'], undefined);
   assert.equal(packageJson.dependencies.qrcode, '1.5.4');
