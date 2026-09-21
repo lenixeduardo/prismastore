@@ -70,22 +70,6 @@
   letter-spacing: .24em;
 }
 
-.auth-prism-art {
-  position: absolute;
-  z-index: -1;
-  width: min(360px, 82vw);
-  height: auto;
-  aspect-ratio: 1 / 1;
-  right: -132px;
-  top: 48px;
-  object-fit: contain;
-  object-position: center;
-  image-rendering: auto;
-  opacity: .62;
-  pointer-events: none;
-  filter: drop-shadow(0 18px 70px rgba(26, 233, 149, .10));
-}
-
 .auth-heading {
   position: relative;
   z-index: 2;
@@ -266,7 +250,6 @@
   .auth-brand img { width: 64px; height: auto; }
   .auth-brand-copy strong { font-size: 27px; }
   .auth-brand-copy span { font-size: 12px; }
-  .auth-prism-art { width: min(310px, 80vw); height: auto; right: -118px; top: 42px; opacity: .58; }
   .auth-heading { margin-bottom: 24px; }
   .auth-heading p { font-size: 15px; }
   .auth-card { border-radius: 16px; padding: 18px; }
