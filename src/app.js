@@ -193,7 +193,7 @@ const DASHBOARD_KPI_ASSETS = {
   money: '/assets/kpi-revenue.webp',
   cart: '/assets/kpi-paid-orders.webp',
   box: '/assets/kpi-packing.webp',
-  alert: '/assets/kpi-critical-stock.webp',
+  alert: '/assets/kpi-critical-stock.svg',
 };
 
 function dashboardKpi(icon,label,value,meta,klass='') {
