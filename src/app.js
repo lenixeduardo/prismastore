@@ -55,8 +55,14 @@ async function persist() {
       body: JSON.stringify({ products: state.products, customers: state.customers, orders: state.orders }),
     });
     if (!response.ok) throw new Error('Falha ao salvar dados locais.');
+    const saved = await response.json();
+    state.products = Array.isArray(saved.products) ? saved.products : state.products;
+    state.customers = Array.isArray(saved.customers) ? saved.customers : state.customers;
+    state.orders = Array.isArray(saved.orders) ? saved.orders : state.orders;
     state.serverConnected = true;
     state.serverError = null;
+    window.dispatchEvent(new CustomEvent('prismastore:state-updated', { detail: { source: 'persist' } }));
+    return saved;
   } catch (error) {
     state.serverConnected = false;
     state.serverError = friendlyErrorMessage(error, 'Não foi possível salvar as alterações. Tente novamente.');
@@ -437,7 +443,7 @@ function orderDrawer(orderId) {
     <div class="detail-block"><div class="detail-label">Endereço do pedido</div><div class="subtitle">${esc(addressText(o.address))}</div></div>
     <div class="detail-block"><div class="detail-label">Itens</div>${o.items.map(i=>`<div class="item-row"><span>${i.quantity}× ${esc(i.name)}</span><strong>${formatCurrencyBRL(i.quantity*i.unitPrice)}</strong></div>`).join('')}<div class="item-row"><span>${o.deliveryType==='shipping'?'Frete':'Entrega'}</span><strong>${formatCurrencyBRL(o.deliveryFee||0)}</strong></div><div class="item-row" style="border-top:1px solid var(--border-soft);padding-top:12px"><strong>Total</strong><strong>${formatCurrencyBRL(o.total)}</strong></div></div>
     <div class="detail-block"><div class="detail-label">Pagamento</div><div class="subtitle">${o.paidAt?`Confirmado em ${formatDate(o.paidAt)} · ${esc(receivingAccounts.find(a=>a.id===o.receivingAccountId)?.name||o.receivingAccountId)}`:'Aguardando confirmação'}</div></div>
-    ${canAdvance?`<button class="btn primary" style="width:100%" data-advance-order="${o.id}">${label}</button>`:''}
+    ${canAdvance?`<button class="btn primary" style="width:100%" data-advance-order="${o.id}" data-order-status="${o.status}">${label}</button>`:''}
   </aside></div>`;
 }
 
@@ -459,8 +465,37 @@ function bind() {
   document.querySelectorAll('[data-order-filter]').forEach(b=>b.addEventListener('click',()=>{state.orderFilter=b.dataset.orderFilter;render();}));
   document.querySelector('#order-search')?.addEventListener('input',(e)=>{state.search=e.target.value; render(); requestAnimationFrame(()=>{const input=document.querySelector('#order-search');input?.focus();input?.setSelectionRange(state.search.length,state.search.length);});});
   document.querySelectorAll('[data-open-order]').forEach(b=>b.addEventListener('click',()=>{state.selectedOrder=b.dataset.openOrder;render();}));
-  document.querySelectorAll('[data-close-drawer]').forEach(b=>b.addEventListener('click',()=>{state.selectedOrder=null;render();}));
-  document.querySelectorAll('[data-advance-order]').forEach(b=>b.addEventListener('click',()=>{const o=state.orders.find(x=>x.id===b.dataset.advanceOrder);o.status=nextOrderStatus(o);persist();state.selectedOrder=o.id;render();}));
+  document.querySelectorAll('[data-close-drawer]').forEach(b=>b.addEventListener('click',(event)=>{
+    if (b.classList.contains('drawer-backdrop') && event.target !== b) return;
+    state.selectedOrder=null;
+    render();
+  }));
+  document.querySelectorAll('[data-advance-order]').forEach(b=>b.addEventListener('click',async(event)=>{
+    event.stopPropagation();
+    const o=state.orders.find(x=>x.id===b.dataset.advanceOrder);
+    if(!o) return;
+    b.disabled=true;
+    const original=b.textContent;
+    b.textContent='Atualizando…';
+    try{
+      const response=await fetch(`/api/orders/${encodeURIComponent(o.id)}/advance`,{
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify({expectedStatus:o.status}),
+      });
+      const result=await response.json();
+      if(!response.ok) throw new Error(result.error||'Falha ao atualizar pedido.');
+      await loadOperationalState();
+      window.dispatchEvent(new CustomEvent('prismastore:orders-updated',{detail:{orderId:o.id,status:result.order?.status||null}}));
+      state.selectedOrder=o.id;
+      render();
+    }catch(error){
+      console.error(error);
+      b.disabled=false;
+      b.textContent=original;
+      b.title=error instanceof Error?error.message:'Falha ao atualizar pedido.';
+    }
+  }));
   document.querySelectorAll('[data-stock-inc]').forEach(b=>b.addEventListener('click',()=>{const p=state.products.find(x=>x.id===b.dataset.stockInc);p.stock+=1;persist();render();}));
   document.querySelectorAll('[data-stock-dec]').forEach(b=>b.addEventListener('click',()=>{const p=state.products.find(x=>x.id===b.dataset.stockDec);p.stock=Math.max(0,p.stock-1);persist();render();}));
   document.querySelectorAll('[data-stock-input]').forEach(input=>input.addEventListener('change',()=>{const p=state.products.find(x=>x.id===input.dataset.stockInput);const value=Math.max(0,Number.parseInt(input.value,10)||0);p.stock=value;persist();render();}));
@@ -482,7 +517,7 @@ function bind() {
   document.querySelector('[data-whatsapp-disconnect]')?.addEventListener('click', disconnectWhatsApp);
 }
 function resetChat(){state.chatbot={step:'welcome',cart:{},deliveryType:null,addressMode:null,paymentConfirmed:false};render();}
-function chatAction(action){
+async function chatAction(action){
   const map={'age-confirm':'catalog','delivery':'delivery','address':'address','review':'review','pix':'pix'};
   if(map[action]){state.chatbot.step=map[action];render();return;}
   if(action==='confirm-payment'){
@@ -490,7 +525,10 @@ function chatAction(action){
     const id=`PS-${1050+state.orders.length}`;
     const items=Object.entries(state.chatbot.cart).filter(([,q])=>q>0).map(([pid,q])=>{const p=state.products.find(x=>x.id===pid);return{productId:pid,name:p.name,quantity:q,unitPrice:p.price}});
     state.orders.unshift({id,customerId:'c1',customerName:'Lucas Almeida',phone:'+55 11 98888-1204',status:'PAID',deliveryType:state.chatbot.deliveryType,total:t.subtotal+fee,createdAt:new Date().toISOString(),paidAt:new Date().toISOString(),receivingAccountId:'pix-local',items,address:chatAddress(),newAddress:state.chatbot.addressMode==='new',deliveryFee:fee});
-    state.chatbot.step='paid';state.chatbot.paymentConfirmed=true;persist();render();
+    state.chatbot.step='paid';state.chatbot.paymentConfirmed=true;
+    await persist();
+    window.dispatchEvent(new CustomEvent('prismastore:orders-updated', { detail: { source: 'chat-simulator', orderId: id } }));
+    render();
   }
 }
 
