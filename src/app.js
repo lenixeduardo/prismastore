@@ -437,7 +437,8 @@ function whatsappConnectionPanel() {
     return `<div class="wa-connection-panel"><strong>${whatsappStatusLabel()}</strong><div class="category">Preparando o pareamento por número deste celular.</div><button class="btn" type="button" data-whatsapp-restart>Reiniciar conexão</button></div>`;
   }
   if (w.status === 'error') {
-    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(friendlyErrorMessage(w.error, 'Não foi possível conectar ao WhatsApp. Tente novamente.'))}</div>${whatsappPairingForm()}<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-whatsapp-restart>Reiniciar conexão</button><button class="btn" data-whatsapp-connect>Tentar QR Code</button></div></div>`;
+    const rateLimited = Number(w.errorCode) === 429;
+    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(friendlyErrorMessage(w.error, 'Não foi possível conectar ao WhatsApp. Tente novamente.'))}</div>${rateLimited ? '<div class="notice">Novas tentativas por número estão temporariamente pausadas para evitar ampliar o bloqueio do WhatsApp.</div>' : whatsappPairingForm()}<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-whatsapp-restart>Reiniciar conexão</button><button class="btn" data-whatsapp-connect>Tentar QR Code</button></div></div>`;
   }
   return `<div class="wa-connection-panel"><strong>Conectar WhatsApp</strong><div class="category">Use o número do WhatsApp deste próprio celular para gerar o código de vínculo.</div>${whatsappPairingForm()}<button class="btn" data-whatsapp-connect>Alternativa: usar QR Code</button></div>`;
 }
@@ -445,6 +446,13 @@ function whatsappConnectionPanel() {
 function settingsBadge(ok, pending = false) {
   if (pending) return '<span class="badge orange">VERIFICANDO</span>';
   return ok ? '<span class="badge green">ATIVO</span>' : '<span class="badge red">ERRO</span>';
+}
+
+function whatsappSettingsBadge(pending = false) {
+  if (pending) return '<span class="badge orange">VERIFICANDO</span>';
+  if (state.whatsapp.status === 'connected') return '<span class="badge green">CONECTADO</span>';
+  if (state.whatsapp.status === 'error') return '<span class="badge red">ERRO</span>';
+  return '<span class="badge orange">NÃO CONECTADO</span>';
 }
 
 function settingsMessagesMarkup() {
@@ -494,7 +502,7 @@ function settingsView() {
       <section class="card padded">
         <div class="section-head"><div class="section-title">WhatsApp</div>${whatsappStatusBadge()}</div>
         <div class="settings-list">
-          <div class="setting-row"><div><div class="product-name">Estado da conexão</div><div class="category">${esc(state.whatsapp.error || whatsappStatusLabel())}</div></div>${settingsBadge(state.whatsapp.status === 'connected', health.loading)}</div>
+          <div class="setting-row"><div><div class="product-name">Estado da conexão</div><div class="category">${esc(state.whatsapp.error || whatsappStatusLabel())}</div></div>${whatsappSettingsBadge(health.loading)}</div>
           <div class="setting-row"><div><div class="product-name">Conexão</div><div class="category">O vínculo e o QR Code ficam na tela inicial para não depender desta página.</div></div><button class="btn sm" type="button" data-view="dashboard">Abrir início</button></div>
         </div>
       </section>
