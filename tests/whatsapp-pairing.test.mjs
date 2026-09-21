@@ -102,3 +102,37 @@ test('WhatsApp manager rejects an invalid pairing phone before creating a socket
   await assert.rejects(() => manager.requestPairingCode('123'), /telefone/i);
   assert.equal(sockets, 0);
 });
+
+test('pairing recovers once from stale 401 credentials using a clean auth state', async () => {
+  const stale = fakeSocket();
+  const fresh = fakeSocket();
+  let sockets = 0;
+  let resets = 0;
+
+  stale.requestPairingCode = async () => {
+    const error = new Error('logged out');
+    error.output = { statusCode: 401 };
+    throw error;
+  };
+
+  const manager = createWhatsAppManager({
+    socketFactory: async () => (++sockets === 1 ? stale : fresh),
+    authStateLoader: async () => ({ state: { creds: { registered: sockets > 0 } }, saveCreds: async () => {} }),
+    qrEncoder: async () => 'data:image/png;base64,qr',
+    disconnectReasonLoggedOut: 401,
+    pairingReadyTimeoutMs: 1000,
+    resetAuthState: async () => { resets += 1; },
+  });
+
+  const resultPromise = manager.requestPairingCode('(11) 99999-9999');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  stale.emit('connection.update', { qr: 'STALE_QR' });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  fresh.emit('connection.update', { qr: 'FRESH_QR' });
+
+  const result = await resultPromise;
+  assert.equal(resets, 1);
+  assert.equal(sockets, 2);
+  assert.equal(result.status, 'pairing');
+  assert.equal(result.pairingCode, 'ABCD-1234');
+});
