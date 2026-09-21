@@ -65,7 +65,7 @@ mensagem
 → item + quantidade
 → envio/entrega + endereço
 → confirmação
-→ pedido PAYMENT_PENDING + reserva de estoque
+→ pedido PAYMENT_PENDING + baixa imediata no estoque
 → Pix local + QR + Copia e Cola
 → cliente envia imagem do comprovante
 → OCR local extrai valor, destinatário, data, horário e identificador

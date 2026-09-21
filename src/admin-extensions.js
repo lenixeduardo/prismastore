@@ -44,7 +44,6 @@ function productEditorMarkup(product = null) {
         </div>
         <div class="real-product-grid">
           <label>Nome<input name="name" required value="${escapeHtml(product?.name ?? '')}" placeholder="Ex.: Seda King Size" /></label>
-          <label>Categoria<input name="category" required value="${escapeHtml(product?.category ?? '')}" placeholder="Ex.: Sedas" /></label>
           <label>Preço (R$)<input name="price" required inputmode="decimal" value="${escapeHtml(product?.price ?? '')}" placeholder="0,00" /></label>
           <label>Estoque físico<input name="stock" required inputmode="numeric" value="${escapeHtml(product?.stock ?? 0)}" /></label>
         </div>
@@ -69,7 +68,6 @@ async function persistProduct(form) {
   const data = new FormData(form);
   const product = normalizeProductInput({
     name: data.get('name'),
-    category: data.get('category'),
     price: data.get('price'),
     stock: data.get('stock'),
     active: data.get('active') === 'on',

@@ -9,8 +9,8 @@ import { createChatbotEngine } from '../server/chatbot.js';
 function seed() {
   return {
     products: [
-      { id: 'p1', name: 'Produto A', category: 'Categoria', price: 10, stock: 5, reserved: 0, active: true },
-      { id: 'p2', name: 'Produto B', category: 'Categoria', price: 20, stock: 2, reserved: 0, active: true },
+      { id: 'p1', name: 'Produto A', price: 10, stock: 5, active: true },
+      { id: 'p2', name: 'Produto B', price: 20, stock: 2, active: true },
     ],
     customers: [],
     orders: [],
@@ -92,6 +92,7 @@ test('chatbot guides item, quantity, delivery, address and confirmation without 
     assert.equal(session.step, 'confirmed');
     assert.ok(session.confirmedAt);
     assert.match(h.sent.at(-1).text, /pedido confirmado/i);
+    assert.equal(h.store.load().products.find((product) => product.id === 'p1').stock, 3);
 
     const customer = h.store.load().customers[0];
     assert.equal(customer.addresses.length, 1);

@@ -1,5 +1,5 @@
 export function availableStock(product) {
-  return Math.max(0, Number(product.stock ?? 0) - Number(product.reserved ?? 0));
+  return Math.max(0, Number(product.stock ?? 0));
 }
 
 export function isLowStock(product) {
@@ -64,36 +64,14 @@ export function buildMonthlyReport(orders, monthKey) {
   };
 }
 
-export function reserveCartStock(products, cart) {
+export function consumeCartStock(products, cart) {
   return products.map((product) => {
     const quantity = Number(cart?.[product.id] ?? 0);
     if (quantity <= 0) return { ...product };
-    if (availableStock(product) < quantity) {
-      throw new Error(`Estoque insuficiente para ${product.id}`);
-    }
-    return { ...product, reserved: Number(product.reserved ?? 0) + quantity };
-  });
-}
-
-export function consumeReservedOrderStock(products, items = []) {
-  const quantities = new Map(items.map((item) => [item.productId, Number(item.quantity ?? 0)]));
-  return products.map((product) => {
-    const quantity = quantities.get(product.id) ?? 0;
-    if (quantity <= 0) return { ...product };
-    const reserved = Number(product.reserved ?? 0);
-    const stock = Number(product.stock ?? 0);
-    if (reserved < quantity || stock < quantity) {
-      throw new Error(`Reserva inconsistente para ${product.id}`);
-    }
-    return { ...product, stock: stock - quantity, reserved: reserved - quantity };
-  });
-}
-
-export function releaseCartStock(products, cart) {
-  return products.map((product) => {
-    const quantity = Number(cart?.[product.id] ?? 0);
-    if (quantity <= 0) return { ...product };
-    return { ...product, reserved: Math.max(0, Number(product.reserved ?? 0) - quantity) };
+    const stock = availableStock(product);
+    if (stock < quantity) throw new Error(`Estoque insuficiente para ${product.id}`);
+    const { reserved: _legacyReserved, category: _legacyCategory, ...cleanProduct } = product;
+    return { ...cleanProduct, stock: stock - quantity };
   });
 }
 

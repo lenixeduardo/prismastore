@@ -8,10 +8,10 @@ import {
   buildMonthlyReport,
 } from '../src/domain.js';
 
-test('flags products with fewer than 3 available units as low stock', () => {
-  assert.equal(isLowStock({ stock: 2, reserved: 0 }), true);
-  assert.equal(isLowStock({ stock: 4, reserved: 1 }), false);
-  assert.equal(isLowStock({ stock: 3, reserved: 1 }), true);
+test('flags products with fewer than 3 physical stock units as low stock', () => {
+  assert.equal(isLowStock({ stock: 2 }), true);
+  assert.equal(isLowStock({ stock: 4, reserved: 4 }), false);
+  assert.equal(isLowStock({ stock: 3, reserved: 99 }), false);
 });
 
 test('marks an address as new when it differs from every historical address', () => {

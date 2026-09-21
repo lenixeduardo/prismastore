@@ -1,4 +1,4 @@
-import { confirmPayment, consumeReservedOrderStock } from '../src/domain.js';
+import { confirmPayment } from '../src/domain.js';
 import { buildPixPayload } from './pix-brcode.js';
 import { validatePixReceipt } from './pix-receipt.js';
 
@@ -237,7 +237,6 @@ export function createPaymentService({
         return state;
       }
 
-      state.products = consumeReservedOrderStock(state.products, order.items);
       const updated = confirmPayment(order, pixConfig.accountId || 'pix-local', now().toISOString());
       updated.paymentProvider = 'pix-local';
       updated.paymentStatus = 'CONFIRMED_LOCAL';
@@ -294,7 +293,6 @@ export function createPaymentService({
         paidOrder = structuredClone(order);
         return state;
       }
-      state.products = consumeReservedOrderStock(state.products, order.items);
       const updated = confirmPayment(order, accountId, now().toISOString());
       updated.paymentStatus = payload.payment?.status || payload.event.replace('PAYMENT_', '');
       Object.assign(order, updated);

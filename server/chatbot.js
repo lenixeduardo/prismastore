@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { availableStock, calculateCart, formatCurrencyBRL, reserveCartStock } from '../src/domain.js';
+import { availableStock, calculateCart, consumeCartStock, formatCurrencyBRL } from '../src/domain.js';
 import { resolveChatbotMessage } from './chatbot-messages.js';
 
 function digits(value = '') { return String(value).replace(/\D/g, ''); }
@@ -123,14 +123,14 @@ function createPendingOrder(stateStore, phone, session, now) {
     });
     if (!items.length) throw new Error('Carrinho vazio.');
     const totals = calculateCart(state.products, session.cart);
-    state.products = reserveCartStock(state.products, session.cart);
+    state.products = consumeCartStock(state.products, session.cart);
     const createdAt = now().toISOString();
     order = {
       id: nextOrderId(state.orders), customerId: customer.id, customerName: customer.name, phone: `+${phone}`,
       status: 'PAYMENT_PENDING', deliveryType: session.deliveryType, total: totals.subtotal, createdAt,
       paidAt: null, receivingAccountId: null, items, address: structuredClone(session.address),
       newAddress: Boolean(session.newAddress), deliveryFee: 0, source: 'whatsapp',
-      sourceCheckoutId: session.checkoutId, reservedAt: createdAt,
+      sourceCheckoutId: session.checkoutId,
     };
     state.orders.unshift(order);
     return state;
