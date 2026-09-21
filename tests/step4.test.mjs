@@ -11,7 +11,7 @@ function makeHarness() {
   const store = createStateStore({
     dbPath: path.join(dir, 'db.sqlite'),
     seedState: {
-      products: [{ id: 'p1', name: 'Produto A', category: 'Teste', price: 10, stock: 3, reserved: 0, active: true }],
+      products: [{ id: 'p1', name: 'Produto A', price: 10, stock: 3, active: true }],
       customers: [],
       orders: [],
     },
@@ -34,7 +34,7 @@ async function reachConfirmation(h) {
   await h.incoming('Rua Teste, 123 - São Paulo/SP - 01000-000');
 }
 
-test('Passo 4 cria pedido PAYMENT_PENDING e reserva o estoque ao confirmar', async () => {
+test('Passo 4 cria pedido PAYMENT_PENDING e baixa o estoque ao confirmar', async () => {
   const h = makeHarness();
   try {
     await reachConfirmation(h);
@@ -42,12 +42,13 @@ test('Passo 4 cria pedido PAYMENT_PENDING e reserva o estoque ao confirmar', asy
     const state = h.store.load();
     assert.equal(state.orders.length, 1);
     assert.equal(state.orders[0].status, 'PAYMENT_PENDING');
-    assert.equal(state.products[0].reserved, 2);
+    assert.equal(state.products[0].stock, 1);
+    assert.equal('reserved' in state.products[0], false);
     assert.equal(state.orders[0].source, 'whatsapp');
   } finally { h.close(); }
 });
 
-test('Passo 4 não duplica pedido nem reserva para o mesmo checkout', async () => {
+test('Passo 4 não duplica pedido nem baixa estoque novamente para o mesmo checkout', async () => {
   const h = makeHarness();
   try {
     await reachConfirmation(h);
@@ -58,7 +59,8 @@ test('Passo 4 não duplica pedido nem reserva para o mesmo checkout', async () =
     await h.incoming('1');
     const state = h.store.load();
     assert.equal(state.orders.length, 1);
-    assert.equal(state.products[0].reserved, 2);
+    assert.equal(state.products[0].stock, 1);
+    assert.equal('reserved' in state.products[0], false);
   } finally { h.close(); }
 });
 
