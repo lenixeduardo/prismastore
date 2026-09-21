@@ -1,6 +1,7 @@
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import makeWASocket, {
+  Browsers,
   DisconnectReason,
   downloadMediaMessage,
   fetchLatestBaileysVersion,
@@ -112,7 +113,7 @@ const socketFactory = async ({ auth }) => {
     auth,
     logger,
     printQRInTerminal: false,
-    browser: ['PrismaStore', 'Chrome', '1.0.0'],
+    browser: Browsers.macOS('Desktop'),
   });
 };
 

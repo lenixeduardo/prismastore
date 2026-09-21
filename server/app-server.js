@@ -243,7 +243,22 @@ export function createAppServer({
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/pair') {
         if (!whatsappManager?.requestPairingCode) return sendJson(res, 503, { error: 'Pareamento por telefone não configurado' });
         const body = await readJson(req);
-        return sendJson(res, 200, await whatsappManager.requestPairingCode(body.phone));
+        try {
+          return sendJson(res, 200, await whatsappManager.requestPairingCode(body.phone));
+        } catch (error) {
+          runtimeLogProvider?.record?.('erro', error);
+          const message = error instanceof Error && error.message
+            ? error.message
+            : 'Não foi possível gerar o código de pareamento do WhatsApp.';
+          return sendJson(res, 422, {
+            status: 'error',
+            qrDataUrl: null,
+            pairingCode: null,
+            account: null,
+            error: message,
+            code: 'WHATSAPP_PAIRING_FAILED',
+          });
+        }
       }
       if (req.method === 'POST' && url.pathname === '/api/whatsapp/restart') {
         if (!whatsappManager?.restartConnection) return sendJson(res, 503, { status: 'error', error: 'Reinício do WhatsApp não configurado' });
