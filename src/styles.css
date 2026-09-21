@@ -442,12 +442,13 @@ tr:hover td { background:rgba(255,255,255,.012); }
   .dashboard-section { margin-top:10px; }
   .dashboard-section.card.padded { padding:13px; }
   .section-title { font-size:16px; }
-  .dashboard-order-row { grid-template-columns:38px minmax(0,1fr) auto 14px;gap:9px;padding:10px 9px; }
+  .dashboard-order-row { grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:10px 9px; }
   .order-cart { width:34px;height:34px; }
-  .order-main .customer-name { font-size:14px; }
+  .order-main .customer-name { font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
   .order-summary { max-width:100%; }
+  .order-main .category { white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
   .order-side .badge { max-width:112px;overflow:hidden;text-overflow:ellipsis; }
-  .recent-orders-card .dashboard-order-row { grid-template-columns:32px minmax(0,1fr) auto 12px; }
+  .recent-orders-card .dashboard-order-row { grid-template-columns:minmax(0,1fr) auto; }
   .recent-orders-card .order-cart { width:30px;height:30px;font-size:16px; }
   .mobile-bottom button { min-width:54px;font-size:10px; }
 }
@@ -458,7 +459,7 @@ tr:hover td { background:rgba(255,255,255,.012); }
   .card.padded.dashboard-kpi { min-height:142px;padding:13px 34% 13px 12px; }
   .dashboard-kpi .kpi-value { font-size:21px; }
   .dashboard-kpi-art { opacity:.38; }
-  .dashboard-order-row { grid-template-columns:34px minmax(0,1fr) 86px 10px;gap:7px; }
+  .dashboard-order-row { grid-template-columns:minmax(0,1fr) auto;gap:8px; }
   .order-side { font-size:11px; }
 }
 
