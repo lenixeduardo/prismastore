@@ -210,6 +210,11 @@ tr:hover td { background:rgba(255,255,255,.012); }
 .wa-pairing-label { display:grid; gap:6px; color:var(--muted); font-size:11px; }
 .wa-pairing-label input { width:100%; min-height:42px; padding:10px 12px; border:1px solid var(--border); border-radius:5px; background:#06100b; color:var(--text); outline:none; }
 .wa-pairing-label input:focus { border-color:rgba(119,230,150,.42); box-shadow:0 0 0 3px rgba(119,230,150,.06); }
+.wa-secondary-option { margin-top:2px; padding-top:10px; border-top:1px solid var(--border-soft); }
+.wa-secondary-option summary { cursor:pointer; color:var(--muted); font-size:11px; font-weight:700; list-style-position:inside; }
+.wa-secondary-option[open] summary { margin-bottom:10px; }
+.wa-qr-status { text-align:center; }
+.whatsapp-home-card .wa-qr { width:min(220px,100%); }
 .whatsapp-home-card {
   border-color:rgba(119,230,150,.18);
   background:linear-gradient(120deg,rgba(8,27,18,.98),rgba(7,20,14,.97));
