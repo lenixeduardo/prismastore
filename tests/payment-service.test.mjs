@@ -11,7 +11,7 @@ function harness() {
   const store = createStateStore({
     dbPath: join(dir, 'db.sqlite'),
     seedState: {
-      products: [{ id: 'p1', name: 'Produto', price: 10, stock: 3, reserved: 2, active: true }],
+      products: [{ id: 'p1', name: 'Produto', price: 10, stock: 1, active: true }],
       customers: [{ id: 'c1', name: 'Cliente', phone: '+5511999999999', addresses: [], totalSpent: 0, orderCount: 0, lastOrderAt: null }],
       orders: [{ id: 'PS-1001', customerId: 'c1', customerName: 'Cliente', phone: '+5511999999999', status: 'PAYMENT_PENDING', total: 20, items: [{ productId: 'p1', name: 'Produto', quantity: 2, unitPrice: 10 }], sourceCheckoutId: 'chk-1' }],
     },
@@ -49,7 +49,7 @@ test('generates Pix idempotently, stores provider IDs and does not persist raw C
   } finally { h.close(); }
 });
 
-test('PAYMENT_CONFIRMED marks order PAID, consumes reserved stock, updates customer and session once', async () => {
+test('PAYMENT_CONFIRMED marks order PAID without consuming stock a second time', async () => {
   const h = harness();
   try {
     await h.service.generatePixForOrder({ orderId: 'PS-1001', cpfCnpj: '12345678909' });
@@ -62,7 +62,7 @@ test('PAYMENT_CONFIRMED marks order PAID, consumes reserved stock, updates custo
     assert.equal(state.orders[0].receivingAccountId, 'asaas-main');
     assert.ok(state.orders[0].paidAt);
     assert.equal(state.products[0].stock, 1);
-    assert.equal(state.products[0].reserved, 0);
+    assert.equal('reserved' in state.products[0], false);
     assert.equal(state.customers[0].orderCount, 1);
     assert.equal(state.customers[0].totalSpent, 20);
     assert.equal(h.store.getChatSession('5511999999999').step, 'paid');
