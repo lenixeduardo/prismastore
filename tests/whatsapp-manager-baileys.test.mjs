@@ -283,3 +283,58 @@ test('restart invalidates an in-flight pairing so it cannot restore the previous
   assert.equal(manager.getStatus().status, 'disconnected');
   assert.equal(manager.getStatus().error, null);
 });
+
+test('fresh QR pairing clears previous auth, starts one socket and returns the generated QR', async () => {
+  let resets = 0;
+  let sockets = 0;
+  const socket = createSocket();
+  const manager = createWhatsAppManager({
+    authStateLoader: async () => ({ state: { creds: { registered: false } }, saveCreds: async () => {} }),
+    socketFactory: async () => { sockets += 1; return socket; },
+    qrEncoder: async (value) => `data:image/png;base64,${value}`,
+    disconnectReasonLoggedOut: 401,
+    resetAuthState: async () => { resets += 1; },
+    pairingReadyTimeoutMs: 1000,
+  });
+
+  const qrPromise = manager.startQrPairing();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await socket.ev.emit('connection.update', { qr: 'FRESH_QR' });
+  const status = await qrPromise;
+
+  assert.equal(resets, 1);
+  assert.equal(sockets, 1);
+  assert.equal(status.status, 'qr');
+  assert.equal(status.qrDataUrl, 'data:image/png;base64,FRESH_QR');
+});
+
+test('515 pairing restart waits until credentials are saved before scheduling reconnect', async () => {
+  let releaseSave;
+  const saveGate = new Promise((resolve) => { releaseSave = resolve; });
+  const { manager, socket, scheduled } = harness({
+    disconnectReasonRestartRequired: 515,
+    authStateLoader: async () => ({
+      state: { creds: { registered: false } },
+      saveCreds: async () => saveGate,
+    }),
+  });
+
+  await manager.connect();
+  await socket.ev.emit('connection.update', { qr: 'PAIR_QR' });
+  const pairing = await manager.requestPairingCode('(11) 99999-9999');
+  assert.equal(pairing.status, 'pairing');
+
+  const credsHandler = socket.ev.emit('creds.update', { registered: true });
+  const closePromise = socket.ev.emit('connection.update', {
+    connection: 'close',
+    lastDisconnect: { error: { output: { statusCode: 515 } } },
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(scheduled.length, 0);
+
+  releaseSave();
+  await credsHandler;
+  await closePromise;
+  assert.equal(scheduled.length, 1);
+});
