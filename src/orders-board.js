@@ -85,7 +85,7 @@ function paidCard(order, lane, now) {
     <div class="order-board-items">${itemLines(order)}</div>
     <div class="order-board-customer">${esc(order.customerName || 'Cliente')}</div>
     ${address ? `<div class="order-board-address">${address}</div>` : ''}
-    <button class="order-board-action" type="button" data-board-advance="${esc(order.id)}">${icon('package')}<span>Marcar como embalando</span>${icon('chevron')}</button>
+    <button class="order-board-action" type="button" data-board-advance="${esc(order.id)}">${icon('package')}<span>Marcar como produto embalado</span>${icon('chevron')}</button>
   </article>`;
 }
 
