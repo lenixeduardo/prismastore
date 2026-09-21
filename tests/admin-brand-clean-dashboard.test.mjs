@@ -54,11 +54,12 @@ test('dashboard uses the generated holographic prism and four KPI assets', () =>
 });
 
 
-test('dashboard generated assets are visually dominant on desktop and mobile', () => {
+test('dashboard KPI art stays secondary to text on desktop and mobile', () => {
   assert.match(styles, /\.dashboard-hero\s*\{[\s\S]*?min-height:\s*220px/);
   assert.match(styles, /\.dashboard-prism\s*\{[\s\S]*?width:\s*340px[\s\S]*?opacity:\s*\.96/);
-  assert.match(styles, /\.card\.padded\.dashboard-kpi\s*\{[\s\S]*?min-height:\s*168px/);
-  assert.match(styles, /\.dashboard-kpi-art\s*\{[\s\S]*?width:\s*46%[\s\S]*?max-width:\s*190px/);
-  assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-prism\s*\{[\s\S]*?width:\s*240px[\s\S]*?opacity:\s*\.88/);
-  assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-kpi-art\s*\{[\s\S]*?width:\s*44%[\s\S]*?max-width:\s*118px/);
+  assert.match(styles, /\.card\.padded\.dashboard-kpi\s*\{[\s\S]*?padding:\s*22px 36% 22px 20px/);
+  assert.match(styles, /\.dashboard-kpi-art\s*\{[\s\S]*?width:\s*35%[\s\S]*?max-width:\s*142px[\s\S]*?opacity:\s*\.48/);
+  assert.doesNotMatch(styles, /\.dashboard-kpi-art\s*\{[\s\S]*?transform:\s*scale\(1\.18\)/);
+  assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-kpi-art\s*\{[\s\S]*?width:\s*33%[\s\S]*?max-width:\s*90px[\s\S]*?opacity:\s*\.40/);
+  assert.doesNotMatch(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-kpi-art\s*\{[\s\S]*?transform:\s*scale\(1\.42\)/);
 });
