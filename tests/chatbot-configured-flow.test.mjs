@@ -11,7 +11,7 @@ test('chatbot uses persisted custom welcome catalog and quantity messages', asyn
   const store = createStateStore({
     dbPath: join(dir, 'prismastore.db'),
     seedState: {
-      products: [{ id: 'p1', name: 'Seda Real', category: 'Sedas', price: 8, stock: 4, reserved: 0, active: true }],
+      products: [{ id: 'p1', name: 'Seda Real', price: 8, stock: 4, active: true }],
       customers: [], orders: [],
       settings: { chatbotMessages: {
         welcome: 'Olá {cliente}, atendimento Prisma.',
@@ -44,9 +44,9 @@ test('inactive and out-of-stock products do not appear in the WhatsApp catalog',
     dbPath: join(dir, 'prismastore.db'),
     seedState: {
       products: [
-        { id: 'p1', name: 'Ativo', price: 10, stock: 2, reserved: 0, active: true },
-        { id: 'p2', name: 'Desativado', price: 10, stock: 10, reserved: 0, active: false },
-        { id: 'p3', name: 'Sem estoque', price: 10, stock: 1, reserved: 1, active: true },
+        { id: 'p1', name: 'Ativo', price: 10, stock: 2, active: true },
+        { id: 'p2', name: 'Desativado', price: 10, stock: 10, active: false },
+        { id: 'p3', name: 'Sem estoque', price: 10, stock: 0, active: true },
       ], customers: [], orders: [],
     },
   });
