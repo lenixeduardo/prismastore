@@ -375,6 +375,15 @@ tr:hover td { background:rgba(255,255,255,.012); }
   text-overflow:ellipsis;
 }
 .order-side { display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:12px; }
+.recent-orders-card .order-main { min-width:0;overflow:hidden; }
+.recent-orders-card .customer-name,
+.recent-orders-card .order-summary {
+  display:block;
+  max-width:100%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 .stock-empty-state {
   min-height:164px;
   display:flex;
