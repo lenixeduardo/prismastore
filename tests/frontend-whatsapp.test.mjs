@@ -28,11 +28,9 @@ test('dashboard surfaces the WhatsApp QR from the single core controller until t
   assert.doesNotMatch(html, /src\/whatsapp-onboarding\.js/);
 });
 
-test('settings UI exposes local Pix receipt configuration status', () => {
-  const paymentStatus = readFileSync(new URL('../src/payment-status.js', import.meta.url), 'utf8');
-  assert.match(paymentStatus, /api\/payments\/status/);
-  assert.match(paymentStatus, /Pix local/);
-  assert.match(paymentStatus, /CONFIGURAR PIX/);
-  assert.doesNotMatch(paymentStatus, /Asaas|Sandbox|API KEY|WEBHOOK TOKEN/i);
-  assert.match(html, /src\/payment-status\.js/);
+test('settings UI owns Pix status in the core without a second DOM controller', () => {
+  assert.match(source, /api\/payments\/status/);
+  assert.match(source, /Pix Oscar/);
+  assert.doesNotMatch(source, /Asaas|Sandbox|API KEY|WEBHOOK TOKEN/i);
+  assert.doesNotMatch(html, /src\/payment-status\.js/);
 });
