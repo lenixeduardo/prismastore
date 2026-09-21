@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.2-mobile-orders-layout-20260921-9';
+const CACHE_NAME = 'prismastore-shell-v0.9.2-more-install-only-20260921-10';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
