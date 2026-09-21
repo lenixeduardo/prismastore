@@ -50,8 +50,11 @@ function closeMoreSheet() {
 }
 
 function navigateTo(view) {
-  const target = document.querySelector(`.sidebar [data-view="${view}"]`) || document.querySelector(`[data-view="${view}"]`);
-  target?.click();
+  const handled = window.PrismastoreApp?.openView?.(view);
+  if (!handled) {
+    const target = document.querySelector(`.sidebar [data-view="${view}"]`) || document.querySelector(`[data-view="${view}"]`);
+    target?.click();
+  }
   closeMoreSheet();
 }
 
