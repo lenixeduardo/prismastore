@@ -71,7 +71,7 @@ mensagem
 → OCR local extrai valor, destinatário, data, horário e identificador
 → validação local do comprovante
 → PAID / Pago · Embalar
-→ Em preparação
+→ Produto embalado
 → Enviado ou Saiu para entrega
 → Finalizado + arte final
 ```
@@ -101,7 +101,7 @@ Depois do pagamento, o operador avança o pedido pelo painel. Cada transição p
 
 ```text
 ✅ Pagamento confirmado
-✅/○ Em preparação
+✅/○ Produto embalado
 ✅/○ Pedido enviado ou Saiu para entrega
 ✅/○ Finalizado
 ```

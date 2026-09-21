@@ -30,7 +30,7 @@ function monthLabel(monthKey) {
 
 function statusLabel(status) {
   return ({
-    PAYMENT_PENDING: 'Aguardando Pix', PAID: 'Pago · Embalar', PACKING: 'Embalando',
+    PAYMENT_PENDING: 'Aguardando Pix', PAID: 'Pago · Embalar', PACKING: 'Produto embalado',
     SHIPPED: 'Enviado', OUT_FOR_DELIVERY: 'Saiu para entrega', DELIVERED: 'Entregue', CANCELLED: 'Cancelado',
   })[status] || status;
 }
@@ -69,7 +69,7 @@ function renderRealReport(report) {
     </div>
     <div class="grid cols-2 section">
       <div class="card chart-card"><div class="section-head"><div class="section-title">Faturamento por dia</div><div class="section-note">${esc(period)}</div></div><div class="bar-chart">${dailyBars}</div></div>
-      <div class="card chart-card"><div class="section-head"><div class="section-title">Recebimento por conta</div><div class="section-note">${esc(period)}</div></div><div class="account-bars">${accountBars}</div><div class="detail-block" style="margin-top:16px"><div class="detail-label">Regra financeira</div><div class="subtitle">Pedidos permanecem no faturamento depois de avançar para embalando, enviado ou finalizado.</div></div></div>
+      <div class="card chart-card"><div class="section-head"><div class="section-title">Recebimento por conta</div><div class="section-note">${esc(period)}</div></div><div class="account-bars">${accountBars}</div><div class="detail-block" style="margin-top:16px"><div class="detail-label">Regra financeira</div><div class="subtitle">Pedidos permanecem no faturamento depois de avançar para produto embalado, enviado ou finalizado.</div></div></div>
     </div>
     <div class="section"><div class="section-head"><div class="section-title">Pagamentos considerados no período</div><div class="section-note">${report.orders.length} registro(s)</div></div>${reportOrderTable(report.orders)}</div>`;
   main.dataset.realReportMonth = report.month;

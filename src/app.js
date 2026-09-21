@@ -77,7 +77,7 @@ function latestAddress(customer) { return customer?.addresses?.[customer.address
 function addressText(a) { if(!a) return '—'; if(a.formatted) return a.formatted; return `${a.street}, ${a.number}${a.complement ? ` · ${a.complement}`:''} · ${a.neighborhood} · ${a.city}/${a.state} · ${a.zip}`; }
 function statusBadge(status) {
   const cfg = {
-    PAYMENT_PENDING:['Aguardando Pix','orange'], PAID:['Pago · Embalar','green'], PACKING:['Embalando','gold'], SHIPPED:['Enviado','gray'], OUT_FOR_DELIVERY:['Saiu para entrega','gold'], DELIVERED:['Entregue','gray'], CANCELLED:['Cancelado','red']
+    PAYMENT_PENDING:['Aguardando Pix','orange'], PAID:['Pago · Embalar','green'], PACKING:['Produto embalado','gold'], SHIPPED:['Enviado','gray'], OUT_FOR_DELIVERY:['Saiu para entrega','gold'], DELIVERED:['Entregue','gray'], CANCELLED:['Cancelado','red']
   }[status] || [status,'gray'];
   return `<span class="badge ${cfg[1]}">${cfg[0]}</span>`;
 }
@@ -241,7 +241,7 @@ function ordersView() {
   if(state.search) orders=orders.filter(o=>`${o.customerName} ${o.phone}`.toLowerCase().includes(state.search.toLowerCase()));
   return shell(`${header('Pedidos','Do pagamento confirmado até envio ou entrega no endereço do cliente.','<button class="btn primary" data-view="chatbot">+ Simular pedido</button>')}
     <div class="toolbar">
-      <div class="tabs">${[['all','Todos'],['PAID','Embalar'],['PACKING','Embalando'],['SHIPPED','Enviados'],['OUT_FOR_DELIVERY','Em rota'],['DELIVERED','Entregues']].map(([id,l])=>`<button class="tab ${state.orderFilter===id?'active':''}" data-order-filter="${id}">${l}</button>`).join('')}</div>
+      <div class="tabs">${[['all','Todos'],['PAID','Embalar'],['PACKING','Produto embalado'],['SHIPPED','Enviados'],['OUT_FOR_DELIVERY','Em rota'],['DELIVERED','Entregues']].map(([id,l])=>`<button class="tab ${state.orderFilter===id?'active':''}" data-order-filter="${id}">${l}</button>`).join('')}</div>
       <label class="searchbar"><span>⌕</span><input id="order-search" value="${esc(state.search)}" placeholder="Cliente ou celular" /></label>
     </div>
     ${ordersTable(orders,'Fila de pedidos')}`);
@@ -436,7 +436,7 @@ function orderDrawer(orderId) {
   const o=state.orders.find(x=>x.id===orderId); if(!o) return '';
   const canAdvance=['PAID','PACKING','SHIPPED','OUT_FOR_DELIVERY'].includes(o.status);
   const next=nextOrderStatus(o);
-  const label={PACKING:'Marcar como embalando',SHIPPED:'Marcar como enviado',OUT_FOR_DELIVERY:'Saiu para entrega',DELIVERED:'Marcar como entregue'}[next]||'Atualizar';
+  const label={PACKING:'Marcar como produto embalado',SHIPPED:'Marcar como enviado',OUT_FOR_DELIVERY:'Saiu para entrega',DELIVERED:'Marcar como entregue'}[next]||'Atualizar';
   return `<div class="drawer-backdrop" data-close-drawer><aside class="drawer" onclick="event.stopPropagation()"><div class="drawer-head"><div><div class="eyebrow">Pedido</div><h2>Detalhes do pedido</h2><div class="subtitle">${formatDate(o.createdAt)} · ${esc(o.customerName)}</div></div><button class="btn" data-close-drawer>${icons.close}</button></div>
     <div>${statusBadge(o.status)} ${o.newAddress?'<span class="badge gold">NOVO ENDEREÇO</span>':''}</div>
     <div class="detail-block"><div class="detail-label">Cliente</div><div class="customer-name">${esc(o.customerName)}</div><div class="category">${esc(o.phone)}</div></div>

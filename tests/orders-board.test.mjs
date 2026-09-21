@@ -78,7 +78,7 @@ test('board markup exposes the reference lane titles and operational actions', a
   assert.match(html, /Pedidos pagos — envio/);
   assert.match(html, /Pedidos pagos — entregas/);
   assert.match(html, /Em atendimento/);
-  assert.match(html, /Marcar como embalando/);
+  assert.match(html, /Marcar como produto embalado/);
   assert.equal((html.match(/data-board-advance=/g) || []).length, 2);
   assert.match(html, /Enviar mensagem referente à demanda/);
   assert.match(html, /Informar a ordem na fila/);
