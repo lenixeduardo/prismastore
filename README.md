@@ -123,6 +123,18 @@ O painel permite selecionar o mês e exibe:
 
 A exportação usa `GET /api/reports/monthly.csv?month=YYYY-MM` e gera CSV compatível com Excel. O JSON equivalente está em `GET /api/reports/monthly?month=YYYY-MM`.
 
+## Massa de métricas para homologação
+
+Para preencher a base de homologação com histórico suficiente para validar faturamento, ticket médio e gráfico diário, execute uma vez:
+
+```bash
+npm run seed:metrics
+```
+
+O comando adiciona **12 pedidos concluídos de demonstração** no mês atual, distribuídos entre envio e entrega, com valores variados e `paidAt` válido. A rotina é idempotente: executar novamente no mesmo mês não duplica os pedidos já criados.
+
+Os pedidos recebem `metricsSeed: true` para permanecerem distinguíveis de pedidos operacionais. Use essa massa somente para homologação/validação de métricas.
+
 ## Persistência e segurança
 
 Não entram no Git:

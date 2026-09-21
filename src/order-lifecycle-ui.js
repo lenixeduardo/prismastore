@@ -7,7 +7,7 @@ async function currentOrder(orderId) {
 
 async function advanceOrder(orderId) {
   const order = await currentOrder(orderId);
-  if (!order) throw new Error(`Pedido ${orderId} não encontrado.`);
+  if (!order) throw new Error('Pedido não encontrado.');
   const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/advance`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -22,18 +22,32 @@ document.addEventListener('click', async (event) => {
   const button = event.target.closest?.('[data-advance-order]');
   if (!button) return;
 
-  // Captura o clique antes do handler legado do app.js e impede avanço local direto.
+  // Os botões atuais já são tratados pelo app.js e atualizam o estado em tela.
+  if (button.dataset.orderStatus) return;
+
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation();
+
+  const originalLabel = button.textContent;
   button.disabled = true;
+  button.textContent = 'Atualizando…';
 
   try {
-    await advanceOrder(button.dataset.advanceOrder);
+    const result = await advanceOrder(button.dataset.advanceOrder);
+    window.dispatchEvent(new CustomEvent('prismastore:orders-updated', {
+      detail: {
+        orderId: button.dataset.advanceOrder,
+        status: result.order?.status || null,
+        changed: Boolean(result.changed),
+        stale: Boolean(result.stale),
+      },
+    }));
     window.location.reload();
   } catch (error) {
     console.error(error);
     button.disabled = false;
+    button.textContent = originalLabel;
     button.title = error instanceof Error ? error.message : 'Falha ao atualizar pedido.';
   }
 }, true);

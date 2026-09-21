@@ -14,14 +14,13 @@ function ensureOverlay() {
   overlay.innerHTML = `
     <div class="auth-shell">
       <div class="auth-brand">
-        <img src="/icons/prismastore-logo.png" alt="" aria-hidden="true" />
+        <img src="/icons/icon-512.svg" alt="" aria-hidden="true" />
         <div class="auth-brand-copy">
           <strong>PrismaStore</strong>
           <span>Operations</span>
         </div>
       </div>
 
-      <img class="auth-prism-art" src="/assets/login-prism-burst.svg" alt="" aria-hidden="true" />
 
       <div class="auth-heading">
         <h1 id="auth-title">Entrar</h1>

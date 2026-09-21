@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.2-prism-icon-20260918-3';
+const CACHE_NAME = 'prismastore-shell-v0.9.2-prism-icon-orders-login-20260920-2';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
@@ -7,7 +7,7 @@ const APP_SHELL = [
   '/src/order-lifecycle-ui.js', '/src/reports-ui.js', '/src/backup-ui.js', '/src/pwa.js', '/src/hero.js',
   '/src/admin-extensions.js', '/src/product-editor.js', '/src/chatbot-settings.js', '/src/chat-simulator.js', '/src/admin-icons.js', '/src/whatsapp-onboarding.js', '/src/orders-board.js',
   '/assets/hero/hero-part-1.txt', '/assets/hero/hero-part-2.txt', '/assets/hero/hero-part-3.txt', '/assets/hero/hero-part-4.txt',
-  '/assets/mobile-dashboard-bg.svg', '/assets/prism-hero.svg', '/assets/empty-stock-ok.svg', '/assets/login-prism-burst.svg',
+  '/assets/mobile-dashboard-bg.svg', '/assets/prism-hero.svg', '/assets/empty-stock-ok.svg',
   '/icons/favicon-16.png', '/icons/favicon-32.png', '/icons/apple-touch-icon.png',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-192.svg', '/icons/icon-512.svg', '/icons/prismastore-logo.png'
 ];

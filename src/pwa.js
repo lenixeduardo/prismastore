@@ -59,7 +59,7 @@ function openMoreSheet() {
   closeMoreSheet();
   const backdrop = document.createElement('div');
   backdrop.className = 'pwa-more-backdrop';
-  backdrop.innerHTML = `<div class="pwa-more-sheet"><div class="pwa-more-handle"></div><div class="pwa-more-grid"><button data-pwa-view="customers">◎ Clientes</button><button data-pwa-view="reports">⌁ Relatórios</button><button data-pwa-view="chatbot">◌ Simular chatbot</button>${!isStandalone() && (deferredInstallPrompt || isIOS()) ? '<button data-pwa-install-entry>＋ Instalar PrismaStore</button>' : ''}</div></div>`;
+  backdrop.innerHTML = `<div class="pwa-more-sheet"><div class="pwa-more-handle"></div><div class="pwa-more-grid"><button data-pwa-view="customers">◎ Clientes</button><button data-pwa-view="reports">⌁ Relatórios</button><button data-pwa-view="chatbot">◌ Simular chatbot</button><button data-pwa-view="settings">⚙ Configurações</button>${!isStandalone() && (deferredInstallPrompt || isIOS()) ? '<button data-pwa-install-entry>＋ Instalar PrismaStore</button>' : ''}</div></div>`;
   document.body.appendChild(backdrop);
 }
 

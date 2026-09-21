@@ -47,8 +47,11 @@
 
 .auth-brand img {
   width: 72px;
-  height: 72px;
+  height: auto;
+  aspect-ratio: 1 / 1;
   object-fit: contain;
+  object-position: center;
+  image-rendering: auto;
   filter: drop-shadow(0 12px 30px rgba(0,0,0,.32));
 }
 
@@ -65,19 +68,6 @@
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: .24em;
-}
-
-.auth-prism-art {
-  position: absolute;
-  z-index: -1;
-  width: 360px;
-  height: 360px;
-  right: -132px;
-  top: 48px;
-  object-fit: contain;
-  opacity: .62;
-  pointer-events: none;
-  filter: drop-shadow(0 18px 70px rgba(26, 233, 149, .10));
 }
 
 .auth-heading {
@@ -257,10 +247,9 @@
   .auth-overlay { padding-inline: 18px; }
   .auth-shell { min-height: calc(100dvh - 44px); justify-content: flex-start; padding-top: 36px; }
   .auth-brand { margin-bottom: 70px; }
-  .auth-brand img { width: 64px; height: 64px; }
+  .auth-brand img { width: 64px; height: auto; }
   .auth-brand-copy strong { font-size: 27px; }
   .auth-brand-copy span { font-size: 12px; }
-  .auth-prism-art { width: 310px; height: 310px; right: -118px; top: 42px; opacity: .58; }
   .auth-heading { margin-bottom: 24px; }
   .auth-heading p { font-size: 15px; }
   .auth-card { border-radius: 16px; padding: 18px; }
