@@ -11,7 +11,10 @@ test('painel consulta status do Pix local sem depender de credenciais Asaas', ()
   assert.doesNotMatch(source, /API KEY|WEBHOOK TOKEN|Asaas/);
 });
 
-test('index carrega o adaptador de status de pagamento', () => {
+test('index não carrega um segundo adaptador de status de pagamento', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /src\/payment-status\.js/);
+  const app = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(html, /src\/payment-status\.js/);
+  assert.match(app, /\/api\/payments\/status/);
+  assert.match(app, /Pix Oscar/);
 });
