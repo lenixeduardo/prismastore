@@ -102,8 +102,8 @@ const views = [
 const mobileViews = [
   ['dashboard','Início','⌂'],
   ['orders','Pedidos','◫'],
-  ['customers','Clientes','◎'],
   ['products','Produtos','□'],
+  ['settings','Configurações','⚙'],
 ];
 
 function shell(content) {
