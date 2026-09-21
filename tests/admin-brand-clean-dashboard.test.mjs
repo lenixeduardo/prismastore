@@ -44,13 +44,13 @@ test('dashboard uses the generated holographic prism and four KPI assets', () =>
   assert.match(app, /\/assets\/kpi-revenue\.webp/);
   assert.match(app, /\/assets\/kpi-paid-orders\.webp/);
   assert.match(app, /\/assets\/kpi-packing\.webp/);
-  assert.match(app, /\/assets\/kpi-critical-stock\.webp/);
+  assert.match(app, /\/assets\/kpi-critical-stock\.svg/);
   assert.match(styles, /\.dashboard-kpi-art/);
   assert.match(sw, /\/assets\/dashboard-prism-holographic\.webp/);
   assert.match(sw, /\/assets\/kpi-revenue\.webp/);
   assert.match(sw, /\/assets\/kpi-paid-orders\.webp/);
   assert.match(sw, /\/assets\/kpi-packing\.webp/);
-  assert.match(sw, /\/assets\/kpi-critical-stock\.webp/);
+  assert.match(sw, /\/assets\/kpi-critical-stock\.svg/);
 });
 
 
