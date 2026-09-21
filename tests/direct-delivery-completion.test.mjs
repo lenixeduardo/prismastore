@@ -5,6 +5,7 @@ import { nextOrderStatus } from '../src/domain.js';
 
 const app = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
 const lifecycle = readFileSync(new URL('../server/order-lifecycle-service.js', import.meta.url), 'utf8');
+const board = readFileSync(new URL('../src/orders-board.js', import.meta.url), 'utf8');
 
 test('local delivery completes immediately when packed order is handed to courier', () => {
   assert.equal(nextOrderStatus({ status: 'PACKING', deliveryType: 'local_delivery' }), 'DELIVERED');
@@ -26,4 +27,10 @@ test('local completion tracker has no intermediate courier route stage', () => {
   assert.doesNotMatch(lifecycle, /OUT_FOR_DELIVERY/);
   assert.doesNotMatch(lifecycle, /Saiu para entrega/);
   assert.match(lifecycle, /Concluído/);
+});
+
+
+test('packing delivery card exposes courier handoff completion action', () => {
+  assert.match(board, /Entregue ao motoboy · Concluir/);
+  assert.match(board, /expectedStatus:\s*'PACKING'/);
 });
