@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { seedProducts, catalogProducts } from '../src/data.js';
-import { availableStock, consumeOrderStock } from '../src/domain.js';
+import { availableStock, consumeCartStock } from '../src/domain.js';
 import { normalizeProductInput } from '../src/product-editor.js';
 
 const appSource = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
@@ -35,10 +35,10 @@ test('available stock is the physical stock and ignores legacy reserved values',
   assert.equal(availableStock({ stock: 0, reserved: 99 }), 0);
 });
 
-test('payment stock consumption decrements physical stock without reserved fields', () => {
-  const result = consumeOrderStock(
+test('order confirmation decrements physical stock without reserved fields', () => {
+  const result = consumeCartStock(
     [{ id: 'p1', name: 'Produto', stock: 5, reserved: 4 }],
-    [{ productId: 'p1', quantity: 2 }],
+    { p1: 2 },
   );
 
   assert.equal(result[0].stock, 3);
