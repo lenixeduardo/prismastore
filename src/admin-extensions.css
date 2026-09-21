@@ -40,7 +40,6 @@
 }
 .product-list-main { min-width:0; display:grid; gap:4px; }
 .product-list-main .product-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
-.product-list-price { color:var(--muted); font-size:12px; }
 .product-list-stock { min-width:58px; display:grid; justify-items:end; gap:3px; }
 .product-list-stock span { color:var(--muted-2); font-size:9px; text-transform:uppercase; letter-spacing:.08em; }
 .product-list-stock strong { color:var(--text); font-size:15px; }
@@ -68,7 +67,6 @@
   .product-list { gap:7px; margin-top:14px; }
   .product-list-item { min-height:66px; padding:11px 10px 11px 13px; gap:10px; border-radius:9px; }
   .product-list-main .product-name { font-size:14px; }
-  .product-list-price { font-size:11px; }
   .product-list-stock { min-width:48px; }
   .product-list-menu { width:36px; height:36px; }
   .real-product-detail-grid { grid-template-columns:1fr 1fr; }
