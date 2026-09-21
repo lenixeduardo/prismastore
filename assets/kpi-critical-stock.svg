@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Estoque crítico</title>
+  <desc id="desc">Caixas de estoque com alerta em estilo PrismaStore.</desc>
+  <defs>
+    <linearGradient id="boxA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#173326"/>
+      <stop offset="1" stop-color="#07140f"/>
+    </linearGradient>
+    <linearGradient id="boxB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#234634"/>
+      <stop offset="1" stop-color="#0b1b13"/>
+    </linearGradient>
+    <linearGradient id="warn" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffb37d"/>
+      <stop offset="1" stop-color="#ff655a"/>
+    </linearGradient>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000" flood-opacity=".42"/>
+    </filter>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+
+  <ellipse cx="304" cy="392" rx="174" ry="62" fill="#19b86c" opacity=".10" filter="url(#glow)"/>
+
+  <g filter="url(#shadow)">
+    <path d="M94 212 207 153l111 58-111 61Z" fill="url(#boxB)" stroke="#77e696" stroke-opacity=".30" stroke-width="3"/>
+    <path d="M94 212v127l113 62V272Z" fill="#0c2118" stroke="#77e696" stroke-opacity=".22" stroke-width="3"/>
+    <path d="M318 211v128l-111 62V272Z" fill="url(#boxA)" stroke="#77e696" stroke-opacity=".22" stroke-width="3"/>
+    <path d="m145 186 113 60" stroke="#d7b56d" stroke-opacity=".62" stroke-width="7" stroke-linecap="round"/>
+    <rect x="178" y="306" width="57" height="15" rx="7.5" fill="#77e696" opacity=".78"/>
+  </g>
+
+  <g transform="translate(292 250)" filter="url(#shadow)">
+    <path d="M79 4c7-13 26-13 33 0l76 138c7 13-2 29-17 29H20c-15 0-24-16-17-29Z" fill="url(#warn)" stroke="#ffd4ba" stroke-opacity=".38" stroke-width="3"/>
+    <rect x="88" y="49" width="19" height="64" rx="9.5" fill="#2d120e"/>
+    <circle cx="97.5" cy="138" r="11" fill="#2d120e"/>
+  </g>
+
+  <g opacity=".72">
+    <circle cx="110" cy="132" r="5" fill="#77e696"/>
+    <circle cx="350" cy="118" r="4" fill="#d7b56d"/>
+    <circle cx="394" cy="185" r="3" fill="#77e696"/>
+  </g>
+</svg>
