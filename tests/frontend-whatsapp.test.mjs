@@ -28,6 +28,15 @@ test('dashboard surfaces the WhatsApp QR from the single core controller until t
   assert.doesNotMatch(html, /src\/whatsapp-onboarding\.js/);
 });
 
+test('WhatsApp connection prefers QR Code and keeps phone pairing as the secondary option', () => {
+  assert.match(source, /Leia o QR Code no WhatsApp/);
+  assert.match(source, /Gerar QR Code/);
+  assert.match(source, /Usar código de vínculo em vez do QR Code/);
+  assert.match(source, /Usar código de vínculo como segunda opção/);
+  assert.match(source, /Voltar para QR Code/);
+  assert.doesNotMatch(source, /Alternativa: QR Code em outro dispositivo/);
+});
+
 test('settings UI owns Pix status in the core without a second DOM controller', () => {
   assert.match(source, /api\/payments\/status/);
   assert.match(source, /Pix Oscar/);
