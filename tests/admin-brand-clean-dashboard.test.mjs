@@ -63,3 +63,11 @@ test('dashboard KPI art stays secondary to text on desktop and mobile', () => {
   assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-kpi-art\s*\{[\s\S]*?width:\s*33%[\s\S]*?max-width:\s*90px[\s\S]*?opacity:\s*\.40/);
   assert.doesNotMatch(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-kpi-art\s*\{[\s\S]*?transform:\s*scale\(1\.42\)/);
 });
+
+
+test('mobile order cards keep the content column wide enough for customer and item text', () => {
+  assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-order-row\s*\{\s*grid-template-columns:\s*minmax\(0,1fr\) auto;[\s\S]*?\.recent-orders-card \.dashboard-order-row\s*\{\s*grid-template-columns:\s*minmax\(0,1fr\) auto;/);
+  assert.match(styles, /@media \(max-width:\s*390px\)[\s\S]*?\.dashboard-order-row\s*\{\s*grid-template-columns:\s*minmax\(0,1fr\) auto;/);
+  assert.doesNotMatch(styles, /\.dashboard-order-row\s*\{\s*grid-template-columns:\s*(?:38px|34px)\s+minmax\(0,1fr\)/);
+  assert.doesNotMatch(styles, /\.recent-orders-card \.dashboard-order-row\s*\{\s*grid-template-columns:\s*32px\s+minmax\(0,1fr\)/);
+});
