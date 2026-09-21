@@ -75,7 +75,7 @@ function compactAddress(address) {
 
 function waitMarkup(order, now) {
   const wait = waitTimeState(minutesSincePayment(order, now));
-  return `<div class="order-board-wait ${wait.tone}">${icon('clock')}<strong>${wait.label}</strong></div>`;
+  return `<div class="order-board-wait ${wait.tone}"><strong>${wait.label}</strong></div>`;
 }
 
 function paidCard(order, lane, now) {
@@ -85,21 +85,21 @@ function paidCard(order, lane, now) {
     <div class="order-board-items">${itemLines(order)}</div>
     <div class="order-board-customer">${esc(order.customerName || 'Cliente')}</div>
     ${address ? `<div class="order-board-address">${address}</div>` : ''}
-    <button class="order-board-action" type="button" data-board-advance="${esc(order.id)}">${icon('package')}<span>Marcar como produto embalado</span>${icon('chevron')}</button>
+    <button class="order-board-action" type="button" data-board-advance="${esc(order.id)}"><span>Marcar como produto embalado</span></button>
   </article>`;
 }
 
 function attendingCard(order, position) {
   const nextAction = order.deliveryType === 'local_delivery'
-    ? `<button class="order-board-action complete" type="button" data-board-complete-delivery="${esc(order.id)}">${icon('truck')}<span>Entregue ao motoboy · Concluir</span>${icon('chevron')}</button>`
-    : `<button class="order-board-action" type="button" data-board-ready-shipping="${esc(order.id)}">${icon('truck')}<span>Pedido pronto para envio</span>${icon('chevron')}</button>`;
+    ? `<button class="order-board-action complete" type="button" data-board-complete-delivery="${esc(order.id)}"><span>Entregue ao motoboy · Concluir</span></button>`
+    : `<button class="order-board-action" type="button" data-board-ready-shipping="${esc(order.id)}"><span>Pedido pronto para envio</span></button>`;
   return `<article class="order-board-card attending" data-order-id="${esc(order.id)}">
-    <div class="order-board-person">${icon('user')}<strong>${esc(order.customerName || 'Cliente')}</strong></div>
+    <div class="order-board-person"><strong>${esc(order.customerName || 'Cliente')}</strong></div>
     <div class="order-board-items">${itemLines(order)}</div>
     ${nextAction}
     <div class="order-board-actions-stack">
-      <button class="order-board-message" type="button" data-board-message="${esc(order.id)}">${icon('message')}<span>Enviar mensagem referente à demanda</span></button>
-      <button class="order-board-message secondary" type="button" data-board-queue="${esc(order.id)}" data-queue-position="${position}">${icon('info')}<span>Informar a ordem na fila</span></button>
+      <button class="order-board-message" type="button" data-board-message="${esc(order.id)}"><span>Enviar mensagem referente à demanda</span></button>
+      <button class="order-board-message secondary" type="button" data-board-queue="${esc(order.id)}" data-queue-position="${position}"><span>Informar a ordem na fila</span></button>
     </div>
   </article>`;
 }
