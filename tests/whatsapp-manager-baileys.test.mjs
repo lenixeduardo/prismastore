@@ -174,10 +174,12 @@ test('send operations fail clearly while disconnected', async () => {
 });
 
 
-test('recoverable reconnect keeps an issued pairing code visible until WhatsApp connects', async () => {
-  const { manager, socket, scheduled } = harness();
+test('pairing waits for readiness and a generic close does not enter an automatic retry loop', async () => {
+  const { manager, socket, scheduled } = harness({ pairingReadyTimeoutMs: 1000 });
   await manager.connect();
-  const pairing = await manager.requestPairingCode('(11) 99999-9999');
+  const pairingPromise = manager.requestPairingCode('(11) 99999-9999');
+  await socket.ev.emit('connection.update', { qr: 'QR-PAIR' });
+  const pairing = await pairingPromise;
   assert.equal(pairing.status, 'pairing');
   assert.equal(pairing.pairingCode, 'ABCD-1234');
 
@@ -186,12 +188,30 @@ test('recoverable reconnect keeps an issued pairing code visible until WhatsApp 
     lastDisconnect: { error: { output: { statusCode: 500 } } },
   });
 
-  assert.equal(manager.getStatus().status, 'pairing');
-  assert.equal(manager.getStatus().pairingCode, 'ABCD-1234');
+  assert.equal(manager.getStatus().status, 'error');
+  assert.equal(manager.getStatus().pairingCode, null);
+  assert.equal(manager.getStatus().errorCode, 500);
+  assert.equal(scheduled.length, 0);
+});
+
+test('restart-required 515 after pairing schedules one controlled reconnect', async () => {
+  const { manager, socket, scheduled } = harness({
+    pairingReadyTimeoutMs: 1000,
+    disconnectReasonRestartRequired: 515,
+  });
+  await manager.connect();
+  const pairingPromise = manager.requestPairingCode('(11) 99999-9999');
+  await socket.ev.emit('connection.update', { qr: 'QR-PAIR' });
+  await pairingPromise;
+
+  await socket.ev.emit('connection.update', {
+    connection: 'close',
+    lastDisconnect: { error: { output: { statusCode: 515 } } },
+  });
+
+  assert.equal(manager.getStatus().status, 'connecting');
+  assert.equal(manager.getStatus().pairingCode, null);
+  assert.equal(manager.getStatus().errorCode, 515);
   assert.equal(scheduled.length, 1);
-
-  await scheduled[0].fn();
-
-  assert.equal(manager.getStatus().status, 'pairing');
-  assert.equal(manager.getStatus().pairingCode, 'ABCD-1234');
+  assert.equal(scheduled[0].ms, 3000);
 });
