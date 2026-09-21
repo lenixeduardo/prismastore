@@ -33,3 +33,9 @@ test('runtime enables the WhatsApp dev allowlist only when explicitly requested'
   assert.match(indexSource, /PRISMASTORE_DEV_WHATSAPP_PHONE/);
   assert.match(indexSource, /devAllowedPhone:/);
 });
+
+test('runtime keeps the internal bind separate from the public production URL', () => {
+  assert.match(indexSource, /PRISMASTORE_PUBLIC_URL/);
+  assert.match(indexSource, /PrismaStore produção/);
+  assert.match(indexSource, /requestedHost = process\.env\.HOST \|\| '127\.0\.0\.1'/);
+});
