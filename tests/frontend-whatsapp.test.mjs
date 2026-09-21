@@ -34,3 +34,11 @@ test('settings UI owns Pix status in the core without a second DOM controller', 
   assert.doesNotMatch(source, /Asaas|Sandbox|API KEY|WEBHOOK TOKEN/i);
   assert.doesNotMatch(html, /src\/payment-status\.js/);
 });
+
+
+test('core WhatsApp controller refreshes active connection states until they settle', () => {
+  assert.match(source, /WHATSAPP_ACTIVE_STATUSES\s*=\s*new Set\(\[['"]connecting['"],\s*['"]authenticated['"],\s*['"]qr['"],\s*['"]pairing['"]\]\)/);
+  assert.match(source, /function syncWhatsAppStatusPolling\(/);
+  assert.match(source, /window\.setTimeout\([\s\S]*?refreshWhatsAppStatus\(\{ rerender: true \}\)[\s\S]*?WHATSAPP_STATUS_POLL_MS/);
+  assert.match(source, /function stopWhatsAppStatusPolling\(/);
+});
