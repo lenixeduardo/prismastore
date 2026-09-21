@@ -36,6 +36,27 @@ npm start
 
 No Windows, `INICIAR_PRISMASTORE.bat` instala dependências e abre `http://localhost:4173`.
 
+## Produção Oracle
+
+A URL pública oficial desta instalação é:
+
+```text
+http://163.176.60.192/
+```
+
+Na VM Oracle, o Node continua escutando somente em `127.0.0.1:4173` e o Nginx publica a aplicação na porta 80. Isso evita expor a porta interna `4173` diretamente na Internet.
+
+Use no `.env` de produção:
+
+```env
+HOST=127.0.0.1
+PORT=4173
+PRISMASTORE_PUBLIC_URL=http://163.176.60.192/
+WHATSAPP_AUTO_CONNECT=false
+```
+
+As chamadas do frontend usam URLs relativas (`/api/...`), então no navegador elas são resolvidas automaticamente para `http://163.176.60.192/api/...`.
+
 ## WhatsApp
 
 Em **Configurações → WhatsApp**, clique em **Conectar WhatsApp** e leia o QR com **Aparelhos conectados**. A sessão Baileys fica em `data/whatsapp-auth/` e é restaurada ao reiniciar.
