@@ -368,6 +368,7 @@ function whatsappRenderKey(whatsapp = state.whatsapp) {
 const WHATSAPP_ACTIVE_STATUSES = new Set(['connecting', 'authenticated', 'qr', 'pairing']);
 const WHATSAPP_STATUS_POLL_MS = 2500;
 let whatsappStatusPollTimer = null;
+let whatsappPairingRequestInFlight = false;
 
 function stopWhatsAppStatusPolling() {
   if (whatsappStatusPollTimer) window.clearTimeout(whatsappStatusPollTimer);
@@ -415,6 +416,8 @@ async function connectWhatsApp() {
 }
 
 async function pairWhatsAppByPhone(phone) {
+  if (whatsappPairingRequestInFlight) return;
+  whatsappPairingRequestInFlight = true;
   try {
     const response = await fetch('/api/whatsapp/pair', {
       method: 'POST',
@@ -429,6 +432,8 @@ async function pairWhatsAppByPhone(phone) {
     if (!response.ok) throw new Error(state.whatsapp.error || 'Falha ao gerar código de pareamento');
   } catch (error) {
     state.whatsapp = { ...state.whatsapp, status: 'error', pairingCode: null, error: friendlyErrorMessage(error, 'Não foi possível gerar o código de pareamento.') };
+  } finally {
+    whatsappPairingRequestInFlight = false;
   }
   render();
 }
