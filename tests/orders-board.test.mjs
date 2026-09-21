@@ -78,7 +78,8 @@ test('board markup exposes the reference lane titles and operational actions', a
   assert.match(html, /Pedidos pagos — envio/);
   assert.match(html, /Pedidos pagos — entregas/);
   assert.match(html, /Em atendimento/);
-  assert.match(html, /Pedido pronto para envio/);
+  assert.match(html, /Marcar como embalando/);
+  assert.equal((html.match(/data-board-advance=/g) || []).length, 2);
   assert.match(html, /Enviar mensagem referente à demanda/);
   assert.match(html, /Informar a ordem na fila/);
   assert.match(html, /WhatsApp conectado/);
@@ -91,4 +92,13 @@ test('orders board stylesheet stacks lanes vertically on mobile', () => {
   assert.match(source, /\.orders-board-grid/);
   assert.match(source, /@media\s*\(max-width:\s*720px\)/);
   assert.match(source, /grid-template-columns:\s*1fr/);
+});
+
+
+test('orders board refresh cadence and update events keep new paid orders in the correct lane', async () => {
+  const source = readFileSync(resolve(root, 'src/orders-board.js'), 'utf8');
+  assert.match(source, /prismastore:orders-updated/);
+  assert.match(source, /prismastore:state-updated/);
+  assert.match(source, /}, 5000\);/);
+  assert.match(source, /expectedStatus: 'PAID'/);
 });
