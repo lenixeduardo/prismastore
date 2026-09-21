@@ -388,6 +388,10 @@ async function pairWhatsAppByPhone(phone) {
       body: JSON.stringify({ phone }),
     });
     state.whatsapp = await response.json();
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent('prismastore:auth-required'));
+      throw new Error('Autenticação necessária.');
+    }
     if (!response.ok) throw new Error(state.whatsapp.error || 'Falha ao gerar código de pareamento');
   } catch (error) {
     state.whatsapp = { ...state.whatsapp, status: 'error', pairingCode: null, error: friendlyErrorMessage(error, 'Não foi possível gerar o código de pareamento.') };
@@ -438,7 +442,8 @@ function whatsappConnectionPanel() {
   }
   if (w.status === 'error') {
     const rateLimited = Number(w.errorCode) === 429;
-    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(friendlyErrorMessage(w.error, 'Não foi possível conectar ao WhatsApp. Tente novamente.'))}</div>${rateLimited ? '<div class="notice">Novas tentativas por número estão temporariamente pausadas para evitar ampliar o bloqueio do WhatsApp.</div>' : whatsappPairingForm()}<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-whatsapp-restart>Reiniciar conexão</button><button class="btn" data-whatsapp-connect>Tentar QR Code</button></div></div>`;
+    const diagnostic = w.errorCode ? `<div class="category mono">Diagnóstico WhatsApp: ${esc(w.errorCode)}</div>` : '';
+    return `<div class="wa-connection-panel error"><strong>Não foi possível conectar</strong><div class="category">${esc(friendlyErrorMessage(w.error, 'Não foi possível conectar ao WhatsApp. Tente novamente.'))}</div>${diagnostic}${rateLimited ? '<div class="notice">Novas tentativas por número estão temporariamente pausadas para evitar ampliar o bloqueio do WhatsApp.</div>' : whatsappPairingForm()}<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-whatsapp-restart>Reiniciar conexão</button><button class="btn" data-whatsapp-connect>Tentar QR Code</button></div></div>`;
   }
   return `<div class="wa-connection-panel"><strong>Conectar WhatsApp</strong><div class="category">Use o número do WhatsApp deste próprio celular para gerar o código de vínculo.</div>${whatsappPairingForm()}<button class="btn" data-whatsapp-connect>Alternativa: usar QR Code</button></div>`;
 }
@@ -515,6 +520,14 @@ async function refreshSettingsHealth() {
   state.settingsHealth = { ...state.settingsHealth, loading: true, error: null };
   render();
   try {
+    const authResponse = await fetch('/api/auth/status', { cache: 'no-store' });
+    const auth = await authResponse.json();
+    if (auth.configured && !auth.authenticated) {
+      state.settingsHealth = { ...state.settingsHealth, loading: false, error: 'Sua sessão expirou. Entre novamente para continuar.' };
+      window.dispatchEvent(new CustomEvent('prismastore:auth-required'));
+      return;
+    }
+
     const [paymentsResponse, backupsResponse, whatsappResponse] = await Promise.all([
       fetch('/api/payments/status', { cache: 'no-store' }),
       fetch('/api/backups', { cache: 'no-store' }),
