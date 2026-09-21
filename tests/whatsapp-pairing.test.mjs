@@ -136,3 +136,36 @@ test('pairing recovers once from stale 401 credentials using a clean auth state'
   assert.equal(result.status, 'pairing');
   assert.equal(result.pairingCode, 'ABCD-1234');
 });
+
+
+test('pairing retries once on transient 503 before exposing an error', async () => {
+  const first = fakeSocket();
+  const second = fakeSocket();
+  let sockets = 0;
+
+  first.requestPairingCode = async () => {
+    const error = new Error('Stream Errored (unknown)');
+    error.output = { statusCode: 503 };
+    throw error;
+  };
+
+  const manager = createWhatsAppManager({
+    socketFactory: async () => (++sockets === 1 ? first : second),
+    authStateLoader: async () => ({ state: { creds: { registered: false } }, saveCreds: async () => {} }),
+    qrEncoder: async () => 'data:image/png;base64,qr',
+    disconnectReasonLoggedOut: 401,
+    pairingReadyTimeoutMs: 1000,
+  });
+
+  const resultPromise = manager.requestPairingCode('(11) 99999-9999');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  first.emit('connection.update', { qr: 'FIRST_QR' });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  second.emit('connection.update', { qr: 'SECOND_QR' });
+
+  const result = await resultPromise;
+  assert.equal(sockets, 2);
+  assert.equal(result.status, 'pairing');
+  assert.equal(result.pairingCode, 'ABCD-1234');
+  assert.equal(result.error, null);
+});
