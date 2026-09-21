@@ -54,3 +54,18 @@ test('WhatsApp settings allow restarting the connection process', () => {
   assert.match(app, /data-whatsapp-restart/);
   assert.match(app, /Reiniciar conexão/);
 });
+
+test('WhatsApp has a single UI controller and server autoconnect is opt-in', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(html, /src\/whatsapp-onboarding\.js/);
+  assert.match(server, /WHATSAPP_AUTO_CONNECT\s*===\s*['"]true['"]/);
+  assert.doesNotMatch(server, /WHATSAPP_AUTO_CONNECT\s*!==\s*['"]false['"]/);
+});
+
+test('core settings view performs real server health checks', () => {
+  assert.match(app, /\/api\/payments\/status/);
+  assert.match(app, /\/api\/backups/);
+  assert.match(app, /\/api\/whatsapp\/status/);
+  assert.match(app, /data-refresh-settings-health/);
+  assert.match(app, /Salvar mensagens/);
+});
