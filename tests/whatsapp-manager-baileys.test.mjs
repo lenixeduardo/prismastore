@@ -338,3 +338,31 @@ test('515 pairing restart waits until credentials are saved before scheduling re
   await closePromise;
   assert.equal(scheduled.length, 1);
 });
+
+test('QR pairing also waits for credential persistence before a 515 reconnect', async () => {
+  let releaseSave;
+  const saveGate = new Promise((resolve) => { releaseSave = resolve; });
+  const { manager, socket, scheduled } = harness({
+    disconnectReasonRestartRequired: 515,
+    authStateLoader: async () => ({
+      state: { creds: { registered: false } },
+      saveCreds: async () => saveGate,
+    }),
+  });
+
+  await manager.connect();
+  await socket.ev.emit('connection.update', { qr: 'QR_LINK' });
+  socket.ev.emit('creds.update', { registered: true });
+  const closePromise = socket.ev.emit('connection.update', {
+    connection: 'close',
+    lastDisconnect: { error: { output: { statusCode: 515 } } },
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(scheduled.length, 0);
+
+  releaseSave();
+  await closePromise;
+  assert.equal(scheduled.length, 1);
+  assert.equal(manager.getStatus().status, 'connecting');
+});
