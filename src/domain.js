@@ -75,18 +75,6 @@ export function consumeCartStock(products, cart) {
   });
 }
 
-export function consumeOrderStock(products, items = []) {
-  const quantities = new Map(items.map((item) => [item.productId, Number(item.quantity ?? 0)]));
-  return products.map((product) => {
-    const quantity = quantities.get(product.id) ?? 0;
-    const { reserved: _legacyReserved, category: _legacyCategory, ...cleanProduct } = product;
-    if (quantity <= 0) return { ...cleanProduct };
-    const stock = availableStock(product);
-    if (stock < quantity) throw new Error(`Estoque insuficiente para ${product.id}`);
-    return { ...cleanProduct, stock: stock - quantity };
-  });
-}
-
 export function nextOrderStatus(order) {
   if (order.status === 'PAID') return 'PACKING';
   if (order.status === 'PACKING') {
