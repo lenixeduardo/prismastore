@@ -12,12 +12,18 @@ test('loads operational extensions after the core admin app', () => {
   assert.match(html, /src\/admin-extensions\.css/);
 });
 
-test('products page replaces demo creation with real create edit and deactivate actions', () => {
-  assert.match(source, /Cadastrar produto/);
-  assert.match(source, /data-real-product-new/);
+test('products page uses compact rows and opens product-specific details from the ellipsis action', () => {
+  assert.match(app, /class="product-list"/);
+  assert.match(app, /class="product-list-item"/);
+  assert.match(app, /data-real-product-details=/);
+  assert.match(app, />•••<\/button>/);
+  assert.doesNotMatch(app, /<th>Disponível<\/th>/);
+  assert.doesNotMatch(app, /data-stock-dec=/);
+  assert.doesNotMatch(app, /data-stock-input=/);
+  assert.doesNotMatch(app, /data-stock-inc=/);
+  assert.match(source, /function productDetailsMarkup\(/);
   assert.match(source, /data-real-product-edit/);
   assert.match(source, /data-real-product-toggle/);
-  assert.doesNotMatch(source, /Novo produto de demonstração/);
 });
 
 test('settings page owns persisted chatbot configuration in the core app without duplicate extension handlers', () => {
@@ -32,4 +38,9 @@ test('settings page owns persisted chatbot configuration in the core app without
 test('QR code is compact by default on desktop and mobile', () => {
   assert.match(styles, /\.wa-qr\s*\{[^}]*width:\s*180px/s);
   assert.match(styles, /@media\s*\(max-width:\s*520px\)[\s\S]*\.wa-qr\s*\{[^}]*width:\s*160px/s);
+});
+
+
+test('document head does not render the escaped newline token', () => {
+  assert.doesNotMatch(html, /\/>\\n\s*<link rel="icon"/);
 });
