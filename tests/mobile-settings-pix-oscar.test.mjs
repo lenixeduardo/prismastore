@@ -77,3 +77,18 @@ test('WhatsApp resolves the live WA Web revision before falling back to the Bail
   assert.match(server, /WhatsApp Web version \(live\)/);
   assert.match(server, /shouldSyncHistoryMessage:\s*\(\)\s*=>\s*false/);
 });
+
+test('settings extensions cannot enter a self-triggering MutationObserver loop', () => {
+  const backupUi = readFileSync(new URL('../src/backup-ui.js', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(backupUi, /new MutationObserver/);
+  assert.match(backupUi, /prismastore:view-changed/);
+  assert.doesNotMatch(html, /src\/payment-status\.js/);
+});
+
+test('expired auth can recover Configurações without reloading the page', () => {
+  const authUi = readFileSync(new URL('../src/auth-ui.js', import.meta.url), 'utf8');
+  assert.match(authUi, /prismastore:auth-restored/);
+  assert.match(app, /addEventListener\(['"]prismastore:auth-restored['"]/);
+  assert.match(app, /refreshSettingsHealth\(\)/);
+});
