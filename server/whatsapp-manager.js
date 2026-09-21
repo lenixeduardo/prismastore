@@ -74,6 +74,7 @@ export function createWhatsAppManager({
   let pairingPromise = null;
   let authResetPromise = null;
   let reconnectTimer = null;
+  let lifecycleGeneration = 0;
   let reconnectAttempts = 0;
   let manualDisconnect = false;
   let sessionRegistered = false;
@@ -358,23 +359,28 @@ export function createWhatsAppManager({
   async function requestPairingCode(phoneNumber) {
     const phone = normalizePairingPhone(phoneNumber);
     if (pairingPromise) return pairingPromise;
+    const generation = lifecycleGeneration;
 
     async function attemptPairing({ recoverLoggedOut = true } = {}) {
       try {
         logWhatsApp('pairing:start', `phone=${maskedPhone(phone)} recover401=${recoverLoggedOut}`);
         if (!socket) await connect();
+        if (generation !== lifecycleGeneration) return getStatus();
         if (status.status === 'connected') throw new Error('WhatsApp já está conectado.');
         if (!socket?.requestPairingCode) throw new Error('Pareamento por telefone não está disponível nesta sessão do WhatsApp.');
 
         await waitForPairingReady();
+        if (generation !== lifecycleGeneration) return getStatus();
         if (status.status === 'connected') throw new Error('WhatsApp já está conectado.');
 
         const pairingCode = await socket.requestPairingCode(phone);
+        if (generation !== lifecycleGeneration) return getStatus();
         if (!pairingCode) throw new Error('WhatsApp não retornou um código de pareamento.');
         logWhatsApp('pairing:code-generated');
         setStatus({ status: 'pairing', pairingCode: String(pairingCode), qrDataUrl: null, account: null, error: null, errorCode: null });
         return getStatus();
       } catch (error) {
+        if (generation !== lifecycleGeneration) return getStatus();
         const code = errorStatusCode(error);
         if (code === disconnectReasonLoggedOut && recoverLoggedOut) {
           logWhatsApp('pairing:recover-401');
@@ -408,6 +414,7 @@ export function createWhatsAppManager({
   }
 
   async function disconnect() {
+    lifecycleGeneration += 1;
     manualDisconnect = true;
     clearReconnect();
     const activeSocket = socket;
@@ -423,6 +430,7 @@ export function createWhatsAppManager({
   }
 
   async function restartConnection() {
+    lifecycleGeneration += 1;
     manualDisconnect = true;
     clearReconnect();
     const activeSocket = socket;
@@ -433,10 +441,19 @@ export function createWhatsAppManager({
     reconnectAttempts = 0;
     pairingReady = false;
     rejectPairingReady(new Error('Conexão do WhatsApp reiniciada.'));
-    setStatus({ status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: null });
+    setStatus({
+      status: 'disconnected',
+      qrDataUrl: null,
+      pairingCode: null,
+      account: null,
+      error: null,
+      errorCode: null,
+    });
     manualDisconnect = false;
     connectPromise = null;
-    return connect();
+    pairingPromise = null;
+    logWhatsApp('restart:ready-for-new-pairing');
+    return getStatus();
   }
 
   async function sendText(phoneOrJid, text) {
