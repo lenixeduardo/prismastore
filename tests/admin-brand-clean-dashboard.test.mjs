@@ -52,3 +52,13 @@ test('dashboard uses the generated holographic prism and four KPI assets', () =>
   assert.match(sw, /\/assets\/kpi-packing\.webp/);
   assert.match(sw, /\/assets\/kpi-critical-stock\.webp/);
 });
+
+
+test('dashboard generated assets are visually dominant on desktop and mobile', () => {
+  assert.match(styles, /\.dashboard-hero\s*\{[\s\S]*?min-height:\s*220px/);
+  assert.match(styles, /\.dashboard-prism\s*\{[\s\S]*?width:\s*340px[\s\S]*?opacity:\s*\.96/);
+  assert.match(styles, /\.card\.padded\.dashboard-kpi\s*\{[\s\S]*?min-height:\s*168px/);
+  assert.match(styles, /\.dashboard-kpi-art\s*\{[\s\S]*?width:\s*46%[\s\S]*?max-width:\s*190px/);
+  assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-prism\s*\{[\s\S]*?width:\s*240px[\s\S]*?opacity:\s*\.88/);
+  assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-kpi-art\s*\{[\s\S]*?width:\s*44%[\s\S]*?max-width:\s*118px/);
+});
