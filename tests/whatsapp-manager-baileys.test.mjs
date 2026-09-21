@@ -235,3 +235,51 @@ test('logged out 401 clears stale auth and returns to a clean disconnected state
   assert.equal(manager.getStatus().errorCode, null);
   assert.equal(scheduled.length, 0);
 });
+
+test('restart resets WhatsApp to a clean disconnected state without auto-connecting again', async () => {
+  let socketCreates = 0;
+  const socket = createSocket();
+  const manager = createWhatsAppManager({
+    authStateLoader: async () => ({ state: { creds: {} }, saveCreds: async () => {} }),
+    socketFactory: async () => {
+      socketCreates += 1;
+      return socket;
+    },
+    qrEncoder: async (value) => value,
+    disconnectReasonLoggedOut: 401,
+  });
+
+  await manager.connect();
+  assert.equal(socketCreates, 1);
+
+  const result = await manager.restartConnection();
+
+  assert.equal(result.status, 'disconnected');
+  assert.equal(result.qrDataUrl, null);
+  assert.equal(result.pairingCode, null);
+  assert.equal(result.account, null);
+  assert.equal(result.error, null);
+  assert.equal(result.errorCode, null);
+  assert.equal(socketCreates, 1);
+});
+
+test('restart invalidates an in-flight pairing so it cannot restore the previous error state', async () => {
+  const socket = createSocket();
+  const manager = createWhatsAppManager({
+    authStateLoader: async () => ({ state: { creds: { registered: false } }, saveCreds: async () => {} }),
+    socketFactory: async () => socket,
+    qrEncoder: async (value) => value,
+    disconnectReasonLoggedOut: 401,
+    pairingReadyTimeoutMs: 1000,
+  });
+
+  const pairing = manager.requestPairingCode('(11) 99999-9999');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const restarted = await manager.restartConnection();
+  const pairingResult = await pairing;
+
+  assert.equal(restarted.status, 'disconnected');
+  assert.equal(pairingResult.status, 'disconnected');
+  assert.equal(manager.getStatus().status, 'disconnected');
+  assert.equal(manager.getStatus().error, null);
+});
