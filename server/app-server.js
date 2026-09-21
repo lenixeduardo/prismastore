@@ -247,15 +247,18 @@ export function createAppServer({
           return sendJson(res, 200, await whatsappManager.requestPairingCode(body.phone));
         } catch (error) {
           runtimeLogProvider?.record?.('erro', error);
-          const message = error instanceof Error && error.message
+          const current = whatsappManager.getStatus?.() ?? {};
+          const message = current.error || (error instanceof Error && error.message
             ? error.message
-            : 'Não foi possível gerar o código de pareamento do WhatsApp.';
+            : 'Não foi possível gerar o código de pareamento do WhatsApp.');
           return sendJson(res, 422, {
+            ...current,
             status: 'error',
-            qrDataUrl: null,
+            qrDataUrl: current.qrDataUrl ?? null,
             pairingCode: null,
-            account: null,
+            account: current.account ?? null,
             error: message,
+            errorCode: current.errorCode ?? null,
             code: 'WHATSAPP_PAIRING_FAILED',
           });
         }
