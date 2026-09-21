@@ -15,7 +15,7 @@ test('admin shell uses the PrismaStore logo asset in the sidebar brand', () => {
 });
 
 test('dashboard initial screen has no MVP label or quick action buttons', () => {
-  assert.doesNotMatch(app, /PrismaStore · MVP/);
+  assert.doesNotMatch(app, /PRISMASTORE\s*·\s*MVP/i);
   assert.doesNotMatch(app, />Testar fluxo</);
   assert.doesNotMatch(app, />Ver pedidos</);
 });
@@ -36,4 +36,19 @@ test('dashboard removes static revenue comparison copy and products expose stock
 test('PWA does not render the server online status badge', () => {
   assert.doesNotMatch(pwa, /Servidor online/);
   assert.doesNotMatch(pwa, /pwa-status/);
+});
+
+
+test('dashboard uses the generated holographic prism and four KPI assets', () => {
+  assert.match(app, /\/assets\/dashboard-prism-holographic\.webp/);
+  assert.match(app, /\/assets\/kpi-revenue\.webp/);
+  assert.match(app, /\/assets\/kpi-paid-orders\.webp/);
+  assert.match(app, /\/assets\/kpi-packing\.webp/);
+  assert.match(app, /\/assets\/kpi-critical-stock\.webp/);
+  assert.match(styles, /\.dashboard-kpi-art/);
+  assert.match(sw, /\/assets\/dashboard-prism-holographic\.webp/);
+  assert.match(sw, /\/assets\/kpi-revenue\.webp/);
+  assert.match(sw, /\/assets\/kpi-paid-orders\.webp/);
+  assert.match(sw, /\/assets\/kpi-packing\.webp/);
+  assert.match(sw, /\/assets\/kpi-critical-stock\.webp/);
 });
