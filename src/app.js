@@ -274,7 +274,6 @@ function productsView() {
       ${state.products.map(p=>`<article class="product-list-item">
         <div class="product-list-main">
           <div class="product-name">${esc(p.name)}</div>
-          <div class="product-list-price mono">${formatCurrencyBRL(p.price)}</div>
         </div>
         <div class="product-list-stock">
           <span>Estoque</span>
