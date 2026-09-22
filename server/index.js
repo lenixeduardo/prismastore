@@ -2,7 +2,6 @@ import { rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import makeWASocket, {
-  Browsers,
   DisconnectReason,
   downloadMediaMessage,
   fetchLatestBaileysVersion,
@@ -135,6 +134,8 @@ async function resolveWhatsAppWebVersion() {
   return cachedWhatsAppVersion;
 }
 
+const PRISMASTORE_WHATSAPP_DEVICE = ['PrismaStore', 'PrismaStore', '0.9.2'];
+
 const socketFactory = async ({ auth }) => {
   const version = await resolveWhatsAppWebVersion();
   return makeWASocket({
@@ -142,7 +143,7 @@ const socketFactory = async ({ auth }) => {
     auth,
     logger,
     printQRInTerminal: false,
-    browser: Browsers.macOS('Desktop'),
+    browser: PRISMASTORE_WHATSAPP_DEVICE,
     connectTimeoutMs: 60_000,
     defaultQueryTimeoutMs: 60_000,
     keepAliveIntervalMs: 10_000,
