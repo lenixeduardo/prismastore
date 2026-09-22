@@ -13,6 +13,14 @@ function ensureOverlay() {
   overlay.hidden = true;
   overlay.innerHTML = `
     <div class="auth-shell">
+      <div class="auth-toolbar">
+        <button class="theme-switch" type="button" role="switch" aria-checked="false" data-theme-toggle aria-label="Alternar tema claro e escuro">
+          <span class="theme-switch-label" data-theme-label>Tema escuro</span>
+          <span class="theme-switch-icon" aria-hidden="true">☀</span>
+          <span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-thumb"></span></span>
+          <span class="theme-switch-icon" aria-hidden="true">☾</span>
+        </button>
+      </div>
       <div class="auth-brand">
         <img src="/assets/prismastore-prism-logo.webp?v=20260922-logo-1" alt="" aria-hidden="true" />
         <div class="auth-brand-copy">
@@ -54,6 +62,7 @@ function ensureOverlay() {
       </div>
     </div>`;
   document.body.appendChild(overlay);
+  window.PrismastoreTheme?.sync(overlay);
   return overlay;
 }
 
