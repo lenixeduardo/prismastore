@@ -134,7 +134,7 @@ async function resolveWhatsAppWebVersion() {
   return cachedWhatsAppVersion;
 }
 
-const PRISMASTORE_WHATSAPP_DEVICE = ['PrismaStore', 'PrismaStore', '0.9.2'];
+const PRISMASTORE_WHATSAPP_DEVICE = ['PrismaStore', 'Chrome', '0.9.2'];
 
 const socketFactory = async ({ auth }) => {
   const version = await resolveWhatsAppWebVersion();
