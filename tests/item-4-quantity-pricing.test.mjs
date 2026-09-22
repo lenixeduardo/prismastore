@@ -73,6 +73,9 @@ test('chatbot persists the discounted unit price and total for 5 units of item 4
 
   try {
     await incoming('oi');
+    assert.match(sent.at(-1), /2 por R\$\s*280,00/);
+    assert.match(sent.at(-1), /3 por R\$\s*405,00/);
+    assert.match(sent.at(-1), /5\+ por R\$\s*125,00\/un/);
     await incoming('1');
     await incoming('5');
     assert.match(sent.at(-1), /R\$\s*625,00/);
