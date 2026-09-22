@@ -10,7 +10,17 @@
   "theme_color": "#01251d",
   "orientation": "portrait-primary",
   "icons": [
-    { "src": "/icons/icon-192.svg?v=20260918-prism-icon-1", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "/icons/icon-512.svg?v=20260918-prism-icon-1", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" }
+    {
+      "src": "/icons/icon-192.png?v=20260922-pwa-install-2",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png?v=20260922-pwa-install-2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }
