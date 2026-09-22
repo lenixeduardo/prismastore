@@ -277,7 +277,11 @@ function productsView() {
         </div>
         <div class="product-list-stock">
           <span>Estoque</span>
-          <strong class="mono">${p.stock}</strong>
+          <div class="product-stock-stepper" aria-label="Ajustar estoque de ${esc(p.name)}">
+            <button type="button" data-stock-dec="${p.id}" aria-label="Diminuir estoque de ${esc(p.name)}">−</button>
+            <input type="number" min="0" step="1" inputmode="numeric" data-stock-input="${p.id}" value="${p.stock}" aria-label="Estoque de ${esc(p.name)}" />
+            <button type="button" data-stock-inc="${p.id}" aria-label="Aumentar estoque de ${esc(p.name)}">+</button>
+          </div>
         </div>
         <button class="product-list-menu" type="button" data-real-product-details="${p.id}" aria-label="Ver detalhes de ${esc(p.name)}">•••</button>
       </article>`).join('')}

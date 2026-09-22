@@ -25,12 +25,13 @@ test('initial sidebar footer does not expose persistent-session implementation c
 });
 
 
-test('dashboard removes static revenue comparison copy and products keep stock controls out of the summary list', () => {
+test('dashboard removes static revenue comparison copy and products use grouped stock controls in the summary list', () => {
   assert.doesNotMatch(app, /↑ 12,8% vs\. mês anterior/);
   assert.doesNotMatch(app, /No MVP de validação não há imagens de produtos/);
-  assert.doesNotMatch(app, /data-stock-dec=/);
-  assert.doesNotMatch(app, /data-stock-input=/);
-  assert.doesNotMatch(app, /data-stock-inc=/);
+  assert.match(app, /class="product-stock-stepper"/);
+  assert.match(app, /data-stock-dec=/);
+  assert.match(app, /data-stock-input=/);
+  assert.match(app, /data-stock-inc=/);
   assert.match(app, /data-real-product-details=/);
 });
 
