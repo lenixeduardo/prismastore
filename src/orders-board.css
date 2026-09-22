@@ -142,6 +142,25 @@
   border-color: rgba(94, 224, 222, .8);
 }
 
+.order-board-card.awaiting-payment {
+  border-color: rgba(242, 213, 63, .62);
+  background: linear-gradient(180deg, rgba(38, 34, 16, .86), rgba(22, 28, 18, .94));
+}
+
+.order-board-payment-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -2px 0 9px;
+  color: #f2d53f;
+  font-size: 11px;
+}
+
+.order-board-payment-state .orders-board-status-dot {
+  background: #f2d53f;
+  box-shadow: 0 0 0 4px rgba(242, 213, 63, .08);
+}
+
 .order-board-wait {
   display: flex;
   align-items: center;
