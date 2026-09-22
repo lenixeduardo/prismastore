@@ -14,13 +14,13 @@ test('manifest has installable identity and 192/512 icons', () => {
   assert.equal(manifest.start_url, '/');
   assert.equal(manifest.scope, '/');
   assert.equal(manifest.display, 'standalone');
-  assert.ok(manifest.icons.some((icon) => icon.sizes === '192x192'));
-  assert.ok(manifest.icons.some((icon) => icon.sizes === '512x512'));
+  assert.ok(manifest.icons.some((icon) => icon.sizes === '192x192' && icon.type === 'image/png'));
+  assert.ok(manifest.icons.some((icon) => icon.sizes === '512x512' && icon.type === 'image/png'));
 });
 
 test('service worker caches only static shell and bypasses API', () => {
   const sw = read('service-worker.js');
-  assert.match(sw, /prismastore-shell-v0\.9\.2-prism-icon/);
+  assert.match(sw, /prismastore-shell-v0\.9\.2-pwa-install/);
   assert.match(sw, /url\.pathname\.startsWith\('\/api\/'\)/);
   const shell = sw.match(/const APP_SHELL = \[[\s\S]*?\n\];/)?.[0] || '';
   assert.doesNotMatch(shell, /['"]\/api\//);
@@ -37,9 +37,9 @@ test('PWA module registers only in secure contexts and supports install/update/i
   assert.match(js, /navigator\.standalone/);
   assert.match(js, /Adicionar à Tela de Início/);
   assert.match(js, /data-pwa-more/);
-  assert.match(js, /data-pwa-view="settings"/);
-  assert.match(js, /navigateTo\(view\)/);
-  assert.match(js, /PrismastoreApp\?\.openView\?\.\(view\)/);
+  assert.match(js, /HTTPS necessário para instalar/);
+  assert.match(js, /site não pode criar o ícone automaticamente/);
+  assert.match(js, /data-pwa-install-entry/);
   assert.match(js, /setAttribute\('data-label'/);
 });
 
@@ -77,4 +77,13 @@ test('core app exposes a stable navigation API including Settings', () => {
   assert.match(app, /'settings'/);
   assert.match(app, /window\.PrismastoreApp/);
   assert.match(app, /openView,/);
+});
+
+
+test('service worker shell references only PWA icon files that exist in the repository', () => {
+  const sw = read('service-worker.js');
+  assert.match(sw, /\/icons\/icon-192\.png/);
+  assert.match(sw, /\/icons\/icon-512\.png/);
+  assert.ok(read('icons/icon-192.png').length > 0);
+  assert.ok(read('icons/icon-512.png').length > 0);
 });
