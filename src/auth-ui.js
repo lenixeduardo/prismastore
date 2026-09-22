@@ -14,7 +14,7 @@ function ensureOverlay() {
   overlay.innerHTML = `
     <div class="auth-shell">
       <div class="auth-brand">
-        <img src="/icons/icon-512.svg" alt="" aria-hidden="true" />
+        <img src="/assets/prismastore-prism-logo.webp?v=20260922-logo-1" alt="" aria-hidden="true" />
         <div class="auth-brand-copy">
           <strong>PrismaStore</strong>
           <span>Operations</span>
