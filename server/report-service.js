@@ -1,4 +1,4 @@
-import { buildMonthlyReport } from '../src/domain.js';
+const REPORT_TIME_ZONE = 'America/Sao_Paulo';
 
 function assertMonthKey(monthKey) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(monthKey ?? ''))) {
@@ -16,42 +16,86 @@ function accountNameMap(receivingAccounts = []) {
   return new Map(receivingAccounts.map((account) => [account.id, account.name]));
 }
 
+function dateParts(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: REPORT_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+  if (!year || !month || !day) return null;
+  return { monthKey: `${year}-${month}`, dateKey: `${year}-${month}-${day}` };
+}
+
+function safeTotal(value) {
+  const number = Number(value ?? 0);
+  return Number.isFinite(number) ? number : 0;
+}
+
 export function createReportService({ stateStore, receivingAccounts = [] }) {
   const names = accountNameMap(receivingAccounts);
+
+  function accountName(id) {
+    if (!id) return 'Conta não identificada';
+    return names.get(id) || id;
+  }
 
   function getMonthlyReport(monthKey) {
     assertMonthKey(monthKey);
     const state = stateStore.load();
-    const orders = (state.orders ?? [])
-      .filter((order) => String(order.paidAt ?? '').startsWith(monthKey))
-      .sort((a, b) => String(b.paidAt).localeCompare(String(a.paidAt)));
-    const summary = buildMonthlyReport(orders, monthKey);
-    const accountIds = new Set([...receivingAccounts.map((account) => account.id), ...Object.keys(summary.byAccount)]);
-    const accounts = [...accountIds]
-      .map((id) => ({
+    const orders = (Array.isArray(state.orders) ? state.orders : [])
+      .map((order) => ({ order, parts: dateParts(order?.paidAt) }))
+      .filter(({ parts }) => parts?.monthKey === monthKey)
+      .sort((a, b) => String(b.order.paidAt).localeCompare(String(a.order.paidAt)));
+
+    const byAccount = new Map();
+    const byDay = new Map();
+    let revenue = 0;
+
+    for (const { order, parts } of orders) {
+      const total = safeTotal(order.total);
+      revenue += total;
+      const accountId = order.receivingAccountId || 'sem-conta';
+      byAccount.set(accountId, (byAccount.get(accountId) || 0) + total);
+      const day = byDay.get(parts.dateKey) || { total: 0, orderCount: 0 };
+      day.total += total;
+      day.orderCount += 1;
+      byDay.set(parts.dateKey, day);
+    }
+
+    const accounts = [...byAccount.entries()]
+      .map(([id, total]) => ({
         id,
-        name: names.get(id) || (id === 'sem-conta' ? 'Conta não identificada' : id),
-        total: Number(summary.byAccount[id] ?? 0),
+        name: id === 'sem-conta' ? 'Conta não identificada' : accountName(id),
+        total,
       }))
-      .filter((account) => account.total > 0)
       .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
-    const daily = Object.entries(summary.byDay)
-      .map(([date, total]) => ({
-        date,
-        total: Number(total),
-        orderCount: orders.filter((order) => String(order.paidAt).startsWith(date)).length,
-      }))
+
+    const daily = [...byDay.entries()]
+      .map(([date, value]) => ({ date, total: value.total, orderCount: value.orderCount }))
       .sort((a, b) => a.date.localeCompare(b.date));
+
+    const normalizedOrders = orders.map(({ order }) => ({
+      ...order,
+      total: safeTotal(order.total),
+      receivingAccountName: accountName(order.receivingAccountId),
+    }));
 
     return {
       month: monthKey,
-      revenue: summary.revenue,
-      orderCount: summary.orderCount,
-      averageTicket: summary.averageTicket,
+      timeZone: REPORT_TIME_ZONE,
+      revenue,
+      orderCount: normalizedOrders.length,
+      averageTicket: normalizedOrders.length ? revenue / normalizedOrders.length : 0,
       accountCount: accounts.length,
       accounts,
       daily,
-      orders,
+      orders: normalizedOrders,
     };
   }
 
@@ -65,9 +109,9 @@ export function createReportService({ stateStore, receivingAccounts = [] }) {
         order.customerName,
         order.phone,
         order.deliveryType === 'local_delivery' ? 'Entrega no endereço' : 'Envio',
-        names.get(order.receivingAccountId) || (order.receivingAccountId ? order.receivingAccountId : 'Conta não identificada'),
+        order.receivingAccountName,
         order.status,
-        Number(order.total ?? 0).toFixed(2).replace('.', ','),
+        safeTotal(order.total).toFixed(2).replace('.', ','),
       ]),
     ];
     return `\uFEFF${lines.map((row) => row.map(csvCell).join(';')).join('\r\n')}`;
