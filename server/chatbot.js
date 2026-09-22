@@ -44,11 +44,29 @@ function activeProducts(stateStore) {
   return stateStore.load().products.filter((product) => product.active !== false && availableStock(product) > 0);
 }
 
+function quantityPricingText(product) {
+  const pricing = product?.quantityPricing;
+  if (!pricing || typeof pricing !== 'object') return '';
+
+  const exact = Object.entries(pricing.exactTotals ?? {})
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([quantity, total]) => `${quantity} por ${formatCurrencyBRL(total)}`);
+  const minimum = Number(pricing.minQuantity ?? 0);
+  const unitPrice = Number(pricing.unitPrice);
+  if (minimum > 0 && Number.isFinite(unitPrice)) {
+    exact.push(`${minimum}+ por ${formatCurrencyBRL(unitPrice)}/un`);
+  }
+  return exact.join(' · ');
+}
+
 function catalogText(stateStore, products) {
   if (!products.length) return 'Nosso catálogo está temporariamente sem itens disponíveis. Tente novamente mais tarde.';
   return [
     message(stateStore, 'catalogHeader'), '',
-    ...products.map((product, index) => `${index + 1}. ${product.name} — ${formatCurrencyBRL(product.price)}`),
+    ...products.map((product, index) => {
+      const pricing = quantityPricingText(product);
+      return `${index + 1}. ${product.name} — ${formatCurrencyBRL(product.price)}${pricing ? `\n   ${pricing}` : ''}`;
+    }),
     '', message(stateStore, 'catalogInstruction'),
   ].join('\n');
 }
