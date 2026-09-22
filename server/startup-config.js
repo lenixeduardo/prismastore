@@ -15,14 +15,35 @@ export function ensureCatalogProducts({ stateStore, products = [] } = {}) {
   let changed = false;
   stateStore.updateState((state) => {
     const current = Array.isArray(state.products) ? state.products : [];
-    const ids = new Set(current.map((product) => String(product.id ?? '')));
-    const names = new Set(current.map((product) => String(product.name ?? '').trim().toLowerCase()));
-    const additions = products
-      .filter((product) => !ids.has(String(product.id ?? '')) && !names.has(String(product.name ?? '').trim().toLowerCase()))
-      .map((product) => structuredClone(product));
-    if (additions.length === 0) return state;
-    changed = true;
-    return { ...state, products: [...current, ...additions] };
+    const next = current.map((product) => structuredClone(product));
+    const byId = new Map(next.map((product) => [String(product.id ?? ''), product]));
+    const byName = new Map(next.map((product) => [String(product.name ?? '').trim().toLowerCase(), product]));
+
+    for (const catalogProduct of products) {
+      const id = String(catalogProduct.id ?? '');
+      const name = String(catalogProduct.name ?? '').trim().toLowerCase();
+      const existing = byId.get(id) || byName.get(name);
+
+      if (!existing) {
+        const addition = structuredClone(catalogProduct);
+        next.push(addition);
+        byId.set(id, addition);
+        byName.set(name, addition);
+        changed = true;
+        continue;
+      }
+
+      if (catalogProduct.quantityPricing) {
+        const currentPricing = JSON.stringify(existing.quantityPricing ?? null);
+        const desiredPricing = JSON.stringify(catalogProduct.quantityPricing);
+        if (currentPricing !== desiredPricing) {
+          existing.quantityPricing = structuredClone(catalogProduct.quantityPricing);
+          changed = true;
+        }
+      }
+    }
+
+    return changed ? { ...state, products: next } : state;
   });
   return changed;
 }
