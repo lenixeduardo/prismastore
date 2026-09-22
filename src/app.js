@@ -369,7 +369,6 @@ function whatsappRenderKey(whatsapp = state.whatsapp) {
   });
 }
 
-const WHATSAPP_ACTIVE_STATUSES = new Set(['connecting', 'authenticated', 'qr', 'pairing']);
 const WHATSAPP_STATUS_POLL_MS = 2500;
 let whatsappStatusPollTimer = null;
 let whatsappPairingRequestInFlight = false;
@@ -381,7 +380,7 @@ function stopWhatsAppStatusPolling() {
 
 function syncWhatsAppStatusPolling() {
   const visibleControllerView = ['dashboard', 'settings'].includes(state.view);
-  if (!visibleControllerView || !WHATSAPP_ACTIVE_STATUSES.has(state.whatsapp.status)) {
+  if (!visibleControllerView) {
     stopWhatsAppStatusPolling();
     return;
   }
@@ -572,20 +571,17 @@ async function refreshSettingsHealth() {
       return;
     }
 
-    const [paymentsResponse, backupsResponse, whatsappResponse] = await Promise.all([
+    const [paymentsResponse, backupsResponse] = await Promise.all([
       fetch('/api/payments/status', { cache: 'no-store' }),
       fetch('/api/backups', { cache: 'no-store' }),
-      fetch('/api/whatsapp/status', { cache: 'no-store' }),
+      refreshWhatsAppStatus({ rerender: false }),
     ]);
-    const [payments, backups, whatsapp] = await Promise.all([
+    const [payments, backups] = await Promise.all([
       paymentsResponse.json(),
       backupsResponse.json(),
-      whatsappResponse.json(),
     ]);
     if (!paymentsResponse.ok) throw new Error(payments.error || 'Falha ao consultar o Pix.');
     if (!backupsResponse.ok) throw new Error(backups.error || 'Falha ao consultar backups.');
-    if (!whatsappResponse.ok && whatsapp.status !== 'error') throw new Error(whatsapp.error || 'Falha ao consultar o WhatsApp.');
-    state.whatsapp = whatsapp;
     state.settingsHealth = { loading: false, payments, backups, error: null };
   } catch (error) {
     state.settingsHealth = {
