@@ -135,6 +135,12 @@ function shell(content) {
         <button class="nav-btn ${state.view==='settings'?'active':''}" data-view="settings"><span class="nav-icon">⚙</span>Configurações</button>
       </div>
       <div class="sidebar-footer">
+        <button class="theme-switch sidebar-theme-switch" type="button" role="switch" aria-checked="false" data-theme-toggle aria-label="Alternar tema claro e escuro">
+          <span class="theme-switch-label" data-theme-label>Tema escuro</span>
+          <span class="theme-switch-icon" aria-hidden="true">☀</span>
+          <span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-thumb"></span></span>
+          <span class="theme-switch-icon" aria-hidden="true">☾</span>
+        </button>
         <button class="nav-btn report-bug-btn" type="button" data-report-bug><span class="nav-icon">!</span>Reportar bug</button>
         <div class="status-row"><span>WhatsApp</span><span style="display:flex;gap:8px;align-items:center"><i class="status-dot ${state.whatsapp.status==='connected'?'':'offline'}"></i>${whatsappStatusLabel()}</span></div>
       </div>
@@ -659,6 +665,7 @@ function render() {
   const renderer={dashboard:dashboardView,orders:ordersView,customers:customersView,products:productsView,reports:reportsView,chatbot:chatbotView,settings:settingsView}[state.view]||dashboardView;
   app.innerHTML=renderer();
   bind();
+  window.PrismastoreTheme?.sync(app);
   syncWhatsAppStatusPolling();
 }
 
