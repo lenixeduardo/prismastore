@@ -239,7 +239,10 @@ function openWhatsapp(order, text) {
 }
 
 function messageDemand(order) {
-  openWhatsapp(order, `Olá, ${order.customerName || 'cliente'}. Estamos atendendo seu pedido. Se precisar complementar alguma informação, responda por aqui.`);
+  const text = order?.status === 'PAYMENT_PENDING'
+    ? `Olá, ${order.customerName || 'cliente'}. Seu pedido está aguardando o pagamento. Se precisar de ajuda com o Pix ou com o envio do comprovante, responda por aqui.`
+    : `Olá, ${order.customerName || 'cliente'}. Estamos atendendo seu pedido. Se precisar complementar alguma informação, responda por aqui.`;
+  openWhatsapp(order, text);
 }
 
 function messageQueue(order, position) {
