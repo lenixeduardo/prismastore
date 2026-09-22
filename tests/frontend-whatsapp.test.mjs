@@ -60,3 +60,16 @@ test('phone pairing request stays single-flight while status rerenders continue'
   assert.match(source, /if \(whatsappPairingRequestInFlight\) return;/);
   assert.match(source, /finally \{\s*whatsappPairingRequestInFlight = false;/);
 });
+
+
+test('opening the site does not surface a stale WhatsApp error before user interaction', () => {
+  assert.match(source, /let whatsappConnectionAttempted = false;/);
+  assert.match(source, /function cleanInitialWhatsAppStatus\(/);
+  assert.match(source, /remoteStatus\.status !== ['"]error['"]/);
+  assert.match(source, /status: ['"]disconnected['"][\s\S]*?error: null[\s\S]*?errorCode: null/);
+  assert.match(source, /async function connectWhatsApp\(\) \{\s*whatsappConnectionAttempted = true;/);
+  assert.match(source, /async function pairWhatsAppByPhone\(phone\)[\s\S]*?whatsappConnectionAttempted = true;/);
+  const bootstrap = source.match(/async function bootstrapOperationalRuntime\(\)[\s\S]*?\n}\n/)?.[0] || '';
+  assert.doesNotMatch(bootstrap, /connectWhatsApp\(/);
+  assert.match(bootstrap, /refreshWhatsAppStatus\(\{ rerender: false \}\)/);
+});
