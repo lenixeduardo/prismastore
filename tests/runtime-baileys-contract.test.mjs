@@ -42,7 +42,7 @@ test('runtime keeps the internal bind separate from the public production URL', 
 
 
 test('runtime identifies the linked WhatsApp device as PrismaStore instead of Mac OS', () => {
-  assert.match(indexSource, /const PRISMASTORE_WHATSAPP_DEVICE = \[['"]PrismaStore['"],\s*['"]PrismaStore['"],\s*['"]0\.9\.2['"]\]/);
+  assert.match(indexSource, /const PRISMASTORE_WHATSAPP_DEVICE = \[['"]PrismaStore['"],\s*['"]Chrome['"],\s*['"]0\.9\.2['"]\]/);
   assert.match(indexSource, /browser:\s*PRISMASTORE_WHATSAPP_DEVICE/);
   assert.doesNotMatch(indexSource, /Browsers\.macOS/);
 });
