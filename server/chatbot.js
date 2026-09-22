@@ -11,7 +11,7 @@ function newSession(now) {
   const timestamp = now().toISOString();
   return {
     checkoutId: randomUUID(), step: 'catalog', cart: {}, selectedProductId: null,
-    deliveryType: null, address: null, newAddress: false,
+    deliveryType: null, address: null, newAddress: false, addressMissingField: null,
     startedAt: timestamp, updatedAt: timestamp, confirmedAt: null,
   };
 }
@@ -85,10 +85,188 @@ function cartSummary(stateStore, cart) {
   return ['🛒 *SEU PEDIDO*', ...cartLines(stateStore, cart), '', `Subtotal: *${formatCurrencyBRL(total.subtotal)}*`].join('\n');
 }
 
+const REQUIRED_ADDRESS_FIELDS = ['street', 'number', 'neighborhood'];
+
+function cleanAddressValue(value = '') {
+  const text = String(value ?? '').trim().replace(/\s+/g, ' ');
+  if (!text || /^(undefined|null|n\/?a|não informado|nao informado|—|-)$/i.test(text)) return '';
+  return text;
+}
+
+function isZipPart(value) {
+  return /^\d{5}-?\d{3}$/.test(cleanAddressValue(value));
+}
+
+function isCityStatePart(value) {
+  const text = cleanAddressValue(value);
+  return /\/\s*[A-Za-z]{2}$/.test(text) || /^[A-Za-zÀ-ÿ .'-]+\s+-\s+[A-Za-z]{2}$/.test(text);
+}
+
+function isComplementPart(value) {
+  return /^(ap(?:to|artamento)?|bloco|casa|fundos|sala|andar|cj|conjunto|complemento)\b/i.test(cleanAddressValue(value));
+}
+
+function isValidStreet(value) {
+  const text = cleanAddressValue(value);
+  return text.length >= 3 && /[A-Za-zÀ-ÿ]/.test(text);
+}
+
+function isValidNumber(value) {
+  return /\d/.test(cleanAddressValue(value));
+}
+
+function isValidNeighborhood(value) {
+  const text = cleanAddressValue(value);
+  return text.length >= 2 && /[A-Za-zÀ-ÿ]/.test(text);
+}
+
+function addressPartsLabel(address, empty = '—') {
+  if (!address) return empty;
+  const street = cleanAddressValue(address.street);
+  const number = cleanAddressValue(address.number);
+  const complement = cleanAddressValue(address.complement);
+  const neighborhood = cleanAddressValue(address.neighborhood);
+  const city = cleanAddressValue(address.city);
+  const state = cleanAddressValue(address.state);
+  const zip = cleanAddressValue(address.zip);
+  const first = [street, number].filter(Boolean).join(', ');
+  const cityState = [city, state].filter(Boolean).join('/');
+  const structured = [first, complement, neighborhood, cityState, zip].filter(Boolean).join(' · ');
+  if (structured) return structured;
+  const formatted = cleanAddressValue(address.formatted)
+    .replace(/\b(?:undefined|null)\b/gi, '')
+    .replace(/\s*([,·])\s*(?=\1|$)/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return formatted || empty;
+}
+
+function parseAddressInput(value, existing = {}) {
+  const raw = cleanAddressValue(value);
+  const parsed = {
+    street: cleanAddressValue(existing.street),
+    number: cleanAddressValue(existing.number),
+    complement: cleanAddressValue(existing.complement),
+    neighborhood: cleanAddressValue(existing.neighborhood),
+    city: cleanAddressValue(existing.city),
+    state: cleanAddressValue(existing.state),
+    zip: cleanAddressValue(existing.zip),
+  };
+  if (!raw) return { ...parsed, formatted: addressPartsLabel(parsed, '') };
+
+  const tokens = raw
+    .split(/\s*(?:,|;|\||·|\s[-–—]\s)\s*/)
+    .map(cleanAddressValue)
+    .filter(Boolean);
+
+  const inline = raw.match(/^(.+?)\s+(?:n(?:º|°|o)?\.?\s*)?(\d+[A-Za-z0-9/-]*)\s+(.+)$/i);
+  if (inline) {
+    if (!parsed.street) parsed.street = cleanAddressValue(inline[1]);
+    if (!parsed.number) parsed.number = cleanAddressValue(inline[2]);
+    const tail = cleanAddressValue(inline[3]);
+    if (!parsed.neighborhood && tail && !isZipPart(tail) && !isCityStatePart(tail) && !isComplementPart(tail)) {
+      parsed.neighborhood = tail.replace(/^bairro\s*[:\-]?\s*/i, '');
+    }
+  }
+
+  let streetIndex = -1;
+  if (!parsed.street) {
+    const first = tokens[0] || '';
+    const streetWithNumber = first.match(/^(.+?)\s+(?:n(?:º|°|o)?\.?\s*)?(\d+[A-Za-z0-9/-]*)$/i);
+    if (streetWithNumber) {
+      parsed.street = cleanAddressValue(streetWithNumber[1]);
+      parsed.number = parsed.number || cleanAddressValue(streetWithNumber[2]);
+      streetIndex = 0;
+    } else if (isValidStreet(first) && !isCityStatePart(first) && !isComplementPart(first)) {
+      parsed.street = first.replace(/^bairro\s*[:\-]?\s*/i, '');
+      streetIndex = 0;
+    }
+  } else {
+    streetIndex = tokens.findIndex((token) => token === parsed.street);
+  }
+
+  let numberIndex = -1;
+  if (!parsed.number) {
+    numberIndex = tokens.findIndex((token) => /^(?:n(?:º|°|o)?\.?\s*)?\d+[A-Za-z0-9/-]*$/i.test(token));
+    if (numberIndex >= 0) parsed.number = tokens[numberIndex].replace(/^n(?:º|°|o)?\.?\s*/i, '');
+  } else {
+    numberIndex = tokens.findIndex((token) => token.includes(parsed.number));
+  }
+
+  const explicitNeighborhood = raw.match(/\bbairro\s*[:\-]?\s*([^,;|·]+?)(?=\s[-–—]\s|$)/i);
+  if (!parsed.neighborhood && explicitNeighborhood) {
+    parsed.neighborhood = cleanAddressValue(explicitNeighborhood[1]);
+  }
+
+  for (const token of tokens) {
+    if (!parsed.zip && isZipPart(token)) parsed.zip = token;
+    if (!parsed.complement && isComplementPart(token)) parsed.complement = token;
+    if (isCityStatePart(token)) {
+      const cityState = token.match(/^(.+?)[\/-]\s*([A-Za-z]{2})$/);
+      if (cityState) {
+        if (!parsed.city) parsed.city = cleanAddressValue(cityState[1]);
+        if (!parsed.state) parsed.state = cleanAddressValue(cityState[2]).toUpperCase();
+      }
+    }
+  }
+
+  if (!parsed.neighborhood) {
+    const start = Math.max(streetIndex, numberIndex);
+    const candidate = tokens.find((token, index) => {
+      if (index <= start) return false;
+      if (isZipPart(token) || isCityStatePart(token) || isComplementPart(token)) return false;
+      if (/^(?:n(?:º|°|o)?\.?\s*)?\d+[A-Za-z0-9/-]*$/i.test(token)) return false;
+      return isValidNeighborhood(token);
+    });
+    if (candidate) parsed.neighborhood = candidate.replace(/^bairro\s*[:\-]?\s*/i, '');
+  }
+
+  return { ...parsed, formatted: addressPartsLabel(parsed, '') };
+}
+
+function normalizeAddress(address) {
+  if (!address || typeof address !== 'object') return parseAddressInput('');
+  const formatted = cleanAddressValue(address.formatted);
+  return parseAddressInput(formatted, address);
+}
+
+function missingAddressFields(address) {
+  const normalized = normalizeAddress(address);
+  return REQUIRED_ADDRESS_FIELDS.filter((field) => {
+    if (field === 'street') return !isValidStreet(normalized.street);
+    if (field === 'number') return !isValidNumber(normalized.number);
+    return !isValidNeighborhood(normalized.neighborhood);
+  });
+}
+
+function addressMissingPrompt(stateStore, field) {
+  const key = field === 'street'
+    ? 'addressStreetPrompt'
+    : field === 'number'
+      ? 'addressNumberPrompt'
+      : 'addressNeighborhoodPrompt';
+  return message(stateStore, key);
+}
+
+function mergeAddressReply(address, input, expectedField = null) {
+  const draft = normalizeAddress(address);
+  const raw = cleanAddressValue(input);
+  const looksLikeFullAddress = /[,;|·]|\s[-–—]\s/.test(raw) || (/[A-Za-zÀ-ÿ]/.test(raw) && /\d/.test(raw));
+
+  if (expectedField && !looksLikeFullAddress) {
+    draft[expectedField] = raw;
+    return { ...draft, formatted: addressPartsLabel(draft, '') };
+  }
+
+  const parsed = parseAddressInput(raw);
+  for (const field of ['street', 'number', 'complement', 'neighborhood', 'city', 'state', 'zip']) {
+    if (cleanAddressValue(parsed[field])) draft[field] = parsed[field];
+  }
+  return { ...draft, formatted: addressPartsLabel(draft, '') };
+}
+
 function addressLabel(address) {
-  if (!address) return '—';
-  if (address.formatted) return address.formatted;
-  return [[address.street, address.number].filter(Boolean).join(', '), address.complement, address.neighborhood, [address.city, address.state].filter(Boolean).join('/'), address.zip].filter(Boolean).join(' · ');
+  return addressPartsLabel(normalizeAddress(address), '—');
 }
 
 function confirmationText(stateStore, session) {
@@ -288,25 +466,63 @@ export function createChatbotEngine({ stateStore, now = () => new Date() }) {
     if (session.step === 'address_choice') {
       if (input === '1') {
         const savedAddress = latestAddress(customer);
-        if (!savedAddress) { session.step = 'address_input'; saveSession(stateStore, phone, session, now); await sendText(message(stateStore, 'addressInputPrompt')); return { handled: true, step: session.step }; }
-        session.address = structuredClone(savedAddress); session.newAddress = false; session.step = 'confirm'; saveSession(stateStore, phone, session, now);
-        await sendText(confirmationText(stateStore, session)); return { handled: true, step: session.step };
+        if (!savedAddress) {
+          session.address = null; session.addressMissingField = null; session.step = 'address_input';
+          saveSession(stateStore, phone, session, now);
+          await sendText(message(stateStore, 'addressInputPrompt'));
+          return { handled: true, step: session.step };
+        }
+        session.address = normalizeAddress(savedAddress);
+        const missing = missingAddressFields(session.address);
+        if (missing.length) {
+          session.newAddress = true;
+          session.addressMissingField = missing[0];
+          session.step = 'address_input';
+          saveSession(stateStore, phone, session, now);
+          await sendText(addressMissingPrompt(stateStore, session.addressMissingField));
+          return { handled: true, step: session.step };
+        }
+        session.newAddress = false; session.addressMissingField = null; session.step = 'confirm';
+        saveSession(stateStore, phone, session, now);
+        await sendText(confirmationText(stateStore, session));
+        return { handled: true, step: session.step };
       }
-      if (input === '2') { session.step = 'address_input'; saveSession(stateStore, phone, session, now); await sendText(message(stateStore, 'addressInputPrompt')); return { handled: true, step: session.step }; }
+      if (input === '2') {
+        session.address = null; session.addressMissingField = null; session.newAddress = true; session.step = 'address_input';
+        saveSession(stateStore, phone, session, now);
+        await sendText(message(stateStore, 'addressInputPrompt'));
+        return { handled: true, step: session.step };
+      }
       await sendText(message(stateStore, 'savedAddressPrompt', { endereco: addressLabel(latestAddress(customer)) }));
       return { handled: true, step: session.step };
     }
 
     if (session.step === 'address_input') {
-      if (input.length < 8) { await sendText(message(stateStore, 'addressInputPrompt')); return { handled: true, step: session.step }; }
-      session.address = { formatted: input }; session.newAddress = true; session.step = 'confirm'; saveSession(stateStore, phone, session, now);
+      session.address = mergeAddressReply(session.address, input, session.addressMissingField);
+      session.newAddress = true;
+      const missing = missingAddressFields(session.address);
+      if (missing.length) {
+        session.addressMissingField = missing[0];
+        saveSession(stateStore, phone, session, now);
+        await sendText(addressMissingPrompt(stateStore, session.addressMissingField));
+        return { handled: true, step: session.step };
+      }
+      session.addressMissingField = null;
+      session.address = normalizeAddress(session.address);
+      session.step = 'confirm';
+      saveSession(stateStore, phone, session, now);
       storeConfirmedAddress(stateStore, phone, session, now);
       await sendText(confirmationText(stateStore, session));
       return { handled: true, step: session.step };
     }
 
     if (session.step === 'confirm') {
-      if (input === '2') { session.step = 'address_input'; saveSession(stateStore, phone, session, now); await sendText(message(stateStore, 'addressInputPrompt')); return { handled: true, step: session.step }; }
+      if (input === '2') {
+        session.address = null; session.addressMissingField = null; session.newAddress = true; session.step = 'address_input';
+        saveSession(stateStore, phone, session, now);
+        await sendText(message(stateStore, 'addressInputPrompt'));
+        return { handled: true, step: session.step };
+      }
       if (input === '0') return cancelAndRestart({ phone, sendText, sendMedia });
       if (input !== '1') { await sendText(confirmationText(stateStore, session)); return { handled: true, step: session.step }; }
       try {
