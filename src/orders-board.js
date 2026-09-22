@@ -66,11 +66,25 @@ function itemLines(order) {
   return items.map((item) => `<div class="order-board-item"><span>${esc(item.name || 'Item')}</span><span class="order-board-dot">•</span><span>${Number(item.quantity || 0)} un.</span></div>`).join('');
 }
 
+function cleanAddressValue(value = '') {
+  const text = String(value ?? '').trim().replace(/\s+/g, ' ');
+  if (!text || /^(undefined|null|n\/?a|não informado|nao informado|—|-)$/i.test(text)) return '';
+  return text;
+}
+
 function compactAddress(address) {
   if (!address) return '';
-  if (address.formatted) return esc(address.formatted);
-  const first = [address.street, address.number].filter(Boolean).join(', ');
-  return esc([first, address.neighborhood].filter(Boolean).join(' · '));
+  const street = cleanAddressValue(address.street);
+  const number = cleanAddressValue(address.number);
+  const neighborhood = cleanAddressValue(address.neighborhood);
+  const first = [street, number].filter(Boolean).join(', ');
+  const structured = [first, neighborhood].filter(Boolean).join(' · ');
+  if (structured) return esc(structured);
+  const formatted = cleanAddressValue(address.formatted)
+    .replace(/\b(?:undefined|null)\b/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return formatted ? esc(formatted) : '';
 }
 
 function waitMarkup(order, now) {

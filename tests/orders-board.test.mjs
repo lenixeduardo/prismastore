@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 const root = resolve(import.meta.dirname, '..');
 const indexSource = readFileSync(resolve(root, 'index.html'), 'utf8');
 const serviceWorkerSource = readFileSync(resolve(root, 'service-worker.js'), 'utf8');
+const appSource = readFileSync(resolve(root, 'src/app.js'), 'utf8');
 const boardUrl = pathToFileURL(resolve(root, 'src/orders-board.js')).href;
 
 async function loadBoardModule() {
@@ -88,6 +89,27 @@ test('board markup exposes the reference lane titles and operational actions', a
   assert.match(html, /Informar a ordem na fila/);
   assert.match(html, /WhatsApp conectado/);
   assert.match(html, /data-board-view="chatbot"/);
+});
+
+test('orders views never render undefined when address data is absent or invalid', async () => {
+  const { renderOrdersBoard } = await loadBoardModule();
+  const html = renderOrdersBoard({
+    orders: [{
+      id: 'PS-MISSING',
+      customerName: 'Cliente',
+      status: 'PAID',
+      deliveryType: 'local_delivery',
+      paidAt: '2026-09-16T18:28:00.000Z',
+      items: [{ name: 'Item', quantity: 1 }],
+      address: { street: 'undefined', number: undefined, neighborhood: 'undefined', formatted: 'undefined undefined' },
+    }],
+    whatsappStatus: 'connected',
+    now: new Date('2026-09-16T18:34:00.000Z'),
+  });
+
+  assert.doesNotMatch(html, /undefined/i);
+  assert.match(appSource, /addressText\(o\.address,''\)/);
+  assert.doesNotMatch(appSource, /o\.address\.street/);
 });
 
 test('orders board stylesheet stacks lanes vertically on mobile', () => {
