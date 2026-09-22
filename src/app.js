@@ -306,19 +306,8 @@ function productsView() {
 }
 
 function reportsView() {
-  const monthOrders=state.orders.filter(o=>o.paidAt?.startsWith('2026-09'));
-  const revenue=monthOrders.reduce((s,o)=>s+o.total,0);
-  const avg=monthOrders.length?revenue/monthOrders.length:0;
-  const accounts=receivingAccounts.map(a=>({ ...a, total:monthOrders.filter(o=>o.receivingAccountId===a.id).reduce((s,o)=>s+o.total,0) }));
-  const daily=[120,280,190,420,355,510,320,580,440,690,535,760,620];
-  const max=Math.max(...daily);
-  return shell(`${header('Relatórios','Faturamento mensal e rastreabilidade de qual conta recebeu cada pagamento.','<button class="btn">Exportar CSV</button>')}
-    <div class="grid cols-4">${kpi('Faturamento setembro',formatCurrencyBRL(revenue),'Pagamentos confirmados','positive')}${kpi('Pedidos pagos',String(monthOrders.length),'Baseado em paidAt')}${kpi('Ticket médio',formatCurrencyBRL(avg),'Pedidos pagos')}${kpi('Contas recebedoras',String(accounts.filter(a=>a.total>0).length),'Identificadas por transação')}</div>
-    <div class="grid cols-2 section">
-      <div class="card chart-card"><div class="section-head"><div class="section-title">Fluxo do mês</div><div class="section-note">Demonstração visual</div></div><div class="bar-chart">${daily.map((v,i)=>`<div class="bar-col"><div class="bar" style="height:${Math.round(v/max*100)}%" title="${formatCurrencyBRL(v)}"></div><div class="bar-label">${String(i+1).padStart(2,'0')}</div></div>`).join('')}</div></div>
-      <div class="card chart-card"><div class="section-head"><div class="section-title">Recebimento por conta</div><div class="section-note">Setembro</div></div><div class="account-bars">${accounts.map(a=>`<div class="account-row"><span>${esc(a.name)}</span><div class="progress ${a.accent==='gold'?'gold':''}"><i style="width:${revenue?Math.max(4,a.total/revenue*100):0}%"></i></div><strong class="mono">${formatCurrencyBRL(a.total)}</strong></div>`).join('')}</div><div class="detail-block" style="margin-top:16px"><div class="detail-label">Regra financeira</div><div class="subtitle">O relatório usa a data efetiva de confirmação do pagamento e a conta recebedora registrada pelo webhook.</div></div></div>
-    </div>
-    <div class="section">${ordersTable(monthOrders,'Transações consideradas no mês')}</div>`);
+  return shell(`${header('Relatórios','Faturamento mensal e conta recebedora de cada pagamento confirmado.')}
+    <div class="report-loading card padded" role="status">Carregando relatório…</div>`);
 }
 
 function chatbotView() {
