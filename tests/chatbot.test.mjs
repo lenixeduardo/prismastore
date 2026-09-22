@@ -83,7 +83,9 @@ test('chatbot guides item, quantity, delivery, address and confirmation without 
     assert.equal(h.store.getChatSession('5511999999999').step, 'confirm');
     const customerAfterAddress = h.store.load().customers[0];
     assert.equal(customerAfterAddress.addresses.length, 1);
-    assert.equal(customerAfterAddress.addresses[0].formatted, 'Rua Exemplo, 123 - Centro - São Paulo/SP - 01000-000');
+    assert.equal(customerAfterAddress.addresses[0].street, 'Rua Exemplo');
+    assert.equal(customerAfterAddress.addresses[0].number, '123');
+    assert.equal(customerAfterAddress.addresses[0].neighborhood, 'Centro');
     assert.match(h.sent.at(-1).text, /CONFIRME SEU PEDIDO/i);
     assert.match(h.sent.at(-1).text, /R\$\s*20,00/);
 
@@ -96,7 +98,50 @@ test('chatbot guides item, quantity, delivery, address and confirmation without 
 
     const customer = h.store.load().customers[0];
     assert.equal(customer.addresses.length, 1);
-    assert.equal(customer.addresses[0].formatted, 'Rua Exemplo, 123 - Centro - São Paulo/SP - 01000-000');
+    assert.equal(customer.addresses[0].street, 'Rua Exemplo');
+    assert.equal(customer.addresses[0].number, '123');
+    assert.equal(customer.addresses[0].neighborhood, 'Centro');
+  } finally { h.cleanup(); }
+});
+
+test('chatbot requests each missing required address field before confirmation', async () => {
+  const h = harness();
+  try {
+    for (const text of ['Oi', '1', '1', '2', '2']) await h.incoming(text);
+    assert.equal(h.store.getChatSession('5511999999999').step, 'address_input');
+
+    await h.incoming('Rua Exemplo');
+    assert.equal(h.store.getChatSession('5511999999999').step, 'address_input');
+    assert.match(h.sent.at(-1).text, /número/i);
+
+    await h.incoming('123');
+    assert.equal(h.store.getChatSession('5511999999999').step, 'address_input');
+    assert.match(h.sent.at(-1).text, /bairro/i);
+
+    await h.incoming('Centro');
+    const session = h.store.getChatSession('5511999999999');
+    assert.equal(session.step, 'confirm');
+    assert.equal(session.address.street, 'Rua Exemplo');
+    assert.equal(session.address.number, '123');
+    assert.equal(session.address.neighborhood, 'Centro');
+  } finally { h.cleanup(); }
+});
+
+test('chatbot requests the street when number and neighborhood arrive without it', async () => {
+  const h = harness();
+  try {
+    for (const text of ['Oi', '1', '1', '2', '2']) await h.incoming(text);
+
+    await h.incoming('123 - Centro');
+    assert.equal(h.store.getChatSession('5511999999999').step, 'address_input');
+    assert.match(h.sent.at(-1).text, /rua/i);
+
+    await h.incoming('Rua Exemplo');
+    const session = h.store.getChatSession('5511999999999');
+    assert.equal(session.step, 'confirm');
+    assert.equal(session.address.street, 'Rua Exemplo');
+    assert.equal(session.address.number, '123');
+    assert.equal(session.address.neighborhood, 'Centro');
   } finally { h.cleanup(); }
 });
 
@@ -105,7 +150,7 @@ test('existing customer can reuse the most recent address', async () => {
   const initial = seed();
   initial.customers.push({
     id: 'c1', name: 'Eduardo', phone: '+55 11 99999-9999', totalSpent: 0, orderCount: 0,
-    addresses: [{ formatted: 'Rua Salva, 10 - São Paulo/SP', usedAt: '2026-09-01' }],
+    addresses: [{ formatted: 'Rua Salva, 10 - Centro - São Paulo/SP', usedAt: '2026-09-01' }],
     lastOrderAt: null, addressChanged: false,
   });
   const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: initial });
