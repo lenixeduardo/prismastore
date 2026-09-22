@@ -12,19 +12,21 @@ test('loads operational extensions after the core admin app', () => {
   assert.match(html, /src\/admin-extensions\.css/);
 });
 
-test('products page uses compact rows and opens product-specific details from the ellipsis action', () => {
+test('products page keeps a grouped stock stepper beside the compact product summary', () => {
   assert.match(app, /class="[^"]*product-list[^"]*"/);
   assert.match(app, /class="product-list-item"/);
+  assert.match(app, /class="product-stock-stepper"/);
+  assert.match(app, /data-stock-dec=/);
+  assert.match(app, /data-stock-input=/);
+  assert.match(app, /data-stock-inc=/);
   assert.match(app, /data-real-product-details=/);
   assert.match(app, />•••<\/button>/);
   assert.doesNotMatch(app, /product-list-price/);
   assert.doesNotMatch(app, /<th>Disponível<\/th>/);
-  assert.doesNotMatch(app, /data-stock-dec=/);
-  assert.doesNotMatch(app, /data-stock-input=/);
-  assert.doesNotMatch(app, /data-stock-inc=/);
+  assert.match(styles, /\.product-stock-stepper\s*\{[^}]*display:grid[^}]*grid-template-columns:\s*32px 48px 32px[^}]*overflow:hidden/s);
+  assert.match(styles, /\.product-stock-stepper button\s*\{[^}]*border:0/s);
+  assert.match(styles, /\.product-stock-stepper input\s*\{[^}]*border:0[^}]*text-align:center/s);
   assert.match(source, /function productDetailsMarkup\(/);
-  assert.match(source, /data-real-product-edit/);
-  assert.match(source, /data-real-product-toggle/);
 });
 
 test('settings page owns persisted chatbot configuration in the core app without duplicate extension handlers', () => {
