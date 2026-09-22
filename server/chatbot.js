@@ -159,7 +159,9 @@ function parseAddressInput(value, existing = {}) {
     .map(cleanAddressValue)
     .filter(Boolean);
 
-  const inline = raw.match(/^(.+?)\s+(?:n(?:º|°|o)?\.?\s*)?(\d+[A-Za-z0-9/-]*)\s+(.+)$/i);
+  const inline = tokens.length === 1
+    ? raw.match(/^(.+?)\s+(?:n(?:º|°|o)?\.?\s*)?(\d+[A-Za-z0-9/-]*)\s+(.+)$/i)
+    : null;
   if (inline) {
     if (!parsed.street) parsed.street = cleanAddressValue(inline[1]);
     if (!parsed.number) parsed.number = cleanAddressValue(inline[2]);
