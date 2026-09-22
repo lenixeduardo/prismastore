@@ -14,22 +14,47 @@ function closeInstallCard() {
   installCard = null;
 }
 
-function showInstallCard({ ios = false, update = false } = {}) {
+function showInstallCard({ ios = false, update = false, insecure = false, unavailable = false } = {}) {
   if (isStandalone()) return;
   closeInstallCard();
   installCard = document.createElement('div');
   installCard.className = 'pwa-install-card';
-  const message = update
-    ? 'Há uma nova versão do PrismaStore pronta para carregar.'
-    : ios
-      ? 'No iPhone, toque em Compartilhar e depois em “Adicionar à Tela de Início”.'
-      : 'Instale o PrismaStore para abrir em tela cheia como um aplicativo.';
-  installCard.innerHTML = `<strong>${update ? 'Atualização disponível' : 'PrismaStore no celular'}</strong><p>${message}</p><div class="pwa-install-actions"><button class="btn ghost" data-pwa-dismiss>Agora não</button>${ios ? '' : `<button class="btn primary" ${update ? 'data-pwa-update' : 'data-pwa-install'}>${update ? 'Atualizar' : 'Instalar'}</button>`}</div>`;
+
+  let title = 'PrismaStore no celular';
+  let message = 'Instale o PrismaStore para abrir em tela cheia como um aplicativo.';
+  let primaryAction = '<button class="btn primary" data-pwa-install>Instalar</button>';
+
+  if (update) {
+    title = 'Atualização disponível';
+    message = 'Há uma nova versão do PrismaStore pronta para carregar.';
+    primaryAction = '<button class="btn primary" data-pwa-update>Atualizar</button>';
+  } else if (insecure) {
+    title = 'HTTPS necessário para instalar';
+    message = 'Esta produção está aberta por HTTP. O navegador bloqueia a instalação real do PrismaStore e o service worker fora de HTTPS. Abra o painel por um endereço HTTPS e tente novamente.';
+    primaryAction = '';
+  } else if (ios) {
+    title = 'Adicionar PrismaStore à Tela de Início';
+    message = 'No iPhone, o site não pode criar o ícone automaticamente. Abra no Safari, toque em Compartilhar, escolha “Adicionar à Tela de Início” e depois toque em “Adicionar”.';
+    primaryAction = '';
+  } else if (unavailable) {
+    title = 'Instalação ainda não liberada';
+    message = 'O navegador ainda não disponibilizou o prompt de instalação. Recarregue a página e verifique se o PrismaStore está aberto por HTTPS.';
+    primaryAction = '';
+  }
+
+  installCard.innerHTML = `<strong>${title}</strong><p>${message}</p><div class="pwa-install-actions"><button class="btn ghost" data-pwa-dismiss>Fechar</button>${primaryAction}</div>`;
   document.body.appendChild(installCard);
 }
 
 async function installPWA() {
-  if (!deferredInstallPrompt) return;
+  if (!window.isSecureContext) {
+    showInstallCard({ insecure: true });
+    return;
+  }
+  if (!deferredInstallPrompt) {
+    showInstallCard({ unavailable: true });
+    return;
+  }
   deferredInstallPrompt.prompt();
   await deferredInstallPrompt.userChoice;
   deferredInstallPrompt = null;
@@ -107,9 +132,10 @@ document.addEventListener('click', async (event) => {
   if (event.target.closest('[data-pwa-install-entry]')) {
     closeMoreSheet();
     if (isStandalone()) return;
+    if (!window.isSecureContext) return showInstallCard({ insecure: true });
     if (deferredInstallPrompt) return installPWA();
     if (isIOS()) return showInstallCard({ ios: true });
-    return showInstallCard();
+    return showInstallCard({ unavailable: true });
   }
   if (event.target.closest('[data-pwa-install]')) return installPWA();
   if (event.target.closest('[data-pwa-dismiss]')) return closeInstallCard();
