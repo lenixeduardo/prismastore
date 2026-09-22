@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { availableStock, calculateCart, consumeCartStock, formatCurrencyBRL } from '../src/domain.js';
+import { availableStock, calculateCart, consumeCartStock, formatCurrencyBRL, lineTotalForQuantity, unitPriceForQuantity } from '../src/domain.js';
 import { resolveChatbotMessage } from './chatbot-messages.js';
 
 function digits(value = '') { return String(value).replace(/\D/g, ''); }
@@ -44,11 +44,29 @@ function activeProducts(stateStore) {
   return stateStore.load().products.filter((product) => product.active !== false && availableStock(product) > 0);
 }
 
+function quantityPricingText(product) {
+  const pricing = product?.quantityPricing;
+  if (!pricing || typeof pricing !== 'object') return '';
+
+  const exact = Object.entries(pricing.exactTotals ?? {})
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([quantity, total]) => `${quantity} por ${formatCurrencyBRL(total)}`);
+  const minimum = Number(pricing.minQuantity ?? 0);
+  const unitPrice = Number(pricing.unitPrice);
+  if (minimum > 0 && Number.isFinite(unitPrice)) {
+    exact.push(`${minimum}+ por ${formatCurrencyBRL(unitPrice)}/un`);
+  }
+  return exact.join(' · ');
+}
+
 function catalogText(stateStore, products) {
   if (!products.length) return 'Nosso catálogo está temporariamente sem itens disponíveis. Tente novamente mais tarde.';
   return [
     message(stateStore, 'catalogHeader'), '',
-    ...products.map((product, index) => `${index + 1}. ${product.name} — ${formatCurrencyBRL(product.price)}`),
+    ...products.map((product, index) => {
+      const pricing = quantityPricingText(product);
+      return `${index + 1}. ${product.name} — ${formatCurrencyBRL(product.price)}${pricing ? `\n   ${pricing}` : ''}`;
+    }),
     '', message(stateStore, 'catalogInstruction'),
   ].join('\n');
 }
@@ -57,7 +75,7 @@ function cartLines(stateStore, cart) {
   const state = stateStore.load();
   return Object.entries(cart).filter(([, quantity]) => Number(quantity) > 0).map(([productId, quantity]) => {
     const product = state.products.find((candidate) => candidate.id === productId);
-    return product ? `${quantity}× ${product.name} — ${formatCurrencyBRL(Number(product.price) * Number(quantity))}` : null;
+    return product ? `${quantity}× ${product.name} — ${formatCurrencyBRL(lineTotalForQuantity(product, quantity))}` : null;
   }).filter(Boolean);
 }
 
@@ -119,7 +137,7 @@ function createPendingOrder(stateStore, phone, session, now) {
     assertCartProductsAvailable(state, session.cart);
     const items = Object.entries(session.cart).filter(([, quantity]) => Number(quantity) > 0).map(([productId, quantity]) => {
       const product = state.products.find((candidate) => candidate.id === productId);
-      return { productId, name: product.name, quantity: Number(quantity), unitPrice: Number(product.price) };
+      return { productId, name: product.name, quantity: Number(quantity), unitPrice: unitPriceForQuantity(product, quantity) };
     });
     if (!items.length) throw new Error('Carrinho vazio.');
     const totals = calculateCart(state.products, session.cart);

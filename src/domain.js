@@ -17,6 +17,31 @@ export function isNewAddress(customer, address) {
   return !(customer?.addresses ?? []).some((saved) => normalizeAddress(saved) === current);
 }
 
+export function lineTotalForQuantity(product, quantity) {
+  const qty = Number(quantity ?? 0);
+  if (!product || qty <= 0) return 0;
+
+  const pricing = product.quantityPricing && typeof product.quantityPricing === 'object'
+    ? product.quantityPricing
+    : null;
+  const exactTotal = pricing?.exactTotals?.[String(qty)] ?? pricing?.exactTotals?.[qty];
+  if (exactTotal != null && Number.isFinite(Number(exactTotal))) return Number(exactTotal);
+
+  const minQuantity = Number(pricing?.minQuantity ?? 0);
+  const discountedUnitPrice = Number(pricing?.unitPrice);
+  if (minQuantity > 0 && qty >= minQuantity && Number.isFinite(discountedUnitPrice)) {
+    return discountedUnitPrice * qty;
+  }
+
+  return Number(product.price) * qty;
+}
+
+export function unitPriceForQuantity(product, quantity) {
+  const qty = Number(quantity ?? 0);
+  if (!product || qty <= 0) return Number(product?.price ?? 0);
+  return lineTotalForQuantity(product, qty) / qty;
+}
+
 export function calculateCart(products, cart) {
   const byId = Object.fromEntries(products.map((product) => [product.id, product]));
   return Object.entries(cart).reduce(
@@ -25,7 +50,7 @@ export function calculateCart(products, cart) {
       const qty = Number(quantity ?? 0);
       if (!product || qty <= 0) return result;
       result.quantity += qty;
-      result.subtotal += Number(product.price) * qty;
+      result.subtotal += lineTotalForQuantity(product, qty);
       return result;
     },
     { quantity: 0, subtotal: 0 },
