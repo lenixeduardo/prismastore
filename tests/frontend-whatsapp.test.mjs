@@ -45,11 +45,14 @@ test('settings UI owns Pix status in the core without a second DOM controller', 
 });
 
 
-test('core WhatsApp controller refreshes active connection states until they settle', () => {
-  assert.match(source, /WHATSAPP_ACTIVE_STATUSES\s*=\s*new Set\(\[['"]connecting['"],\s*['"]authenticated['"],\s*['"]qr['"],\s*['"]pairing['"]\]\)/);
+test('dashboard and settings keep WhatsApp status synchronized after connected or disconnected states', () => {
   assert.match(source, /function syncWhatsAppStatusPolling\(/);
+  assert.match(source, /const visibleControllerView = \[['"]dashboard['"],\s*['"]settings['"]\]\.includes\(state\.view\)/);
+  assert.doesNotMatch(source, /!WHATSAPP_ACTIVE_STATUSES\.has\(state\.whatsapp\.status\)/);
   assert.match(source, /window\.setTimeout\([\s\S]*?refreshWhatsAppStatus\(\{ rerender: true \}\)[\s\S]*?WHATSAPP_STATUS_POLL_MS/);
-  assert.match(source, /function stopWhatsAppStatusPolling\(/);
+  assert.match(source, /async function refreshSettingsHealth\([\s\S]*?refreshWhatsAppStatus\(\{ rerender: false \}\)/);
+  const settingsHealth = source.match(/async function refreshSettingsHealth\(\)[\s\S]*?\n}\n\nasync function saveChatbotMessageSettings/)?.[0] || '';
+  assert.doesNotMatch(settingsHealth, /fetch\(['"]\/api\/whatsapp\/status['"]/);
 });
 
 test('phone pairing request stays single-flight while status rerenders continue', () => {
