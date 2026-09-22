@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { availableStock, calculateCart, consumeCartStock, formatCurrencyBRL } from '../src/domain.js';
+import { availableStock, calculateCart, consumeCartStock, formatCurrencyBRL, lineTotalForQuantity, unitPriceForQuantity } from '../src/domain.js';
 import { resolveChatbotMessage } from './chatbot-messages.js';
 
 function digits(value = '') { return String(value).replace(/\D/g, ''); }
@@ -57,7 +57,7 @@ function cartLines(stateStore, cart) {
   const state = stateStore.load();
   return Object.entries(cart).filter(([, quantity]) => Number(quantity) > 0).map(([productId, quantity]) => {
     const product = state.products.find((candidate) => candidate.id === productId);
-    return product ? `${quantity}× ${product.name} — ${formatCurrencyBRL(Number(product.price) * Number(quantity))}` : null;
+    return product ? `${quantity}× ${product.name} — ${formatCurrencyBRL(lineTotalForQuantity(product, quantity))}` : null;
   }).filter(Boolean);
 }
 
@@ -119,7 +119,7 @@ function createPendingOrder(stateStore, phone, session, now) {
     assertCartProductsAvailable(state, session.cart);
     const items = Object.entries(session.cart).filter(([, quantity]) => Number(quantity) > 0).map(([productId, quantity]) => {
       const product = state.products.find((candidate) => candidate.id === productId);
-      return { productId, name: product.name, quantity: Number(quantity), unitPrice: Number(product.price) };
+      return { productId, name: product.name, quantity: Number(quantity), unitPrice: unitPriceForQuantity(product, quantity) };
     });
     if (!items.length) throw new Error('Carrinho vazio.');
     const totals = calculateCart(state.products, session.cart);
