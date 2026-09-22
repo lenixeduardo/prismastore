@@ -1,13 +1,13 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.2-reports-runtime-20260922-20';
+const CACHE_NAME = 'prismastore-shell-v0.9.2-theme-logo-20260922-21';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
-  '/src/styles.css', '/src/reports.css', '/src/backup.css', '/src/pwa.css', '/src/auth.css', '/src/admin-extensions.css', '/src/admin-shell-fixes.css', '/src/orders-board.css',
-  '/src/auth-ui.js', '/src/bug-report.js', '/src/error-messages.js', '/src/app.js', '/src/data.js', '/src/domain.js', '/src/live-sync.js',
+  '/src/styles.css', '/src/reports.css', '/src/backup.css', '/src/pwa.css', '/src/auth.css', '/src/admin-extensions.css', '/src/admin-shell-fixes.css', '/src/orders-board.css', '/src/theme.css',
+  '/src/theme.js', '/src/auth-ui.js', '/src/bug-report.js', '/src/error-messages.js', '/src/app.js', '/src/data.js', '/src/domain.js', '/src/live-sync.js',
   '/src/order-lifecycle-ui.js', '/src/reports-ui.js', '/src/backup-ui.js', '/src/pwa.js',
   '/src/admin-extensions.js', '/src/product-editor.js', '/src/chatbot-settings.js', '/src/chat-simulator.js', '/src/admin-icons.js', '/src/orders-board.js',
   '/assets/mobile-dashboard-bg.svg', '/assets/prism-hero.svg', '/assets/empty-stock-ok.svg',
-  '/assets/dashboard-prism-holographic.webp', '/assets/kpi-revenue.webp', '/assets/kpi-paid-orders.webp', '/assets/kpi-packing.webp', '/assets/kpi-critical-stock.svg',
+  '/assets/dashboard-prism-holographic.webp', '/assets/prismastore-prism-logo.webp', '/assets/kpi-revenue.webp', '/assets/kpi-paid-orders.webp', '/assets/kpi-packing.webp', '/assets/kpi-critical-stock.svg',
   '/icons/favicon-16.png', '/icons/favicon-32.png', '/icons/apple-touch-icon.png',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-192.svg', '/icons/icon-512.svg', '/icons/prismastore-logo.png'
 ];

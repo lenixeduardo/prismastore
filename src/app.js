@@ -127,7 +127,7 @@ function shell(content) {
   return `
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><div class="brand-mark"><img src="/icons/prismastore-logo.png" alt="" aria-hidden="true" /></div><div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div></div>
+      <div class="brand"><div class="brand-mark"><img src="/assets/prismastore-prism-logo.webp?v=20260922-logo-1" alt="" aria-hidden="true" /></div><div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div></div>
       <div class="nav-group">
         <div class="nav-label">Operação</div>
         ${views.map(([id,label,icon])=>`<button class="nav-btn ${state.view===id?'active':''}" data-view="${id}"><span class="nav-icon">${icon}</span>${label}</button>`).join('')}
@@ -135,6 +135,12 @@ function shell(content) {
         <button class="nav-btn ${state.view==='settings'?'active':''}" data-view="settings"><span class="nav-icon">⚙</span>Configurações</button>
       </div>
       <div class="sidebar-footer">
+        <button class="theme-switch sidebar-theme-switch" type="button" role="switch" aria-checked="false" data-theme-toggle aria-label="Alternar tema claro e escuro">
+          <span class="theme-switch-label" data-theme-label>Tema escuro</span>
+          <span class="theme-switch-icon" aria-hidden="true">☀</span>
+          <span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-thumb"></span></span>
+          <span class="theme-switch-icon" aria-hidden="true">☾</span>
+        </button>
         <button class="nav-btn report-bug-btn" type="button" data-report-bug><span class="nav-icon">!</span>Reportar bug</button>
         <div class="status-row"><span>WhatsApp</span><span style="display:flex;gap:8px;align-items:center"><i class="status-dot ${state.whatsapp.status==='connected'?'':'offline'}"></i>${whatsappStatusLabel()}</span></div>
       </div>
@@ -569,6 +575,12 @@ function settingsView() {
           <div class="setting-row"><div><div class="product-name">Banco de dados</div><div class="category">SQLite · data/prismastore.db</div></div>${settingsBadge(databaseOk, health.loading)}</div>
           <div class="setting-row"><div><div class="product-name">Pix Oscar</div><div class="category">Validação local por valor, destinatário, data e horário</div></div>${settingsBadge(paymentOk, health.loading)}</div>
           <div class="setting-row"><div><div class="product-name">Backups</div><div class="category">${health.backups?.external?.enabled ? 'Google Drive configurado' : 'Backup local disponível'}</div></div>${settingsBadge(backupOk, health.loading)}</div>
+          <div class="setting-row"><div><div class="product-name">Aparência</div><div class="category">Alternar entre tema claro e escuro.</div></div><button class="theme-switch" type="button" role="switch" aria-checked="false" data-theme-toggle aria-label="Alternar tema claro e escuro">
+          <span class="theme-switch-label" data-theme-label>Tema escuro</span>
+          <span class="theme-switch-icon" aria-hidden="true">☀</span>
+          <span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-thumb"></span></span>
+          <span class="theme-switch-icon" aria-hidden="true">☾</span>
+        </button></div>
         </div>
         <button class="btn sm ghost" type="button" data-refresh-settings-health>Atualizar diagnóstico</button>
       </section>
@@ -659,6 +671,7 @@ function render() {
   const renderer={dashboard:dashboardView,orders:ordersView,customers:customersView,products:productsView,reports:reportsView,chatbot:chatbotView,settings:settingsView}[state.view]||dashboardView;
   app.innerHTML=renderer();
   bind();
+  window.PrismastoreTheme?.sync(app);
   syncWhatsAppStatusPolling();
 }
 
