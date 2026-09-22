@@ -26,7 +26,7 @@ export function groupOperationalOrders(orders = []) {
   return {
     shipping: sorted.filter((order) => order.status === 'PAID' && order.deliveryType === 'shipping'),
     delivery: sorted.filter((order) => order.status === 'PAID' && order.deliveryType !== 'shipping'),
-    attending: sorted.filter((order) => order.status === 'PACKING'),
+    attending: sorted.filter((order) => ['PAYMENT_PENDING', 'PACKING'].includes(order.status)),
   };
 }
 
@@ -89,17 +89,25 @@ function paidCard(order, lane, now) {
   </article>`;
 }
 
-function attendingCard(order, position) {
-  const nextAction = order.deliveryType === 'local_delivery'
-    ? `<button class="order-board-action complete" type="button" data-board-complete-delivery="${esc(order.id)}"><span>Entregue ao motoboy · Concluir</span></button>`
-    : `<button class="order-board-action" type="button" data-board-ready-shipping="${esc(order.id)}"><span>Pedido pronto para envio</span></button>`;
-  return `<article class="order-board-card attending" data-order-id="${esc(order.id)}">
+function attendingCard(order, position, now) {
+  const awaitingPayment = order.status === 'PAYMENT_PENDING';
+  const nextAction = awaitingPayment
+    ? ''
+    : order.deliveryType === 'local_delivery'
+      ? `<button class="order-board-action complete" type="button" data-board-complete-delivery="${esc(order.id)}"><span>Entregue ao motoboy · Concluir</span></button>`
+      : `<button class="order-board-action" type="button" data-board-ready-shipping="${esc(order.id)}"><span>Pedido pronto para envio</span></button>`;
+  const paymentState = awaitingPayment
+    ? `<div class="order-board-payment-state"><span class="orders-board-status-dot"></span><strong>Aguardando pagamento</strong></div>`
+    : '';
+  return `<article class="order-board-card attending ${awaitingPayment ? 'awaiting-payment' : ''}" data-order-id="${esc(order.id)}">
+    ${awaitingPayment ? waitMarkup(order, now) : ''}
     <div class="order-board-person"><strong>${esc(order.customerName || 'Cliente')}</strong></div>
+    ${paymentState}
     <div class="order-board-items">${itemLines(order)}</div>
     ${nextAction}
     <div class="order-board-actions-stack">
-      <button class="order-board-message" type="button" data-board-message="${esc(order.id)}"><span>Enviar mensagem referente à demanda</span></button>
-      <button class="order-board-message secondary" type="button" data-board-queue="${esc(order.id)}" data-queue-position="${position}"><span>Informar a ordem na fila</span></button>
+      <button class="order-board-message" type="button" data-board-message="${esc(order.id)}"><span>${awaitingPayment ? 'Abrir conversa sobre o pagamento' : 'Enviar mensagem referente à demanda'}</span></button>
+      ${awaitingPayment ? '' : `<button class="order-board-message secondary" type="button" data-board-queue="${esc(order.id)}" data-queue-position="${position}"><span>Informar a ordem na fila</span></button>`}
     </div>
   </article>`;
 }
@@ -116,7 +124,7 @@ function laneMarkup({ title, subtitle, iconName, orders, type, now }) {
     </div>
     <div class="orders-board-list">
       ${orders.length
-        ? orders.map((order, index) => type === 'attending' ? attendingCard(order, index + 1) : paidCard(order, type, now)).join('')
+        ? orders.map((order, index) => type === 'attending' ? attendingCard(order, index + 1, now) : paidCard(order, type, now)).join('')
         : emptyLane(type === 'attending' ? 'Nenhum pedido em atendimento.' : 'Nenhum pedido aguardando nesta fila.')}
     </div>
   </section>`;
@@ -128,8 +136,8 @@ export function renderOrdersBoard({ orders = [], whatsappStatus = 'disconnected'
   return `<div class="orders-board-page">
     <div class="orders-board-topbar">
       <div>
-        <h1>Fila de pedidos pagos</h1>
-        <p>Organizada por horário de pagamento</p>
+        <h1>Fila de pedidos</h1>
+        <p>Do pagamento em andamento à separação do pedido</p>
       </div>
       <div class="orders-board-top-actions">
         <div class="orders-board-whatsapp ${whatsappConnected ? 'connected' : 'disconnected'}"><span class="orders-board-status-dot"></span>${whatsappConnected ? 'WhatsApp conectado' : 'WhatsApp desconectado'}</div>
@@ -139,7 +147,7 @@ export function renderOrdersBoard({ orders = [], whatsappStatus = 'disconnected'
     <div class="orders-board-grid">
       ${laneMarkup({ title: 'Pedidos pagos — envio', subtitle: 'Pagos e aguardando separação para envio', iconName: 'truck', orders: grouped.shipping, type: 'shipping', now })}
       ${laneMarkup({ title: 'Pedidos pagos — entregas', subtitle: 'Pagos e aguardando saída para entrega', iconName: 'package', orders: grouped.delivery, type: 'delivery', now })}
-      ${laneMarkup({ title: 'Em atendimento', subtitle: 'Pedido em atendimento pela equipe', iconName: 'headset', orders: grouped.attending, type: 'attending', now })}
+      ${laneMarkup({ title: 'Em atendimento', subtitle: 'Clientes pagando ou pedidos em atendimento pela equipe', iconName: 'headset', orders: grouped.attending, type: 'attending', now })}
     </div>
   </div>`;
 }
