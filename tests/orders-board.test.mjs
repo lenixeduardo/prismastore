@@ -29,7 +29,7 @@ test('orders board assets are loaded and cached by the PWA shell', () => {
   assert.match(serviceWorkerSource, /\/src\/orders-board\.js/);
 });
 
-test('operational orders are split into paid shipping, paid delivery and packing attention lanes', async () => {
+test('operational orders are split into paid shipping, paid delivery and active attention lanes', async () => {
   const { groupOperationalOrders } = await loadBoardModule();
   assert.equal(typeof groupOperationalOrders, 'function');
   if (typeof groupOperationalOrders !== 'function') return;
@@ -38,6 +38,7 @@ test('operational orders are split into paid shipping, paid delivery and packing
     { id: 'ship-newer', status: 'PAID', deliveryType: 'shipping', paidAt: '2026-09-16T18:20:00.000Z' },
     { id: 'delivery', status: 'PAID', deliveryType: 'local_delivery', paidAt: '2026-09-16T18:10:00.000Z' },
     { id: 'packing', status: 'PACKING', deliveryType: 'shipping', paidAt: '2026-09-16T18:05:00.000Z' },
+    { id: 'paying', status: 'PAYMENT_PENDING', deliveryType: 'shipping', createdAt: '2026-09-16T18:03:00.000Z' },
     { id: 'ship-older', status: 'PAID', deliveryType: 'shipping', paidAt: '2026-09-16T18:00:00.000Z' },
     { id: 'done', status: 'DELIVERED', deliveryType: 'local_delivery', paidAt: '2026-09-16T17:00:00.000Z' },
   ];
@@ -45,7 +46,7 @@ test('operational orders are split into paid shipping, paid delivery and packing
   const grouped = groupOperationalOrders(orders);
   assert.deepEqual(grouped.shipping.map((order) => order.id), ['ship-older', 'ship-newer']);
   assert.deepEqual(grouped.delivery.map((order) => order.id), ['delivery']);
-  assert.deepEqual(grouped.attending.map((order) => order.id), ['packing']);
+  assert.deepEqual(grouped.attending.map((order) => order.id), ['paying', 'packing']);
 });
 
 test('wait time uses cyan before 15 minutes, yellow from 15 and red from 30', async () => {
@@ -69,15 +70,18 @@ test('board markup exposes the reference lane titles and operational actions', a
       { id: 'PS-1', customerName: 'Carlos Silva', phone: '+5511999999999', status: 'PAID', deliveryType: 'shipping', paidAt: '2026-09-16T18:30:00.000Z', items: [{ name: 'Papel slim', quantity: 1 }], address: {} },
       { id: 'PS-2', customerName: 'Lucas Pereira', phone: '+5511888888888', status: 'PAID', deliveryType: 'local_delivery', paidAt: '2026-09-16T18:28:00.000Z', items: [{ name: 'Blunt sabor uva', quantity: 1 }], address: { street: 'Rua das Flores', number: '127', neighborhood: 'Vila Mariana' } },
       { id: 'PS-3', customerName: 'Letícia Azevedo', phone: '+5511777777777', status: 'PACKING', deliveryType: 'shipping', paidAt: '2026-09-16T18:20:00.000Z', items: [{ name: 'Isqueiro Clipper', quantity: 2 }], address: {} },
+      { id: 'PS-4', customerName: 'Rafael Costa', phone: '+5511666666666', status: 'PAYMENT_PENDING', deliveryType: 'shipping', createdAt: '2026-09-16T18:25:00.000Z', items: [{ name: 'Seda slim', quantity: 1 }], address: {} },
     ],
     whatsappStatus: 'connected',
     now,
   });
 
-  assert.match(html, /Fila de pedidos pagos/);
+  assert.match(html, /Fila de pedidos/);
   assert.match(html, /Pedidos pagos — envio/);
   assert.match(html, /Pedidos pagos — entregas/);
   assert.match(html, /Em atendimento/);
+  assert.match(html, /Aguardando pagamento/);
+  assert.match(html, /Abrir conversa sobre o pagamento/);
   assert.match(html, /Marcar como produto embalado/);
   assert.equal((html.match(/data-board-advance=/g) || []).length, 2);
   assert.match(html, /Enviar mensagem referente à demanda/);
