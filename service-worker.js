@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.2-wa-clean-open-20260922-18';
+const CACHE_NAME = 'prismastore-shell-v0.9.2-payment-attending-20260922-19';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
