@@ -87,3 +87,38 @@ test('supports extended text and Base64 Pix media', async () => {
     image: Buffer.from('aGVsbG8=', 'base64'), mimetype: 'image/png', fileName: 'pix.png',
   });
 });
+
+
+test('ignores unsaved contacts before chatbot, OCR or any outbound reply', async () => {
+  let chatbotCalls = 0;
+  let ocrCalls = 0;
+  const sent = [];
+  const socket = { sendMessage: async (jid, payload) => sent.push({ jid, payload }) };
+  const adapter = createWhatsAppChatAdapter({
+    chatbot: { handleIncoming: async () => { chatbotCalls += 1; return { handled: true }; } },
+    receiptOcr: { extractText: async () => { ocrCalls += 1; return 'receipt'; } },
+    downloadMedia: async () => Buffer.from('image'),
+    isSavedContact: async ({ phones }) => {
+      assert.deepEqual(phones, ['123456789', '5511999990000']);
+      return false;
+    },
+  });
+
+  const result = await adapter.handleMessage({
+    message: {
+      key: {
+        remoteJid: '123456789@lid',
+        remoteJidAlt: '5511999990000@s.whatsapp.net',
+        fromMe: false,
+        id: 'UNKNOWN1',
+      },
+      message: { imageMessage: { mimetype: 'image/jpeg' } },
+    },
+    socket,
+  });
+
+  assert.deepEqual(result, { handled: false, reason: 'unsaved-contact' });
+  assert.equal(chatbotCalls, 0);
+  assert.equal(ocrCalls, 0);
+  assert.deepEqual(sent, []);
+});
