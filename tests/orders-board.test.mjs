@@ -18,13 +18,13 @@ async function loadBoardModule() {
 }
 
 test('orders page loads the operational board enhancement instead of relying on the legacy table alone', async () => {
-  assert.match(indexSource, /src="\.\/src\/orders-board\.js"/);
+  assert.match(indexSource, /src="\.\/src\/orders-board\.js(?:\?[^"]*)?"/);
   const { enhanceOrdersView } = await loadBoardModule();
   assert.equal(typeof enhanceOrdersView, 'function');
 });
 
 test('orders board assets are loaded and cached by the PWA shell', () => {
-  assert.match(indexSource, /href="\.\/src\/orders-board\.css"/);
+  assert.match(indexSource, /href="\.\/src\/orders-board\.css(?:\?[^"]*)?"/);
   assert.match(serviceWorkerSource, /\/src\/orders-board\.css/);
   assert.match(serviceWorkerSource, /\/src\/orders-board\.js/);
 });
