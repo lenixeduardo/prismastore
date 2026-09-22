@@ -54,3 +54,10 @@ test('runtime wires real monthly reports into the same local server', () => {
   assert.match(source, /receivingAccounts/);
   assert.match(source, /reportService/);
 });
+
+
+test('runtime only allows chatbot replies to customers already saved in PrismaStore', () => {
+  assert.match(source, /isSavedContact:\s*\(\{\s*phones\s*\}\)\s*=>/);
+  assert.match(source, /stateStore\.load\(\)\.customers/);
+  assert.match(source, /savedPhones\.has\(phone\)/);
+});
