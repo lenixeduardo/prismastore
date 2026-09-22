@@ -575,6 +575,12 @@ function settingsView() {
           <div class="setting-row"><div><div class="product-name">Banco de dados</div><div class="category">SQLite · data/prismastore.db</div></div>${settingsBadge(databaseOk, health.loading)}</div>
           <div class="setting-row"><div><div class="product-name">Pix Oscar</div><div class="category">Validação local por valor, destinatário, data e horário</div></div>${settingsBadge(paymentOk, health.loading)}</div>
           <div class="setting-row"><div><div class="product-name">Backups</div><div class="category">${health.backups?.external?.enabled ? 'Google Drive configurado' : 'Backup local disponível'}</div></div>${settingsBadge(backupOk, health.loading)}</div>
+          <div class="setting-row"><div><div class="product-name">Aparência</div><div class="category">Alternar entre tema claro e escuro.</div></div><button class="theme-switch" type="button" role="switch" aria-checked="false" data-theme-toggle aria-label="Alternar tema claro e escuro">
+          <span class="theme-switch-label" data-theme-label>Tema escuro</span>
+          <span class="theme-switch-icon" aria-hidden="true">☀</span>
+          <span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-thumb"></span></span>
+          <span class="theme-switch-icon" aria-hidden="true">☾</span>
+        </button></div>
         </div>
         <button class="btn sm ghost" type="button" data-refresh-settings-health>Atualizar diagnóstico</button>
       </section>
