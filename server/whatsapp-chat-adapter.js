@@ -1,4 +1,4 @@
-import { classifyInboundJid } from './whatsapp-jid.js';
+import { classifyInboundJid, phoneFromJid } from './whatsapp-jid.js';
 import { fingerprintReceipt } from './pix-receipt.js';
 
 function extractText(message) {
@@ -13,7 +13,19 @@ function extractImageMessage(message) {
     ?? null;
 }
 
-export function createWhatsAppChatAdapter({ chatbot, receiptOcr = null, downloadMedia = null }) {
+function contactPhones(message) {
+  return [...new Set([
+    message?.key?.remoteJid,
+    message?.key?.remoteJidAlt,
+  ].filter(Boolean).map(phoneFromJid).filter(Boolean))];
+}
+
+export function createWhatsAppChatAdapter({
+  chatbot,
+  receiptOcr = null,
+  downloadMedia = null,
+  isSavedContact = null,
+}) {
   async function handleMessage({ message, socket }) {
     if (!message) return { handled: false, reason: 'missing-message' };
     if (message?.key?.fromMe) return { handled: false, reason: 'from-me' };
@@ -21,6 +33,11 @@ export function createWhatsAppChatAdapter({ chatbot, receiptOcr = null, download
     const jid = message?.key?.remoteJid ?? '';
     const classification = classifyInboundJid(jid);
     if (!classification.supported) return { handled: false, reason: classification.reason };
+
+    const phones = contactPhones(message);
+    if (isSavedContact && !(await isSavedContact({ message, jid, phones }))) {
+      return { handled: false, reason: 'unsaved-contact' };
+    }
 
     const text = String(extractText(message)).trim();
     const imageMessage = extractImageMessage(message);

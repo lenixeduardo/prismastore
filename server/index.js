@@ -97,6 +97,14 @@ const chatbot = createPaymentChatbot({ baseChatbot, stateStore, paymentService }
 const messageHandler = createWhatsAppChatAdapter({
   chatbot,
   receiptOcr,
+  isSavedContact: ({ phones }) => {
+    const savedPhones = new Set(
+      stateStore.load().customers
+        .map((customer) => String(customer?.phone ?? '').replace(/\D/g, ''))
+        .filter(Boolean),
+    );
+    return phones.some((phone) => savedPhones.has(phone));
+  },
   downloadMedia: ({ message, socket }) => downloadMediaMessage(
     message,
     'buffer',
