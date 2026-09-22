@@ -81,7 +81,24 @@ function el(html) { const t=document.createElement('template');t.innerHTML=html.
 function esc(s='') { return String(s).replace(/[&<>'"]/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[m])); }
 function formatDate(iso) { return new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(iso)); }
 function latestAddress(customer) { return customer?.addresses?.[customer.addresses.length-1]; }
-function addressText(a) { if(!a) return '—'; if(a.formatted) return a.formatted; return `${a.street}, ${a.number}${a.complement ? ` · ${a.complement}`:''} · ${a.neighborhood} · ${a.city}/${a.state} · ${a.zip}`; }
+function cleanAddressText(value='') {
+  const text=String(value??'').trim().replace(/\s+/g,' ');
+  return !text || /^(undefined|null|n\/?a|não informado|nao informado|—|-)$/i.test(text) ? '' : text;
+}
+function addressText(a,empty='—') {
+  if(!a) return empty;
+  const cleanFormatted=cleanAddressText(a.formatted)
+    .replace(/\b(?:undefined|null)\b/gi,'')
+    .replace(/\s{2,}/g,' ')
+    .trim();
+  const street=cleanAddressText(a.street), number=cleanAddressText(a.number);
+  const complement=cleanAddressText(a.complement), neighborhood=cleanAddressText(a.neighborhood);
+  const city=cleanAddressText(a.city), stateCode=cleanAddressText(a.state), zip=cleanAddressText(a.zip);
+  const first=[street,number].filter(Boolean).join(', ');
+  const cityState=[city,stateCode].filter(Boolean).join('/');
+  const structured=[first,complement,neighborhood,cityState,zip].filter(Boolean).join(' · ');
+  return structured || cleanFormatted || empty;
+}
 function statusBadge(status) {
   const cfg = {
     PAYMENT_PENDING:['Aguardando Pix','orange'], PAID:['Pago · Embalar','green'], PACKING:['Produto embalado','gold'], SHIPPED:['Enviado','gray'], OUT_FOR_DELIVERY:['Concluído','gray'], DELIVERED:['Concluído','gray'], CANCELLED:['Cancelado','red']
@@ -259,7 +276,7 @@ function ordersView() {
     </div>
     ${ordersTable(orders,'Fila de pedidos')}`);
 }
-function ordersTable(orders,title) { return `<div class="section-head"><div class="section-title">${title}</div><div class="section-note">${orders.length} registro(s)</div></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Cliente</th><th>Modalidade</th><th>Status</th><th>Endereço</th><th>Total</th><th></th></tr></thead><tbody>${orders.map(o=>`<tr><td><div class="category">${formatDate(o.createdAt)}</div></td><td><div class="customer-name">${esc(o.customerName)}</div><div class="category">${esc(o.phone)}</div></td><td>${o.deliveryType==='shipping'?'Envio':'Entrega'} </td><td>${statusBadge(o.status)}</td><td><div class="address">${o.newAddress?'<span class="badge gold" style="margin-right:5px">NOVO ENDEREÇO</span>':''}${esc(`${o.address.street}, ${o.address.number} · ${o.address.neighborhood}`)}</div></td><td class="mono"><strong>${formatCurrencyBRL(o.total)}</strong></td><td><button class="btn sm" data-open-order="${o.id}">Detalhes</button></td></tr>`).join('')}</tbody></table></div>`; }
+function ordersTable(orders,title) { return `<div class="section-head"><div class="section-title">${title}</div><div class="section-note">${orders.length} registro(s)</div></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Cliente</th><th>Modalidade</th><th>Status</th><th>Endereço</th><th>Total</th><th></th></tr></thead><tbody>${orders.map(o=>`<tr><td><div class="category">${formatDate(o.createdAt)}</div></td><td><div class="customer-name">${esc(o.customerName)}</div><div class="category">${esc(o.phone)}</div></td><td>${o.deliveryType==='shipping'?'Envio':'Entrega'} </td><td>${statusBadge(o.status)}</td><td><div class="address">${o.newAddress?'<span class="badge gold" style="margin-right:5px">NOVO ENDEREÇO</span>':''}${esc(addressText(o.address,''))}</div></td><td class="mono"><strong>${formatCurrencyBRL(o.total)}</strong></td><td><button class="btn sm" data-open-order="${o.id}">Detalhes</button></td></tr>`).join('')}</tbody></table></div>`; }
 
 function customersView() {
   return shell(`${header('Clientes','Cadastro unificado pelo número do WhatsApp, histórico de endereço e pedidos anteriores.')}
