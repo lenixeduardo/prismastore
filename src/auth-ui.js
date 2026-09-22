@@ -51,7 +51,6 @@ function ensureOverlay() {
           </button>
         </form>
 
-        <button class="auth-back auth-glass-button secondary" type="button" data-auth-back>Voltar</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -69,6 +68,22 @@ function hideOverlay() {
   overlay.hidden = true;
   const error = overlay.querySelector('[data-auth-error]');
   if (error) error.textContent = '';
+}
+
+function revealDashboard() {
+  const app = document.querySelector('#app');
+  if (!app) return;
+  app.hidden = false;
+  document.body.classList.add('dashboard-active');
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  window.dispatchEvent(new CustomEvent('prismastore:dashboard-opened'));
+}
+
+async function startAdminAccess() {
+  const allowed = await ensureAuthenticated();
+  if (!allowed) return false;
+  revealDashboard();
+  return true;
 }
 
 async function refreshStatus() {
@@ -169,11 +184,6 @@ document.addEventListener('submit', (event) => {
 });
 
 document.addEventListener('click', (event) => {
-  if (event.target.closest?.('[data-auth-back]')) {
-    hideOverlay();
-    settleLogin(false);
-    return;
-  }
   if (event.target.closest?.('[data-admin-logout]')) logout();
 });
 
@@ -190,4 +200,6 @@ window.PrismastoreAuth = {
   logout,
   getState: () => ({ ...authState }),
 };
+
+startAdminAccess();
 

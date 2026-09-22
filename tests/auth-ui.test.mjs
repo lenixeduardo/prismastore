@@ -2,12 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-test('admin shell loads authentication UI before hero entry logic', () => {
+test('login is the first screen and legacy hero entry is not mounted', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(html, /src\/auth\.css/);
-  const authIndex = html.indexOf('src/auth-ui.js');
-  const heroIndex = html.indexOf('src/hero.js');
-  assert.ok(authIndex >= 0 && heroIndex > authIndex);
+  assert.match(html, /src\/auth-ui\.js/);
+  assert.doesNotMatch(html, /id="hero-page"/);
+  assert.doesNotMatch(html, /data-enter-dashboard/);
+  assert.doesNotMatch(html, /src\/hero\.js/);
+  assert.doesNotMatch(html, /src\/hero\.css/);
 });
 
 test('authentication UI uses status login and logout APIs and exposes an auth gate', () => {
@@ -20,10 +22,13 @@ test('authentication UI uses status login and logout APIs and exposes an auth ga
   assert.match(source, /type="password"/);
 });
 
-test('hero waits for authentication before revealing the dashboard', () => {
-  const source = readFileSync(new URL('../src/hero.js', import.meta.url), 'utf8');
-  assert.match(source, /ensureAuthenticated/);
-  assert.match(source, /await/);
+test('authentication UI boots the admin gate and reveals the dashboard only after access is allowed', () => {
+  const source = readFileSync(new URL('../src/auth-ui.js', import.meta.url), 'utf8');
+  assert.match(source, /async function startAdminAccess\(/);
+  assert.match(source, /await ensureAuthenticated\(\)/);
+  assert.match(source, /function revealDashboard\(/);
+  assert.match(source, /prismastore:dashboard-opened/);
+  assert.match(source, /startAdminAccess\(\)/);
 });
 
 
@@ -59,4 +64,11 @@ test('login inputs do not render decorative icons inside the fields', () => {
   const css = readFileSync(new URL('../src/auth.css', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /auth-input-icon/);
   assert.doesNotMatch(css, /\.auth-input-icon/);
+});
+
+
+test('login screen has no back action because it is the entry screen', () => {
+  const source = readFileSync(new URL('../src/auth-ui.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /data-auth-back/);
+  assert.doesNotMatch(source, />Voltar</);
 });
