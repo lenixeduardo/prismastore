@@ -372,6 +372,7 @@ function whatsappRenderKey(whatsapp = state.whatsapp) {
 const WHATSAPP_STATUS_POLL_MS = 2500;
 let whatsappStatusPollTimer = null;
 let whatsappPairingRequestInFlight = false;
+let whatsappConnectionAttempted = false;
 
 function stopWhatsAppStatusPolling() {
   if (whatsappStatusPollTimer) window.clearTimeout(whatsappStatusPollTimer);
@@ -392,20 +393,36 @@ function syncWhatsAppStatusPolling() {
   }, WHATSAPP_STATUS_POLL_MS);
 }
 
+function cleanInitialWhatsAppStatus(remoteStatus = {}) {
+  if (whatsappConnectionAttempted || remoteStatus.status !== 'error') return remoteStatus;
+  return {
+    status: 'disconnected',
+    qrDataUrl: null,
+    pairingCode: null,
+    account: null,
+    error: null,
+    errorCode: null,
+  };
+}
+
 async function refreshWhatsAppStatus({ rerender = false } = {}) {
   const before = whatsappRenderKey(state.whatsapp);
   try {
     const response = await fetch('/api/whatsapp/status', { cache: 'no-store' });
-    state.whatsapp = await response.json();
-    if (!response.ok && state.whatsapp.status !== 'error') throw new Error(state.whatsapp.error || 'Falha ao consultar WhatsApp');
+    const remoteStatus = await response.json();
+    if (!response.ok && remoteStatus.status !== 'error') throw new Error(remoteStatus.error || 'Falha ao consultar WhatsApp');
+    state.whatsapp = cleanInitialWhatsAppStatus(remoteStatus);
   } catch (error) {
-    state.whatsapp = { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível consultar o WhatsApp.'), errorCode: null };
+    state.whatsapp = whatsappConnectionAttempted
+      ? { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível consultar o WhatsApp.'), errorCode: null }
+      : { status: 'disconnected', qrDataUrl: null, pairingCode: null, account: null, error: null, errorCode: null };
   }
   if (rerender && ['dashboard','settings'].includes(state.view) && before !== whatsappRenderKey(state.whatsapp)) render();
   return state.whatsapp;
 }
 
 async function connectWhatsApp() {
+  whatsappConnectionAttempted = true;
   state.whatsapp = { ...state.whatsapp, status: 'connecting', qrDataUrl: null, pairingCode: null, error: null };
   render();
   try {
@@ -420,6 +437,7 @@ async function connectWhatsApp() {
 
 async function pairWhatsAppByPhone(phone) {
   if (whatsappPairingRequestInFlight) return;
+  whatsappConnectionAttempted = true;
   whatsappPairingRequestInFlight = true;
   try {
     const response = await fetch('/api/whatsapp/pair', {
@@ -445,6 +463,7 @@ async function disconnectWhatsApp() {
   try {
     const response = await fetch('/api/whatsapp/disconnect', { method: 'POST' });
     state.whatsapp = await response.json();
+    if (response.ok && state.whatsapp.status === 'disconnected') whatsappConnectionAttempted = false;
   } catch (error) {
     state.whatsapp = { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: friendlyErrorMessage(error, 'Não foi possível desconectar o WhatsApp.'), errorCode: null };
   }
@@ -452,6 +471,7 @@ async function disconnectWhatsApp() {
 }
 
 async function restartWhatsAppConnection() {
+  whatsappConnectionAttempted = true;
   state.whatsapp = { ...state.whatsapp, status: 'connecting', pairingCode: null, qrDataUrl: null, error: null };
   render();
   try {
