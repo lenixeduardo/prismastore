@@ -63,3 +63,17 @@ test('CSV export uses same monthly paid orders and account labels', () => {
   assert.match(csv, /Conta Secundária/);
   assert.doesNotMatch(csv, /PS-4/);
 });
+
+
+test('monthly report excludes Cliente Métrica orders from totals and CSV', () => {
+  const metricOrders = [
+    { id: 'REAL-1', customerName: 'Cliente Real', phone: '+551100000010', status: 'PAID', deliveryType: 'shipping', total: 40, paidAt: '2026-09-12T12:00:00.000Z', receivingAccountId: 'pix-primary' },
+    { id: 'METRIC-1', customerName: 'Cliente Métrica', phone: '+551100000011', status: 'PAID', deliveryType: 'shipping', total: 999, paidAt: '2026-09-12T13:00:00.000Z', receivingAccountId: 'pix-primary' },
+  ];
+  const service = createReportService({ stateStore: storeWith(metricOrders), receivingAccounts: accounts });
+  const report = service.getMonthlyReport('2026-09');
+  assert.equal(report.orderCount, 1);
+  assert.equal(report.revenue, 40);
+  assert.deepEqual(report.orders.map((order) => order.id), ['REAL-1']);
+  assert.doesNotMatch(service.exportMonthlyCsv('2026-09'), /METRIC-1|Cliente Métrica/);
+});
