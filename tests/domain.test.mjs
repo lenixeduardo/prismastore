@@ -6,12 +6,16 @@ import {
   calculateCart,
   confirmPayment,
   buildMonthlyReport,
+  computeProductStatus,
+  isMetricCustomer,
 } from '../src/domain.js';
 
-test('flags products with fewer than 3 physical stock units as low stock', () => {
-  assert.equal(isLowStock({ stock: 2 }), true);
-  assert.equal(isLowStock({ stock: 4, reserved: 4 }), false);
-  assert.equal(isLowStock({ stock: 3, reserved: 99 }), false);
+test('flags products with fewer than 5 physical stock units as low stock', () => {
+  assert.equal(isLowStock({ stock: 4 }), true);
+  assert.equal(isLowStock({ stock: 3, reserved: 99 }), true);
+  assert.equal(isLowStock({ stock: 5, reserved: 4 }), false);
+  assert.equal(computeProductStatus({ stock: 3 }), 'LOW_STOCK');
+  assert.equal(computeProductStatus({ stock: 5 }), 'ACTIVE');
 });
 
 test('marks an address as new when it differs from every historical address', () => {
@@ -68,4 +72,21 @@ test('monthly report keeps paid revenue after orders advance operational status'
   assert.equal(report.orderCount, 2);
   assert.equal(report.revenue, 200);
   assert.deepEqual(report.byDay, { '2026-09-05': 120, '2026-09-06': 80 });
+});
+
+
+test('recognizes Cliente Métrica records regardless of accents and casing', () => {
+  assert.equal(isMetricCustomer('Cliente Métrica'), true);
+  assert.equal(isMetricCustomer({ customerName: 'CLIENTE METRICA' }), true);
+  assert.equal(isMetricCustomer({ name: 'Cliente Métrica teste' }), true);
+  assert.equal(isMetricCustomer('Cliente Real'), false);
+});
+
+test('monthly domain report ignores Cliente Métrica orders', () => {
+  const report = buildMonthlyReport([
+    { customerName: 'Cliente Métrica', total: 999, receivingAccountId: 'pix-local', paidAt: '2026-09-10T12:00:00.000Z' },
+    { customerName: 'Cliente Real', total: 25, receivingAccountId: 'pix-local', paidAt: '2026-09-10T13:00:00.000Z' },
+  ], '2026-09');
+  assert.equal(report.orderCount, 1);
+  assert.equal(report.revenue, 25);
 });
