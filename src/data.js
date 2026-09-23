@@ -8,6 +8,7 @@ export const seedProducts = [
 ];
 
 export const catalogProducts = [
+  { id: 'catalog-eduardo-teste', name: 'Eduardo teste', price: 0.01, stock: 3, active: true },
   { id: 'catalog-dry-5g', name: 'Dry 5g', price: 175, stock: 10, active: true },
   { id: 'catalog-gisele', name: 'Gisele', price: 70, stock: 20, active: true },
   { id: 'catalog-4un-abacaxi', name: '@ 4un (abacaxi)', price: 130, stock: 10, active: true },

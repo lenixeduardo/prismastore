@@ -1,3 +1,5 @@
+import { isMetricCustomer } from '../src/domain.js';
+
 const REPORT_TIME_ZONE = 'America/Sao_Paulo';
 
 function assertMonthKey(monthKey) {
@@ -49,6 +51,7 @@ export function createReportService({ stateStore, receivingAccounts = [] }) {
     assertMonthKey(monthKey);
     const state = stateStore.load();
     const orders = (Array.isArray(state.orders) ? state.orders : [])
+      .filter((order) => !isMetricCustomer(order))
       .map((order) => ({ order, parts: dateParts(order?.paidAt) }))
       .filter(({ parts }) => parts?.monthKey === monthKey)
       .sort((a, b) => String(b.order.paidAt).localeCompare(String(a.order.paidAt)));

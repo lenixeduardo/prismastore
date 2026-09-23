@@ -3,7 +3,24 @@ export function availableStock(product) {
 }
 
 export function isLowStock(product) {
-  return availableStock(product) < 3;
+  return availableStock(product) < 5;
+}
+
+function normalizeCustomerName(value = '') {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+export function isMetricCustomer(value) {
+  const name = typeof value === 'object' && value
+    ? (value.customerName ?? value.name ?? '')
+    : value;
+  const normalized = normalizeCustomerName(name);
+  return normalized === 'cliente metrica' || normalized.startsWith('cliente metrica ');
 }
 
 function normalizeAddress(address = {}) {
@@ -68,7 +85,7 @@ export function confirmPayment(order, accountId, paidAt = new Date().toISOString
 }
 
 export function buildMonthlyReport(orders, monthKey) {
-  const paid = orders.filter((order) => String(order.paidAt ?? '').startsWith(monthKey));
+  const paid = orders.filter((order) => !isMetricCustomer(order) && String(order.paidAt ?? '').startsWith(monthKey));
   const revenue = paid.reduce((sum, order) => sum + Number(order.total ?? 0), 0);
   const byAccount = paid.reduce((acc, order) => {
     const key = order.receivingAccountId || 'sem-conta';
@@ -116,6 +133,6 @@ export function formatCurrencyBRL(value) {
 export function computeProductStatus(product) {
   const available = availableStock(product);
   if (available <= 0) return 'OUT_OF_STOCK';
-  if (available < 3) return 'LOW_STOCK';
+  if (available < 5) return 'LOW_STOCK';
   return 'ACTIVE';
 }

@@ -42,6 +42,7 @@ test('catalog defaults keep the requested prices and stock', () => {
   assert.deepEqual(
     catalogProducts.map(({ name, price, stock }) => ({ name, price, stock })),
     [
+      { name: 'Eduardo teste', price: 0.01, stock: 3 },
       { name: 'Dry 5g', price: 175, stock: 10 },
       { name: 'Gisele', price: 70, stock: 20 },
       { name: '@ 4un (abacaxi)', price: 130, stock: 10 },
