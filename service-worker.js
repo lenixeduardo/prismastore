@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.2-theme-logo-20260922-21';
+const CACHE_NAME = 'prismastore-shell-v0.9.2-stock-metric-20260923-1';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
