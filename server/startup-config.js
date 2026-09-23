@@ -48,6 +48,48 @@ export function ensureCatalogProducts({ stateStore, products = [] } = {}) {
   return changed;
 }
 
+
+export function ensureBootstrapOrders({ stateStore, orders = [] } = {}) {
+  if (!stateStore?.updateState || !Array.isArray(orders) || orders.length === 0) return false;
+  let changed = false;
+
+  stateStore.updateState((state) => {
+    const nextOrders = Array.isArray(state.orders) ? state.orders.map((order) => structuredClone(order)) : [];
+    const nextProducts = Array.isArray(state.products) ? state.products.map((product) => structuredClone(product)) : [];
+    const existingOrderIds = new Set(nextOrders.map((order) => String(order.id ?? '')));
+    const soldByProduct = new Map();
+
+    for (const order of orders) {
+      const orderId = String(order?.id ?? '');
+      if (!orderId || existingOrderIds.has(orderId)) continue;
+
+      const addition = structuredClone(order);
+      nextOrders.push(addition);
+      existingOrderIds.add(orderId);
+      changed = true;
+
+      for (const item of Array.isArray(addition.items) ? addition.items : []) {
+        const productId = String(item?.productId ?? '');
+        const quantity = Math.max(0, Number(item?.quantity ?? 0));
+        if (!productId || !quantity) continue;
+        soldByProduct.set(productId, (soldByProduct.get(productId) ?? 0) + quantity);
+      }
+    }
+
+    if (!changed) return state;
+
+    for (const product of nextProducts) {
+      const sold = soldByProduct.get(String(product.id ?? '')) ?? 0;
+      if (!sold) continue;
+      product.stock = Math.max(0, Number(product.stock ?? 0) - sold);
+    }
+
+    return { ...state, products: nextProducts, orders: nextOrders };
+  });
+
+  return changed;
+}
+
 function comparableState(state = {}) {
   return JSON.stringify({
     products: Array.isArray(state.products) ? state.products : [],

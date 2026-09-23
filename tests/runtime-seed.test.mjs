@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createStartupState, ensureCatalogProducts } from '../server/startup-config.js';
-import { catalogProducts } from '../src/data.js';
+import { createStartupState, ensureCatalogProducts, ensureBootstrapOrders } from '../server/startup-config.js';
+import { catalogProducts, bootstrapOrders } from '../src/data.js';
 
 test('runtime database starts empty unless demo mode is explicitly enabled', () => {
   const seedState = {
@@ -55,4 +55,29 @@ test('catalog defaults keep the requested prices and stock', () => {
       { name: 'Item G', price: 100, stock: 10 },
     ],
   );
+});
+
+
+test('persists two completed Eduardo teste orders once and consumes their stock', () => {
+  let state = {
+    products: [{ id: 'catalog-eduardo-teste', name: 'Eduardo teste', price: 0.01, stock: 3, active: true }],
+    customers: [],
+    orders: [],
+  };
+  const stateStore = {
+    updateState(mutator) {
+      state = mutator(structuredClone(state));
+      return state;
+    },
+  };
+
+  assert.equal(ensureBootstrapOrders({ stateStore, orders: bootstrapOrders }), true);
+  assert.equal(state.orders.length, 2);
+  assert.deepEqual(state.orders.map((order) => order.status), ['DELIVERED', 'DELIVERED']);
+  assert.ok(state.orders.every((order) => order.items.length === 1 && order.items[0].name === 'Eduardo teste'));
+  assert.equal(state.products[0].stock, 1);
+
+  assert.equal(ensureBootstrapOrders({ stateStore, orders: bootstrapOrders }), false);
+  assert.equal(state.orders.length, 2);
+  assert.equal(state.products[0].stock, 1);
 });

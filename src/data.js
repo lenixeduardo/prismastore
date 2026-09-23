@@ -79,6 +79,43 @@ export const seedOrders = [
   { id: 'PS-1044', customerId: 'c2', customerName: 'Mariana Costa', phone: '+55 11 97777-3399', status: 'PAID', deliveryType: 'local_delivery', total: 54.9, createdAt: '2026-09-08T19:12:00.000Z', paidAt: '2026-09-08T19:15:00.000Z', receivingAccountId: 'pix-local', items: [{ productId: 'p2', name: 'Piteira Premium 6 mm', quantity: 2, unitPrice: 9.9 }], address: { street: 'Rua Clélia', number: '808', complement: '', neighborhood: 'Lapa', city: 'São Paulo', state: 'SP', zip: '05042-000' }, newAddress: false, deliveryFee: 35.1 },
 ];
 
+export const bootstrapOrders = [
+  {
+    id: 'PS-EDU-TEST-001',
+    customerId: 'eduardo-test-customer-1',
+    customerName: 'Cliente Teste 1',
+    phone: '+55 11 90000-0001',
+    status: 'DELIVERED',
+    deliveryType: 'shipping',
+    total: 0.01,
+    createdAt: '2026-09-23T05:30:00.000Z',
+    paidAt: '2026-09-23T05:31:00.000Z',
+    deliveredAt: '2026-09-23T05:40:00.000Z',
+    receivingAccountId: 'pix-local',
+    items: [{ productId: 'catalog-eduardo-teste', name: 'Eduardo teste', quantity: 1, unitPrice: 0.01 }],
+    address: null,
+    newAddress: false,
+    deliveryFee: 0,
+  },
+  {
+    id: 'PS-EDU-TEST-002',
+    customerId: 'eduardo-test-customer-2',
+    customerName: 'Cliente Teste 2',
+    phone: '+55 11 90000-0002',
+    status: 'DELIVERED',
+    deliveryType: 'local_delivery',
+    total: 0.01,
+    createdAt: '2026-09-23T05:42:00.000Z',
+    paidAt: '2026-09-23T05:43:00.000Z',
+    deliveredAt: '2026-09-23T05:52:00.000Z',
+    receivingAccountId: 'pix-local',
+    items: [{ productId: 'catalog-eduardo-teste', name: 'Eduardo teste', quantity: 1, unitPrice: 0.01 }],
+    address: null,
+    newAddress: false,
+    deliveryFee: 0,
+  },
+];
+
 export const receivingAccounts = [
   { id: 'pix-local', name: 'Pix Oscar', accent: 'emerald' },
 ];
