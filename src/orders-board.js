@@ -1,3 +1,5 @@
+import { isMetricCustomer } from './domain.js';
+
 const WAIT_WARNING_MINUTES = 15;
 const WAIT_DANGER_MINUTES = 30;
 
@@ -22,7 +24,7 @@ function sortByPaymentTime(orders = []) {
 }
 
 export function groupOperationalOrders(orders = []) {
-  const sorted = sortByPaymentTime(orders);
+  const sorted = sortByPaymentTime(orders.filter((order) => !isMetricCustomer(order)));
   return {
     shipping: sorted.filter((order) => order.status === 'PAID' && order.deliveryType === 'shipping'),
     delivery: sorted.filter((order) => order.status === 'PAID' && order.deliveryType !== 'shipping'),
