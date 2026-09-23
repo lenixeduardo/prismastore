@@ -128,3 +128,17 @@ test('orders board refresh cadence and update events keep new paid orders in the
   assert.match(source, /}, 5000\);/);
   assert.match(source, /expectedStatus: 'PAID'/);
 });
+
+
+test('Cliente Métrica orders are hidden from every operational lane', async () => {
+  const { groupOperationalOrders, renderOrdersBoard } = await loadBoardModule();
+  const orders = [
+    { id: 'REAL', customerName: 'Cliente Real', status: 'PAID', deliveryType: 'shipping', paidAt: '2026-09-16T18:00:00.000Z', items: [{ name: 'Item real', quantity: 1 }] },
+    { id: 'METRIC', customerName: 'Cliente Métrica', status: 'PAID', deliveryType: 'shipping', paidAt: '2026-09-16T18:01:00.000Z', items: [{ name: 'Item métrica', quantity: 1 }] },
+  ];
+  const grouped = groupOperationalOrders(orders);
+  assert.deepEqual(grouped.shipping.map((order) => order.id), ['REAL']);
+  const html = renderOrdersBoard({ orders, now: new Date('2026-09-16T18:05:00.000Z') });
+  assert.doesNotMatch(html, /Cliente Métrica|Item métrica|METRIC/);
+  assert.match(html, /Cliente Real/);
+});
