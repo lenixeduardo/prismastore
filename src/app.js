@@ -5,6 +5,7 @@ import {
   nextOrderStatus,
   formatCurrencyBRL,
   computeProductStatus,
+  isMetricCustomer,
 } from './domain.js';
 import { seedProducts, seedCustomers, seedOrders, receivingAccounts } from './data.js';
 import { friendlyErrorMessage } from './error-messages.js';
@@ -155,15 +156,24 @@ function header(title, subtitle, actions='') {
   return `<div class="topbar"><div><h1>${title}</h1><div class="subtitle">${subtitle}</div></div>${actions ? `<div class="top-actions">${actions}</div>` : ''}</div>`;
 }
 
+function visibleOrders() {
+  return state.orders.filter((order) => !isMetricCustomer(order));
+}
+
+function visibleCustomers() {
+  return state.customers.filter((customer) => !isMetricCustomer(customer));
+}
+
 function dashboardView() {
   const lowProducts = state.products.filter(isLowStock);
   const low = lowProducts.length;
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const monthLabel = new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(now);
-  const paidMonth = state.orders.filter(o=>o.paidAt?.startsWith(monthKey));
+  const operationalOrders = visibleOrders();
+  const paidMonth = operationalOrders.filter(o=>o.paidAt?.startsWith(monthKey));
   const revenue = paidMonth.reduce((s,o)=>s+o.total,0);
-  const pendingOrders = state.orders.filter(o=>['PAID','PACKING'].includes(o.status));
+  const pendingOrders = operationalOrders.filter(o=>['PAID','PACKING'].includes(o.status));
   const pendingPacking = pendingOrders.length;
 
   return shell(`
@@ -224,7 +234,7 @@ function dashboardView() {
           <button class="btn sm ghost view-all-btn" data-view="orders">Ver todos ›</button>
         </div>
         <div class="dashboard-order-list compact">
-          ${state.orders.slice(0,5).map(orderCompact).join('') || '<div class="empty dashboard-empty">Nenhum pedido registrado.</div>'}
+          ${visibleOrders().slice(0,5).map(orderCompact).join('') || '<div class="empty dashboard-empty">Nenhum pedido registrado.</div>'}
         </div>
       </section>
     </div>`);
@@ -272,7 +282,7 @@ function orderCompact(o) {
 }
 
 function ordersView() {
-  let orders = [...state.orders];
+  let orders = visibleOrders();
   if(state.orderFilter!=='all') orders=orders.filter(o=>o.status===state.orderFilter);
   if(state.search) orders=orders.filter(o=>`${o.customerName} ${o.phone}`.toLowerCase().includes(state.search.toLowerCase()));
   return shell(`${header('Pedidos','Do pagamento confirmado até envio ou entrega no endereço do cliente.','<button class="btn primary" data-view="chatbot">+ Simular pedido</button>')}
@@ -287,7 +297,7 @@ function ordersTable(orders,title) { return `<div class="section-head"><div clas
 function customersView() {
   return shell(`${header('Clientes','Cadastro unificado pelo número do WhatsApp, histórico de endereço e pedidos anteriores.')}
     <div class="toolbar"><label class="searchbar"><span>⌕</span><input id="customer-search" placeholder="Buscar nome ou celular" /></label></div>
-    <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Endereço atual</th><th>Monitoramento</th><th>Pedidos</th><th>Total gasto</th><th>Última compra</th></tr></thead><tbody>${state.customers.map(c=>`<tr><td><div class="customer-name">${esc(c.name)}</div><div class="category">${esc(c.phone)}</div></td><td><div class="address">${esc(addressText(latestAddress(c)))}</div></td><td>${c.addressChanged?'<span class="badge gold">NOVO ENDEREÇO</span>':'<span class="badge gray">Sem alteração</span>'}</td><td class="mono">${c.orderCount}</td><td class="mono"><strong>${formatCurrencyBRL(c.totalSpent)}</strong></td><td>${formatDate(c.lastOrderAt)}</td></tr>`).join('')}</tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Endereço atual</th><th>Monitoramento</th><th>Pedidos</th><th>Total gasto</th><th>Última compra</th></tr></thead><tbody>${visibleCustomers().map(c=>`<tr><td><div class="customer-name">${esc(c.name)}</div><div class="category">${esc(c.phone)}</div></td><td><div class="address">${esc(addressText(latestAddress(c)))}</div></td><td>${c.addressChanged?'<span class="badge gold">NOVO ENDEREÇO</span>':'<span class="badge gray">Sem alteração</span>'}</td><td class="mono">${c.orderCount}</td><td class="mono"><strong>${formatCurrencyBRL(c.totalSpent)}</strong></td><td>${formatDate(c.lastOrderAt)}</td></tr>`).join('')}</tbody></table></div>
     <div class="grid cols-2 section"><div class="card padded"><div class="section-title">Regra de monitoramento</div><p class="subtitle">Ao receber um endereço diferente de todos os endereços históricos do cliente, o pedido recebe o badge <strong style="color:var(--gold)">NOVO ENDEREÇO</strong>. O pedido guarda o snapshot usado naquela compra.</p></div><div class="card padded"><div class="section-title">Identidade do cliente</div><p class="subtitle">O celular/WhatsApp é o identificador inicial. Nome, endereços e histórico evoluem sem sobrescrever pedidos antigos.</p></div></div>`);
 }
 
