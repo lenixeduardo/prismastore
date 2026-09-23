@@ -22,7 +22,7 @@ function ensureOverlay() {
         </button>
       </div>
       <div class="auth-brand">
-        <img src="/assets/prismastore-prism-logo.webp?v=20260922-logo-1" alt="" aria-hidden="true" />
+        <img src="/assets/prismastore-prism-logo.png?v=20260923-logo-fix-1" alt="" aria-hidden="true" />
         <div class="auth-brand-copy">
           <strong>PrismaStore</strong>
           <span>Operations</span>
