@@ -10,7 +10,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
-import { seedProducts, seedCustomers, seedOrders, catalogProducts, receivingAccounts } from '../src/data.js';
+import { seedProducts, seedCustomers, seedOrders, catalogProducts, bootstrapOrders, receivingAccounts } from '../src/data.js';
 import { createStateStore } from './state-store.js';
 import { createChatbotEngine } from './chatbot.js';
 import { createWhatsAppChatAdapter } from './whatsapp-chat-adapter.js';
@@ -26,7 +26,7 @@ import { createBackupService } from './backup-service.js';
 import { createBackupScheduler } from './backup-scheduler.js';
 import { createAuthService } from './auth-service.js';
 import { createGoogleDriveAccessTokenProvider, createGoogleDriveBackupStore } from './google-drive-backup.js';
-import { createStartupState, createTerminalQrEncoder, clearLegacyDemoState, ensureCatalogProducts } from './startup-config.js';
+import { createStartupState, createTerminalQrEncoder, clearLegacyDemoState, ensureCatalogProducts, ensureBootstrapOrders } from './startup-config.js';
 import { createRuntimeLogBuffer } from './runtime-log.js';
 
 const runtimeLog = createRuntimeLogBuffer();
@@ -70,6 +70,7 @@ const stateStore = createStateStore({
 });
 clearLegacyDemoState({ stateStore, seedState: legacySeedState, useDemoData });
 ensureCatalogProducts({ stateStore, products: catalogProducts });
+ensureBootstrapOrders({ stateStore, orders: bootstrapOrders });
 
 const paymentService = createPaymentService({
   stateStore,
