@@ -19,6 +19,7 @@ const clone = (v) => JSON.parse(JSON.stringify(v));
 
 const state = {
   view: 'dashboard',
+  previousView: 'dashboard',
   orderFilter: 'all',
   search: '',
   selectedOrder: null,
@@ -128,7 +129,7 @@ function shell(content) {
   return `
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><div class="brand-mark"><img src="/assets/prismastore-prism-logo.webp?v=20260922-logo-1" alt="" aria-hidden="true" /></div><div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div></div>
+      <div class="brand"><div class="brand-mark"><img src="/assets/prismastore-prism-logo.png?v=20260923-logo-fix-1" alt="" aria-hidden="true" /></div><div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div></div>
       <div class="nav-group">
         <div class="nav-label">Operação</div>
         ${views.map(([id,label,icon])=>`<button class="nav-btn ${state.view===id?'active':''}" data-view="${id}"><span class="nav-icon">${icon}</span>${label}</button>`).join('')}
@@ -302,7 +303,7 @@ function customersView() {
 }
 
 function productsView() {
-  return shell(`${header('Produtos','Resumo do catálogo e estoque atual.','<button class="btn primary" id="add-demo-product">+ Produto demo</button>')}
+  return shell(`${header('Produtos','Resumo do catálogo e estoque atual.','<button class="btn ghost" type="button" data-back-view>← Voltar</button><button class="btn primary" id="add-demo-product">+ Produto demo</button>')}
     <div class="section product-list">
       ${state.products.map(p=>`<article class="product-list-item">
         <div class="product-list-main">
@@ -688,6 +689,7 @@ function render() {
 function openView(view) {
   const allowed = new Set(['dashboard','orders','customers','products','reports','chatbot','settings']);
   if (!allowed.has(view)) return false;
+  if (view !== state.view) state.previousView = state.view;
   state.view = view;
   state.selectedOrder = null;
   render();
@@ -704,6 +706,7 @@ window.PrismastoreApp = {
 
 function bind() {
   document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>openView(b.dataset.view)));
+  document.querySelector('[data-back-view]')?.addEventListener('click',()=>openView(state.previousView || 'dashboard'));
   document.querySelectorAll('[data-order-filter]').forEach(b=>b.addEventListener('click',()=>{state.orderFilter=b.dataset.orderFilter;render();}));
   document.querySelector('#order-search')?.addEventListener('input',(e)=>{state.search=e.target.value; render(); requestAnimationFrame(()=>{const input=document.querySelector('#order-search');input?.focus();input?.setSelectionRange(state.search.length,state.search.length);});});
   document.querySelectorAll('[data-open-order]').forEach(b=>b.addEventListener('click',()=>{state.selectedOrder=b.dataset.openOrder;render();}));
