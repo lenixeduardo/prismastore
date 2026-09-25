@@ -699,6 +699,7 @@ function deliveryDossier(order) {
     ${confirmation.recipientName ? `<div class="delivery-evidence-row"><span>Recebedor</span><strong>${esc(confirmation.recipientName)}</strong></div>` : ''}
     ${confirmation.confirmationIp ? `<div class="delivery-evidence-row"><span>IP da confirmação</span><code>${esc(confirmation.confirmationIp)}</code></div>` : ''}
     ${confirmation.confirmationUserAgent ? `<div class="delivery-evidence-row"><span>Dispositivo</span><small>${esc(confirmation.confirmationUserAgent)}</small></div>` : ''}
+    ${confirmation.evidenceHash ? `<div class="delivery-evidence-row"><span>Hash de integridade</span><code>${esc(confirmation.evidenceHash)}</code></div>` : ''}
     ${confirmation.notes ? `<div class="delivery-evidence-note"><span>Observação</span><p>${esc(confirmation.notes)}</p></div>` : ''}
     ${confirmation.photoDataUrl ? `<div class="delivery-evidence-media"><span>Foto da entrega</span><img src="${confirmation.photoDataUrl}" alt="Foto registrada na confirmação de entrega" /></div>` : ''}
     ${confirmation.signatureDataUrl ? `<div class="delivery-evidence-media signature"><span>Assinatura</span><img src="${confirmation.signatureDataUrl}" alt="Assinatura de quem confirmou o recebimento" /></div>` : ''}
