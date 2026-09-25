@@ -91,6 +91,8 @@ export function createPaymentChatbot({ baseChatbot, stateStore, paymentService }
           fingerprint: receiptFingerprint,
         });
         if (result.handled) {
+          const paidSession = { ...session, step: 'paid', paidAt: new Date().toISOString() };
+          saveSession(stateStore, phone, paidSession);
           await sendText('✅ Pagamento validado. Valor, destinatário, data e horário conferem. Seu pedido está liberado para separação e embalagem.');
           return { handled: true, step: 'paid', orderId: session.orderId, duplicate: result.duplicate };
         }
