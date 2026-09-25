@@ -189,7 +189,7 @@ export function createDeliveryConfirmationService({
     if (cleanRecipient.length < 2) throw new Error('Informe o nome de quem recebeu.');
     const signature = validateDataUrl(signatureDataUrl, 'Assinatura');
     if (!signature) throw new Error('A assinatura é obrigatória.');
-    const photo = validateDataUrl(photoDataUrl, 'Foto da entrega');
+    const photo = validateDataUrl(photoDataUrl, 'Foto da entrega', 1_800_000);
 
     const { payload } = resolveOrderByToken(token);
     let result = null;
@@ -203,6 +203,21 @@ export function createDeliveryConfirmationService({
       }
 
       const confirmedAt = now().toISOString();
+      const confirmationIp = cleanText(requestMeta.ip, 120) || null;
+      const confirmationUserAgent = cleanText(requestMeta.userAgent, 500) || null;
+      const confirmationNotes = cleanText(notes, 1000);
+      const evidenceHash = createHmac('sha256', signingSecret)
+        .update(JSON.stringify({
+          orderId: order.id,
+          confirmedAt,
+          recipientName: cleanRecipient,
+          confirmationIp,
+          confirmationUserAgent,
+          notes: confirmationNotes,
+          signature,
+          photo,
+        }))
+        .digest('hex');
       order.deliveryJourney = {
         ...(order.deliveryJourney || {}),
         deliveredAt: confirmedAt,
@@ -212,11 +227,12 @@ export function createDeliveryConfirmationService({
         confirmedAt,
         recipientName: cleanRecipient,
         accepted: true,
-        notes: cleanText(notes, 1000),
+        notes: confirmationNotes,
         signatureDataUrl: signature,
         photoDataUrl: photo,
-        confirmationIp: cleanText(requestMeta.ip, 120) || null,
-        confirmationUserAgent: cleanText(requestMeta.userAgent, 500) || null,
+        confirmationIp,
+        confirmationUserAgent,
+        evidenceHash,
       };
       result = {
         alreadyConfirmed: false,
