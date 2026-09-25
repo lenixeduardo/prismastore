@@ -28,6 +28,7 @@ import { createAuthService } from './auth-service.js';
 import { createGoogleDriveAccessTokenProvider, createGoogleDriveBackupStore } from './google-drive-backup.js';
 import { createStartupState, createTerminalQrEncoder, clearLegacyDemoState, ensureCatalogProducts, ensureBootstrapOrders } from './startup-config.js';
 import { createRuntimeLogBuffer } from './runtime-log.js';
+import { createDeliveryConfirmationService } from './delivery-confirmation-service.js';
 
 const runtimeLog = createRuntimeLogBuffer();
 runtimeLog.installConsoleCapture();
@@ -44,6 +45,11 @@ const adminPassword = String(process.env.PRISMASTORE_ADMIN_PASSWORD || '');
 const requestedHost = process.env.HOST || '127.0.0.1';
 const host = adminPassword ? requestedHost : '127.0.0.1';
 const publicUrl = String(process.env.PRISMASTORE_PUBLIC_URL || '').trim();
+const deliveryConfirmationSecret = String(
+  process.env.PRISMASTORE_DELIVERY_SECRET
+  || adminPassword
+  || 'prismastore-local-delivery-secret-2026'
+).trim();
 const useDemoData = process.env.PRISMASTORE_DEMO_DATA === 'true';
 const devWhatsappOnly = process.env.PRISMASTORE_DEV_WHATSAPP_ONLY === 'true';
 const devWhatsappPhone = String(process.env.PRISMASTORE_DEV_WHATSAPP_PHONE || '').trim();
@@ -170,10 +176,17 @@ const finalArtworkPath = ensureBase64Asset({
   outputPath: join(dataDir, 'prismastore-order-finished.png'),
 });
 
+const deliveryConfirmationService = createDeliveryConfirmationService({
+  stateStore,
+  secret: deliveryConfirmationSecret,
+  publicUrl,
+});
+
 const orderLifecycleService = createOrderLifecycleService({
   stateStore,
   messenger: whatsappManager,
   finalArtworkPath,
+  deliveryConfirmationService,
 });
 
 const authService = adminPassword
@@ -232,6 +245,7 @@ const server = createAppServer({
   whatsappManager,
   paymentService,
   orderLifecycleService,
+  deliveryConfirmationService,
   reportService,
   backupService,
   whatsappAuthPath: authPath,
