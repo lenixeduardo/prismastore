@@ -12,6 +12,30 @@ function isRecoveryCommand(text = '') {
   return ['menu', 'início', 'inicio', 'reiniciar', 'cancelar'].includes(normalized);
 }
 
+function extractRideLink(text = '') {
+  const match = String(text).match(/https?:\/\/[^\s<>"']+/i);
+  return match?.[0] || null;
+}
+
+function recordRideLink(stateStore, orderId, rideLink) {
+  if (!orderId || !rideLink) return false;
+  let recorded = false;
+  stateStore.updateState((state) => {
+    const order = state.orders.find((candidate) => candidate.id === orderId);
+    const isPilot = order?.items?.some((item) => item?.productId === 'catalog-eduardo-teste');
+    if (!order || !isPilot || order.deliveryType !== 'local_delivery') return state;
+    order.deliveryJourney = {
+      ...(order.deliveryJourney || {}),
+      rideLink,
+      rideRegisteredAt: new Date().toISOString(),
+      rideSource: 'whatsapp-customer',
+    };
+    recorded = true;
+    return state;
+  });
+  return recorded;
+}
+
 export function createPaymentChatbot({ baseChatbot, stateStore, paymentService }) {
   function isLocalPix() {
     return paymentService?.getStatus?.().provider === 'pix-local';
@@ -78,6 +102,11 @@ export function createPaymentChatbot({ baseChatbot, stateStore, paymentService }
     }
 
     if (session.step === 'paid') {
+      const rideLink = extractRideLink(text);
+      if (rideLink && recordRideLink(stateStore, session.orderId, rideLink)) {
+        await sendText('✅ Link da corrida registrado. Vou manter esse vínculo no dossiê da entrega junto com os horários do pedido e do recebimento.');
+        return { handled: true, step: session.step, orderId: session.orderId, rideLinkRecorded: true };
+      }
       await sendText('✅ O pagamento já foi confirmado. Seu pedido está na fila de separação e embalagem.');
       return { handled: true, step: session.step };
     }
