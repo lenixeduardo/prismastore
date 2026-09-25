@@ -57,11 +57,32 @@ function stateForAdmin(state = {}) {
   };
 }
 
-async function readJson(req) {
+function preserveDeliveryEvidence(incomingState = {}, currentState = {}) {
+  if (!Array.isArray(incomingState.orders)) return incomingState;
+  const currentById = new Map(
+    (Array.isArray(currentState.orders) ? currentState.orders : [])
+      .filter((order) => order?.id)
+      .map((order) => [order.id, order]),
+  );
+  return {
+    ...incomingState,
+    orders: incomingState.orders.map((order) => {
+      const current = currentById.get(order?.id);
+      if (!current) return order;
+      return {
+        ...order,
+        ...(current.deliveryJourney ? { deliveryJourney: structuredClone(current.deliveryJourney) } : {}),
+        ...(current.deliveryConfirmation ? { deliveryConfirmation: structuredClone(current.deliveryConfirmation) } : {}),
+      };
+    }),
+  };
+}
+
+async function readJson(req, maxBytes = 1_000_000) {
   let body = '';
   for await (const chunk of req) {
     body += chunk;
-    if (body.length > 1_000_000) throw new Error('Payload muito grande');
+    if (body.length > maxBytes) throw new Error('Payload muito grande');
   }
   if (!body) return {};
   return JSON.parse(body);
@@ -164,6 +185,7 @@ export function createAppServer({
   whatsappManager = null,
   paymentService = null,
   orderLifecycleService = null,
+  deliveryConfirmationService = null,
   reportService = null,
   backupService = null,
   whatsappAuthPath = null,
@@ -226,6 +248,42 @@ export function createAppServer({
         return;
       }
 
+      const publicDeliveryMatch = url.pathname.match(/^\/api\/delivery-confirmations\/([^/]+)$/);
+      if (publicDeliveryMatch && ['GET', 'POST'].includes(req.method)) {
+        if (!deliveryConfirmationService) {
+          return sendJson(res, 503, { error: 'Confirmação de entrega não configurada.' });
+        }
+        const token = decodeURIComponent(publicDeliveryMatch[1]);
+        const requestMeta = {
+          ip: clientKey(req),
+          userAgent: String(req.headers['user-agent'] || ''),
+        };
+        try {
+          if (req.method === 'GET') {
+            return sendJson(res, 200, deliveryConfirmationService.getPublicConfirmation(token, requestMeta));
+          }
+          const body = await readJson(req, 2_500_000);
+          const result = deliveryConfirmationService.confirmDelivery({
+            token,
+            recipientName: body.recipientName,
+            accepted: body.accepted === true,
+            signatureDataUrl: body.signatureDataUrl || null,
+            photoDataUrl: body.photoDataUrl || null,
+            notes: body.notes || '',
+            requestMeta,
+          });
+          return sendJson(res, 200, {
+            ok: true,
+            alreadyConfirmed: result.alreadyConfirmed,
+            confirmedAt: result.confirmation?.confirmedAt || result.order?.confirmedAt || null,
+          });
+        } catch (error) {
+          return sendJson(res, req.method === 'GET' ? 404 : 422, {
+            error: error instanceof Error ? error.message : 'Não foi possível registrar a confirmação.',
+          });
+        }
+      }
+
       if (url.pathname.startsWith('/api/') && authService) {
         const auth = authService.validateSession(sessionToken(req, authService));
         if (!auth.authenticated) {
@@ -244,7 +302,11 @@ export function createAppServer({
       }
 
       if (req.method === 'GET' && url.pathname === '/api/state') return sendJson(res, 200, stateForAdmin(stateStore.load()));
-      if (req.method === 'PUT' && url.pathname === '/api/state') return sendJson(res, 200, stateStore.save(await readJson(req)));
+      if (req.method === 'PUT' && url.pathname === '/api/state') {
+        const current = stateStore.load();
+        const incoming = await readJson(req);
+        return sendJson(res, 200, stateStore.save(preserveDeliveryEvidence(incoming, current)));
+      }
 
       if (req.method === 'GET' && url.pathname === '/api/whatsapp/status') {
         if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
@@ -302,6 +364,17 @@ export function createAppServer({
         const body = await readJson(req);
         const result = await orderLifecycleService.advanceOrder({ orderId: decodeURIComponent(advanceMatch[1]), expectedStatus: body.expectedStatus || null });
         return sendJson(res, 200, result);
+      }
+
+      const deliveryLinkMatch = url.pathname.match(/^\/api\/orders\/([^/]+)\/delivery-confirmation\/link$/);
+      if (req.method === 'POST' && deliveryLinkMatch) {
+        if (!deliveryConfirmationService) return sendJson(res, 503, { error: 'Confirmação de entrega não configurada.' });
+        try {
+          const result = deliveryConfirmationService.issueLink(decodeURIComponent(deliveryLinkMatch[1]));
+          return sendJson(res, 200, { link: result.link, confirmation: result.order?.deliveryConfirmation || null });
+        } catch (error) {
+          return sendJson(res, 422, { error: error instanceof Error ? error.message : 'Não foi possível gerar o link.' });
+        }
       }
 
       if (req.method === 'GET' && url.pathname === '/api/reports/monthly') {

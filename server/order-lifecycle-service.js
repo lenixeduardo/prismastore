@@ -35,7 +35,13 @@ function statusIntro(state, order) {
   return 'Pedido atualizado.';
 }
 
-export function createOrderLifecycleService({ stateStore, messenger = null, finalArtworkPath = null, now = () => new Date() }) {
+export function createOrderLifecycleService({
+  stateStore,
+  messenger = null,
+  finalArtworkPath = null,
+  deliveryConfirmationService = null,
+  now = () => new Date(),
+}) {
   async function notifyOrderStatus(order) {
     if (!messenger) return { notified: false, reason: 'messenger-unavailable' };
     if (order.status === 'DELIVERED' && finalArtworkPath && messenger.sendMedia) {
@@ -44,6 +50,14 @@ export function createOrderLifecycleService({ stateStore, messenger = null, fina
     if (messenger.sendText) {
       const state = stateStore.load();
       await messenger.sendText(order.phone, `${statusIntro(state, order)}\n\n${buildOrderTracker(order)}`);
+      if (order.status === 'DELIVERED' && deliveryConfirmationService?.isEligibleOrder?.(order)) {
+        const issued = deliveryConfirmationService.issueLink(order.id);
+        await messenger.sendText(
+          order.phone,
+          `✅ Para registrar o recebimento, abra o link e confirme somente após estar com os itens em mãos:\n${issued.link}`,
+        );
+        deliveryConfirmationService.markLinkSent(order.id, 'whatsapp');
+      }
     }
     return { notified: true };
   }
@@ -76,6 +90,9 @@ export function createOrderLifecycleService({ stateStore, messenger = null, fina
     });
 
     if (changed) {
+      if (updatedOrder?.status === 'DELIVERED') {
+        deliveryConfirmationService?.markHandoff?.(updatedOrder.id, updatedOrder.updatedAt);
+      }
       try {
         await notifyOrderStatus(updatedOrder);
       } catch (error) {

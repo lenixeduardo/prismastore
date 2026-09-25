@@ -329,6 +329,15 @@ function createPendingOrder(stateStore, phone, session, now) {
       paidAt: null, receivingAccountId: null, items, address: structuredClone(session.address),
       newAddress: Boolean(session.newAddress), deliveryFee: 0, source: 'whatsapp',
       sourceCheckoutId: session.checkoutId,
+      deliveryJourney: session.deliveryType === 'local_delivery'
+        ? {
+            requestedAt: session.deliveryRequestedAt || createdAt,
+            rideLink: null,
+            rideRegisteredAt: null,
+            handoffAt: null,
+            deliveredAt: null,
+          }
+        : null,
     };
     state.orders.unshift(order);
     return state;
@@ -454,6 +463,9 @@ export function createChatbotEngine({ stateStore, now = () => new Date() }) {
     if (session.step === 'delivery') {
       if (!['1', '2'].includes(input)) { await sendText(message(stateStore, 'deliveryPrompt')); return { handled: true, step: session.step }; }
       session.deliveryType = input === '1' ? 'shipping' : 'local_delivery';
+      session.deliveryRequestedAt = session.deliveryType === 'local_delivery'
+        ? (session.deliveryRequestedAt || now().toISOString())
+        : null;
       const savedAddress = latestAddress(customer);
       if (savedAddress) {
         session.step = 'address_choice'; saveSession(stateStore, phone, session, now);
