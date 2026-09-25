@@ -57,6 +57,27 @@ function stateForAdmin(state = {}) {
   };
 }
 
+function preserveDeliveryEvidence(incomingState = {}, currentState = {}) {
+  if (!Array.isArray(incomingState.orders)) return incomingState;
+  const currentById = new Map(
+    (Array.isArray(currentState.orders) ? currentState.orders : [])
+      .filter((order) => order?.id)
+      .map((order) => [order.id, order]),
+  );
+  return {
+    ...incomingState,
+    orders: incomingState.orders.map((order) => {
+      const current = currentById.get(order?.id);
+      if (!current) return order;
+      return {
+        ...order,
+        ...(current.deliveryJourney ? { deliveryJourney: structuredClone(current.deliveryJourney) } : {}),
+        ...(current.deliveryConfirmation ? { deliveryConfirmation: structuredClone(current.deliveryConfirmation) } : {}),
+      };
+    }),
+  };
+}
+
 async function readJson(req, maxBytes = 1_000_000) {
   let body = '';
   for await (const chunk of req) {
@@ -281,7 +302,11 @@ export function createAppServer({
       }
 
       if (req.method === 'GET' && url.pathname === '/api/state') return sendJson(res, 200, stateForAdmin(stateStore.load()));
-      if (req.method === 'PUT' && url.pathname === '/api/state') return sendJson(res, 200, stateStore.save(await readJson(req)));
+      if (req.method === 'PUT' && url.pathname === '/api/state') {
+        const current = stateStore.load();
+        const incoming = await readJson(req);
+        return sendJson(res, 200, stateStore.save(preserveDeliveryEvidence(incoming, current)));
+      }
 
       if (req.method === 'GET' && url.pathname === '/api/whatsapp/status') {
         if (!whatsappManager) return sendJson(res, 503, { status: 'error', qrDataUrl: null, pairingCode: null, account: null, error: 'WhatsApp não configurado' });
