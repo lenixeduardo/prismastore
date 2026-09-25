@@ -489,3 +489,89 @@ tr:hover td { background:rgba(255,255,255,.012); }
 .bug-report-text { width:100%; min-height:360px; resize:vertical; margin-top:14px; padding:14px; border:1px solid var(--border); border-radius:5px; background:#06100b; color:#d9e4dc; font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; outline:none; }
 .bug-report-text:focus { border-color:#365445; }
 .bug-report-actions { display:flex; justify-content:flex-end; margin-top:12px; }
+
+
+/* Delivery confirmation dossier */
+.delivery-dossier {
+  display: grid;
+  gap: 14px;
+}
+.delivery-dossier-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.delivery-dossier-head strong {
+  display: block;
+  margin-top: 4px;
+}
+.delivery-dossier-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.delivery-dossier-grid > div,
+.delivery-evidence-row,
+.delivery-evidence-note,
+.delivery-evidence-media {
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--surface-soft, rgba(255,255,255,.025));
+}
+.delivery-dossier-grid span,
+.delivery-evidence-row > span,
+.delivery-evidence-note > span,
+.delivery-evidence-media > span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.delivery-evidence-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.delivery-evidence-row > span { margin: 0; }
+.delivery-evidence-row a { color: var(--accent, #22c55e); font-weight: 700; }
+.delivery-evidence-row small,
+.delivery-evidence-row code {
+  max-width: 68%;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.delivery-evidence-note p {
+  margin: 0;
+  line-height: 1.45;
+}
+.delivery-evidence-media img {
+  width: 100%;
+  max-height: 260px;
+  display: block;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #fff;
+}
+.delivery-evidence-media.signature img {
+  max-height: 150px;
+}
+.delivery-dossier-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.delivery-dossier-actions .btn {
+  text-decoration: none;
+}
+@media (max-width: 640px) {
+  .delivery-dossier-grid { grid-template-columns: 1fr; }
+  .delivery-evidence-row { align-items: flex-start; flex-direction: column; }
+  .delivery-evidence-row small,
+  .delivery-evidence-row code { max-width: 100%; text-align: left; }
+}
