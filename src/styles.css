@@ -30,8 +30,8 @@ body::before { content:""; position: fixed; inset:0; pointer-events:none; backgr
 .app-shell { min-height: 100vh; display:grid; grid-template-columns: 248px minmax(0,1fr); }
 .sidebar { position:sticky; top:0; height:100vh; border-right:1px solid var(--border-soft); padding:22px 16px; background:rgba(7,16,12,.92); backdrop-filter: blur(18px); z-index:10; display:flex; flex-direction:column; }
 .brand { display:flex; align-items:center; gap:12px; padding:5px 8px 24px; }
-.brand-mark { width:48px; height:48px; display:grid; place-items:center; flex:0 0 48px; }
-.brand-mark img { width:100%; height:100%; display:block; object-fit:contain; filter:drop-shadow(0 6px 14px rgba(0,0,0,.28)); }
+.brand-mark { width:32px; height:32px; display:grid; place-items:center; flex:0 0 32px; }
+.brand-mark img { width:100%; height:100%; display:block; object-fit:contain; object-position:center; filter:drop-shadow(0 4px 10px rgba(0,0,0,.24)); }
 .brand-copy strong { display:block; letter-spacing:.02em; font-size:15px; }
 .brand-copy span { color:var(--muted-2); font-size:11px; text-transform:uppercase; letter-spacing:.14em; }
 .nav-group { display:grid; gap:5px; }
