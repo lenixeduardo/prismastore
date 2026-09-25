@@ -662,6 +662,56 @@ function restoreChatbotMessageDefault(key) {
   if (field) field.value = CHATBOT_MESSAGE_DEFAULTS[key] ?? '';
 }
 
+function deliveryConfirmationPilot(order) {
+  return Array.isArray(order?.items)
+    && order.items.some((item) => item?.productId === 'catalog-eduardo-teste');
+}
+
+function evidenceDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '—' : formatDate(value);
+}
+
+function deliveryDossier(order) {
+  if (!deliveryConfirmationPilot(order)) return '';
+  const journey = order.deliveryJourney || {};
+  const confirmation = order.deliveryConfirmation || {};
+  const confirmed = Boolean(confirmation.confirmedAt);
+  const rideLink = cleanAddressText(journey.rideLink);
+  const publicLink = cleanAddressText(confirmation.link);
+
+  return `<div class="detail-block delivery-dossier">
+    <div class="delivery-dossier-head">
+      <div>
+        <div class="detail-label">Dossiê de entrega · piloto</div>
+        <strong>${confirmed ? 'Recebimento confirmado' : 'Aguardando confirmação do cliente'}</strong>
+      </div>
+      <span class="badge ${confirmed ? 'green' : 'orange'}">${confirmed ? 'CONFIRMADO' : 'PENDENTE'}</span>
+    </div>
+    <div class="delivery-dossier-grid">
+      <div><span>Solicitação da entrega</span><strong>${evidenceDate(journey.requestedAt)}</strong></div>
+      <div><span>Corrida registrada</span><strong>${evidenceDate(journey.rideRegisteredAt)}</strong></div>
+      <div><span>Entregue ao transportador</span><strong>${evidenceDate(journey.handoffAt)}</strong></div>
+      <div><span>Recebimento confirmado</span><strong>${evidenceDate(confirmation.confirmedAt || journey.deliveredAt)}</strong></div>
+    </div>
+    ${rideLink ? `<div class="delivery-evidence-row"><span>Link da corrida</span><a href="${esc(rideLink)}" target="_blank" rel="noopener noreferrer">Abrir corrida</a></div>` : '<div class="delivery-evidence-row muted"><span>Link da corrida</span><strong>Não registrado</strong></div>'}
+    ${confirmation.recipientName ? `<div class="delivery-evidence-row"><span>Recebedor</span><strong>${esc(confirmation.recipientName)}</strong></div>` : ''}
+    ${confirmation.confirmationIp ? `<div class="delivery-evidence-row"><span>IP da confirmação</span><code>${esc(confirmation.confirmationIp)}</code></div>` : ''}
+    ${confirmation.confirmationUserAgent ? `<div class="delivery-evidence-row"><span>Dispositivo</span><small>${esc(confirmation.confirmationUserAgent)}</small></div>` : ''}
+    ${confirmation.notes ? `<div class="delivery-evidence-note"><span>Observação</span><p>${esc(confirmation.notes)}</p></div>` : ''}
+    ${confirmation.photoDataUrl ? `<div class="delivery-evidence-media"><span>Foto da entrega</span><img src="${confirmation.photoDataUrl}" alt="Foto registrada na confirmação de entrega" /></div>` : ''}
+    ${confirmation.signatureDataUrl ? `<div class="delivery-evidence-media signature"><span>Assinatura</span><img src="${confirmation.signatureDataUrl}" alt="Assinatura de quem confirmou o recebimento" /></div>` : ''}
+    ${!confirmed && order.status === 'DELIVERED' ? `
+      <div class="delivery-dossier-actions">
+        <button class="btn primary" type="button" data-generate-delivery-link="${esc(order.id)}">${publicLink ? 'Atualizar link de confirmação' : 'Gerar link de confirmação'}</button>
+        ${publicLink ? `<button class="btn" type="button" data-copy-delivery-link="${esc(publicLink)}">Copiar link</button><a class="btn" href="${esc(publicLink)}" target="_blank" rel="noopener noreferrer">Abrir</a>` : ''}
+      </div>
+    ` : ''}
+    ${confirmation.linkSentAt ? `<div class="delivery-evidence-row"><span>Link enviado</span><strong>${evidenceDate(confirmation.linkSentAt)} · ${esc(confirmation.linkSentChannel || 'WhatsApp')}</strong></div>` : ''}
+  </div>`;
+}
+
 function orderDrawer(orderId) {
   const o=state.orders.find(x=>x.id===orderId); if(!o) return '';
   const canAdvance=['PAID','PACKING','SHIPPED','OUT_FOR_DELIVERY'].includes(o.status);
@@ -673,6 +723,7 @@ function orderDrawer(orderId) {
     <div class="detail-block"><div class="detail-label">Endereço do pedido</div><div class="subtitle">${esc(addressText(o.address))}</div></div>
     <div class="detail-block"><div class="detail-label">Itens</div>${o.items.map(i=>`<div class="item-row"><span>${i.quantity}× ${esc(i.name)}</span><strong>${formatCurrencyBRL(i.quantity*i.unitPrice)}</strong></div>`).join('')}<div class="item-row"><span>${o.deliveryType==='shipping'?'Frete':'Entrega'}</span><strong>${formatCurrencyBRL(o.deliveryFee||0)}</strong></div><div class="item-row" style="border-top:1px solid var(--border-soft);padding-top:12px"><strong>Total</strong><strong>${formatCurrencyBRL(o.total)}</strong></div></div>
     <div class="detail-block"><div class="detail-label">Pagamento</div><div class="subtitle">${o.paidAt?`Confirmado em ${formatDate(o.paidAt)} · ${esc(receivingAccounts.find(a=>a.id===o.receivingAccountId)?.name||o.receivingAccountId)}`:'Aguardando confirmação'}</div></div>
+    ${deliveryDossier(o)}
     ${canAdvance?`<button class="btn primary" style="width:100%" data-advance-order="${o.id}" data-order-status="${o.status}">${label}</button>`:''}
   </aside></div>`;
 }
@@ -714,6 +765,37 @@ function bind() {
     if (b.classList.contains('drawer-backdrop') && event.target !== b) return;
     state.selectedOrder=null;
     render();
+  }));
+  document.querySelectorAll('[data-generate-delivery-link]').forEach((button) => button.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    const orderId = button.dataset.generateDeliveryLink;
+    button.disabled = true;
+    const original = button.textContent;
+    button.textContent = 'Gerando…';
+    try {
+      const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/delivery-confirmation/link`, { method: 'POST' });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Falha ao gerar link.');
+      await loadOperationalState();
+      state.selectedOrder = orderId;
+      render();
+      if (payload.link && navigator.clipboard?.writeText) await navigator.clipboard.writeText(payload.link);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = original;
+      button.title = error instanceof Error ? error.message : 'Falha ao gerar link.';
+    }
+  }));
+  document.querySelectorAll('[data-copy-delivery-link]').forEach((button) => button.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    const link = button.dataset.copyDeliveryLink || '';
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      button.textContent = 'Link copiado';
+    } catch {
+      window.prompt('Copie o link de confirmação:', link);
+    }
   }));
   document.querySelectorAll('[data-advance-order]').forEach(b=>b.addEventListener('click',async(event)=>{
     event.stopPropagation();
