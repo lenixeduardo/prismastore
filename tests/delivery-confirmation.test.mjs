@@ -11,7 +11,7 @@ import {
 
 function fixture() {
   return {
-    products: [],
+    products: [{ id: DELIVERY_CONFIRMATION_PILOT_PRODUCT_ID, name: 'Eduardo teste', active: true, stock: 3 }],
     customers: [],
     orders: [{
       id: 'PS-TEST-1',
@@ -56,6 +56,8 @@ test('pilot order gets a signed public link and confirmation dossier', () => {
     const opened = service.getPublicConfirmation(issued.token, { ip: '10.0.0.1', userAgent: 'test-agent' });
     assert.equal(opened.customerName, 'Eduardo');
     assert.equal(opened.status, 'pending');
+    assert.deepEqual(opened.items, [{ id: '#1', quantity: 1 }]);
+    assert.equal('name' in opened.items[0], false);
 
     const signatureDataUrl = 'data:image/png;base64,aGVsbG8=';
     const result = service.confirmDelivery({
@@ -70,6 +72,7 @@ test('pilot order gets a signed public link and confirmation dossier', () => {
     const order = store.load().orders.find((item) => item.id === 'PS-TEST-1');
     assert.equal(order.deliveryConfirmation.recipientName, 'Eduardo');
     assert.equal(order.deliveryConfirmation.confirmationIp, '10.0.0.1');
+    assert.equal(order.deliveryConfirmation.evidenceHash.length, 64);
     assert.equal(order.deliveryJourney.deliveredAt, '2026-09-25T03:00:00.000Z');
   });
 });
