@@ -74,6 +74,13 @@ test('pilot order gets a signed public link and confirmation dossier', () => {
     assert.equal(order.deliveryConfirmation.confirmationIp, '10.0.0.1');
     assert.equal(order.deliveryConfirmation.evidenceHash.length, 64);
     assert.equal(order.deliveryJourney.deliveredAt, '2026-09-25T03:00:00.000Z');
+
+    const dossier = service.exportDossier('PS-TEST-1');
+    assert.equal(dossier.order.items[0].id, '#1');
+    assert.equal('name' in dossier.order.items[0], false);
+    assert.equal(dossier.confirmation.confirmationIp, '10.0.0.1');
+    assert.equal(dossier.confirmation.confirmationUserAgent, 'test-agent');
+    assert.equal(dossier.confirmation.evidenceHash.length, 64);
   });
 });
 
