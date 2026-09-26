@@ -36,11 +36,13 @@ test('orders view exposes a payment-pending filter for newly confirmed WhatsApp 
 });
 
 
-test('delivery dossier keeps technical evidence compact instead of rendering raw values', () => {
+test('delivery dashboard hides technical evidence and only exposes dossier export', () => {
   assert.match(source, /formatPhoneDisplay/);
-  assert.match(source, /compactIpEvidence/);
-  assert.match(source, /compactEvidenceHash/);
-  assert.match(source, /deviceEvidenceLabel/);
-  assert.doesNotMatch(source, /IP da confirmação/);
+  assert.doesNotMatch(source, /compactIpEvidence/);
+  assert.doesNotMatch(source, /compactEvidenceHash/);
+  assert.doesNotMatch(source, /deviceEvidenceLabel/);
+  assert.doesNotMatch(source, /Origem registrada/);
   assert.doesNotMatch(source, /Hash de integridade/);
+  assert.match(source, /delivery-confirmation\/export/);
+  assert.match(source, /Exportar dossiê/);
 });
