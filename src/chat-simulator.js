@@ -100,14 +100,14 @@ function orderSummary() {
 
 function pixMarkup({ compact = false } = {}) {
   const pix = simulator.pixDemo;
-  if (pix.loading) return '<div class="notice">Gerando QR Code Pix de demonstração…</div>';
+  if (pix.loading) return '<div class="notice">Gerando QR Code Pix Oscar…</div>';
   if (pix.error) return `<div class="notice" style="border-color:rgba(255,107,107,.24);color:#ffb0b0">${esc(pix.error)}</div>`;
   if (!pix.encodedImage || !pix.payload) return '<div class="notice">QR Code Pix ainda não foi gerado.</div>';
   const size = compact ? 154 : 180;
   return `<div style="display:grid;gap:9px;justify-items:center">
-    <div style="background:#fff;padding:9px;border-radius:6px"><img src="data:image/png;base64,${esc(pix.encodedImage)}" alt="QR Code Pix de demonstração" style="display:block;width:${size}px;height:${size}px;object-fit:contain" /></div>
-    <div class="demo-note">QR Code Pix BR Code de demonstração — não use para pagamento.</div>
-    ${compact ? '' : `<label style="width:100%;display:grid;gap:6px"><span class="detail-label" style="margin-bottom:0">Pix Copia e Cola de demonstração</span><textarea readonly style="width:100%;min-height:88px;border:1px solid var(--border);background:#09120e;color:#eef5f0;border-radius:5px;padding:10px 12px;font:inherit;line-height:1.4;resize:vertical">${esc(pix.payload)}</textarea></label>`}
+    <div style="background:#fff;padding:9px;border-radius:6px"><img src="data:image/png;base64,${esc(pix.encodedImage)}" alt="QR Code Pix Oscar" style="display:block;width:${size}px;height:${size}px;object-fit:contain" /></div>
+    <div class="demo-note">QR Code real da conta Pix Oscar — qualquer pagamento realizado será efetivo.</div>
+    ${compact ? '' : `<label style="width:100%;display:grid;gap:6px"><span class="detail-label" style="margin-bottom:0">Pix Copia e Cola — Pix Oscar</span><textarea readonly style="width:100%;min-height:88px;border:1px solid var(--border);background:#09120e;color:#eef5f0;border-radius:5px;padding:10px 12px;font:inherit;line-height:1.4;resize:vertical">${esc(pix.payload)}</textarea></label>`}
   </div>`;
 }
 
@@ -124,7 +124,7 @@ function flowPanel() {
     return `<div class="section-title">3. Endereço</div><p class="subtitle">${nl(prompt)}</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-sim-address="saved">Usar endereço salvo</button><button class="btn gold" data-sim-address="new">Informar novo endereço</button></div>${simulator.addressMode ? `<div class="detail-block"><div class="detail-label">Endereço selecionado ${simulator.addressMode === 'new' ? '<span class="badge gold">NOVO ENDEREÇO</span>' : ''}</div><div class="subtitle">${esc(addressText(selectedAddress()))}</div><button class="btn primary" style="margin-top:12px" data-sim-action="review">Revisar pedido</button></div>` : ''}`;
   }
   if (simulator.step === 'review') {
-    return `<div class="section-title">4. Revisão</div><p class="subtitle">${nl(msg('confirmationPrompt', { subtotal: formatCurrencyBRL(finalTotal()), endereco: addressText(selectedAddress()) }))}</p>${orderSummary()}<button class="btn primary" data-sim-action="pix">Gerar Pix de demonstração</button>`;
+    return `<div class="section-title">4. Revisão</div><p class="subtitle">${nl(msg('confirmationPrompt', { subtotal: formatCurrencyBRL(finalTotal()), endereco: addressText(selectedAddress()) }))}</p>${orderSummary()}<button class="btn primary" data-sim-action="pix">Gerar Pix Oscar</button>`;
   }
   if (simulator.step === 'pix') {
     return `<div class="section-title">5. Pix</div><p class="subtitle">${nl(msg('paymentPending', { pedido: demoOrderId(), subtotal: formatCurrencyBRL(finalTotal()), endereco: addressText(selectedAddress()) }))}</p>${pixMarkup()}${orderSummary()}<button class="btn primary" data-sim-action="confirm-payment" ${simulator.pixDemo.loading || simulator.pixDemo.error ? 'disabled' : ''}>Simular pagamento confirmado</button>`;
@@ -149,7 +149,7 @@ function phoneMockup() {
 }
 
 function simulatorMarkup() {
-  return `<div class="card padded"><div class="section-head"><div class="section-title">Fluxo funcional</div><div class="badge gray">Dados simulados</div></div><div class="notice" style="margin-bottom:14px">Esta prévia usa exatamente as mensagens salvas em <strong>Configurações</strong>. O Pix usa um BR Code válido apenas para demonstração, sem chave de cobrança real.</div>${flowPanel()}</div><div>${phoneMockup()}</div>`;
+  return `<div class="card padded"><div class="section-head"><div class="section-title">Fluxo funcional</div><div class="badge gray">Dados simulados</div></div><div class="notice" style="margin-bottom:14px">Esta prévia usa exatamente as mensagens salvas em <strong>Configurações</strong>. O QR Code usa a mesma configuração da conta Pix Oscar da produção e direciona pagamentos reais para essa conta.</div>${flowPanel()}</div><div>${phoneMockup()}</div>`;
 }
 
 function renderSimulator() {
@@ -182,10 +182,10 @@ async function loadDemoPix() {
   try {
     const response = await fetch(`/api/payments/demo-pix?amount=${encodeURIComponent(finalTotal().toFixed(2))}`, { cache: 'no-store' });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Não foi possível gerar o Pix de demonstração.');
+    if (!response.ok) throw new Error(data.error || 'Não foi possível gerar o Pix Oscar.');
     simulator.pixDemo = { loading: false, payload: data.payload || null, encodedImage: data.encodedImage || null, error: null };
   } catch (error) {
-    simulator.pixDemo = { loading: false, payload: null, encodedImage: null, error: error instanceof Error ? error.message : 'Falha ao gerar Pix de demonstração.' };
+    simulator.pixDemo = { loading: false, payload: null, encodedImage: null, error: error instanceof Error ? error.message : 'Falha ao gerar Pix Oscar.' };
   }
   renderSimulator();
 }
@@ -207,7 +207,7 @@ async function persistPaidDemoOrder() {
     total: totals.subtotal + deliveryFee(),
     createdAt: new Date().toISOString(),
     paidAt: new Date().toISOString(),
-    receivingAccountId: 'pix-demo',
+    receivingAccountId: 'pix-local',
     items,
     address: selectedAddress(),
     newAddress: simulator.addressMode === 'new',
