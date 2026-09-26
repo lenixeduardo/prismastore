@@ -47,11 +47,6 @@ function applyAdminIcons(root = document) {
     node.innerHTML = icon(name);
     node.dataset.adminIcon = name;
   });
-  root.querySelectorAll('[data-kpi-signal]').forEach((node) => {
-    if (node.dataset.adminIcon === 'bar-chart-3') return;
-    node.innerHTML = icon('bar-chart-3');
-    node.dataset.adminIcon = 'bar-chart-3';
-  });
 }
 
 const app = document.querySelector('#app');
