@@ -43,25 +43,19 @@ test('PWA does not render the server online status badge', () => {
 });
 
 
-test('dashboard keeps the four KPI assets without the holographic prism artwork', () => {
+test('dashboard no longer uses decorative KPI artwork or holographic prism imagery', () => {
   assert.doesNotMatch(app, /\/assets\/dashboard-prism-holographic\.webp/);
-  assert.match(app, /\/assets\/kpi-revenue\.webp/);
-  assert.match(app, /\/assets\/kpi-paid-orders\.webp/);
-  assert.match(app, /\/assets\/kpi-packing\.webp/);
-  assert.match(app, /\/assets\/kpi-critical-stock\.svg/);
-  assert.match(styles, /\.dashboard-kpi-art/);
+  assert.doesNotMatch(app, /DASHBOARD_KPI_ASSETS|dashboard-kpi-art/);
   assert.doesNotMatch(sw, /\/assets\/dashboard-prism-holographic\.webp/);
+  assert.match(app, /dashboard-kpi-icon/);
+  assert.match(app, /dashboard-kpi-signal/);
 });
 
 
-test('dashboard KPI art stays secondary to text on desktop and mobile', () => {
-  assert.match(styles, /\.dashboard-hero\s*\{[\s\S]*?min-height:\s*220px/);
+test('dashboard metrics use compact neutral cards on desktop and a two-column mobile grid', () => {
   assert.doesNotMatch(styles, /\.dashboard-prism\s*\{/);
-  assert.match(styles, /\.card\.padded\.dashboard-kpi\s*\{[\s\S]*?padding:\s*22px 36% 22px 20px/);
-  assert.match(styles, /\.dashboard-kpi-art\s*\{[\s\S]*?width:\s*35%[\s\S]*?max-width:\s*142px[\s\S]*?opacity:\s*\.48/);
-  assert.doesNotMatch(styles, /\.dashboard-kpi-art\s*\{[\s\S]*?transform:\s*scale\(1\.18\)/);
-  assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-kpi-art\s*\{[\s\S]*?width:\s*33%[\s\S]*?max-width:\s*90px[\s\S]*?opacity:\s*\.40/);
-  assert.doesNotMatch(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-kpi-art\s*\{[\s\S]*?transform:\s*scale\(1\.42\)/);
+  assert.match(styles, /\.card\.padded\.dashboard-kpi\s*\{[\s\S]*?background:\s*#121616/);
+  assert.match(styles, /@media \(max-width:\s*820px\)[\s\S]*?\.dashboard-kpis\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,minmax\(0,1fr\)\)/);
 });
 
 
