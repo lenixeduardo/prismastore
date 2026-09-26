@@ -1,6 +1,9 @@
 const ICONS = {
   'layout-dashboard': '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
   'shopping-bag': '<path d="M6 8h12l1 13H5L6 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/>',
+  'shopping-cart': '<circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M3 4h2l2.4 10.2a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.6L21 8H7"/>',
+  'dollar-sign': '<path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"/>',
+  'alert-triangle': '<path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
   users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   package: '<path d="m21 8-9-5-9 5 9 5 9-5Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v9"/><path d="m21 8v9l-9 5-9-5V8"/>',
   'bar-chart-3': '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
@@ -31,6 +34,24 @@ function applyAdminIcons(root = document) {
       node.dataset.adminIcon = name;
     });
   }
+
+  const kpiIcons = {
+    money: 'dollar-sign',
+    cart: 'shopping-cart',
+    box: 'package',
+    alert: 'alert-triangle',
+  };
+  root.querySelectorAll('[data-kpi-icon]').forEach((node) => {
+    const name = kpiIcons[node.dataset.kpiIcon] || 'package';
+    if (node.dataset.adminIcon === name) return;
+    node.innerHTML = icon(name);
+    node.dataset.adminIcon = name;
+  });
+  root.querySelectorAll('[data-kpi-signal]').forEach((node) => {
+    if (node.dataset.adminIcon === 'bar-chart-3') return;
+    node.innerHTML = icon('bar-chart-3');
+    node.dataset.adminIcon = 'bar-chart-3';
+  });
 }
 
 const app = document.querySelector('#app');
