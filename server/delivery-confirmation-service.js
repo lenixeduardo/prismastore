@@ -49,7 +49,9 @@ function catalogItemNumber(item, state) {
 
   const products = Array.isArray(state?.products) ? state.products : [];
   const index = products.findIndex((product) => product?.id === item?.productId);
-  return index >= 0 ? index + 1 : null;
+  if (index >= 0) return index + 1;
+  if (item?.productId === DELIVERY_CONFIRMATION_PILOT_PRODUCT_ID) return 1;
+  return null;
 }
 
 function publicOrder(order, state) {
