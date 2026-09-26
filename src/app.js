@@ -137,7 +137,10 @@ function shell(content) {
   return `
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div></div>
+      <div class="brand">
+        <img class="brand-logo-mark" src="/assets/prismastore-prism-mark.svg" alt="" aria-hidden="true" />
+        <div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div>
+      </div>
       <div class="nav-group">
         <div class="nav-label">Operação</div>
         ${views.map(([id,label,icon])=>`<button class="nav-btn ${state.view===id?'active':''}" data-view="${id}"><span class="nav-icon">${icon}</span>${label}</button>`).join('')}
@@ -156,7 +159,10 @@ function shell(content) {
       </div>
     </aside>
     <header class="mobile-topbar">
-      <div class="mobile-brand" aria-label="PrismaStore">Prisma<span>Store</span></div>
+      <div class="mobile-brand" aria-label="PrismaStore">
+        <img class="mobile-brand-mark" src="/assets/prismastore-prism-mark.svg" alt="" aria-hidden="true" />
+        <span class="mobile-brand-word">Prisma<span>Store</span></span>
+      </div>
       <div class="mobile-top-actions">
         <button class="mobile-theme-button" type="button" role="switch" aria-checked="false" data-theme-toggle aria-label="Alternar tema claro e escuro">
           <span aria-hidden="true">◐</span>
