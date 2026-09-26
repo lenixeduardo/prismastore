@@ -294,6 +294,43 @@ export function createDeliveryConfirmationService({
     return result;
   }
 
+  function exportDossier(orderId) {
+    const state = stateStore.load();
+    const order = state.orders.find((candidate) => candidate.id === orderId);
+    if (!order) throw new Error('Pedido não encontrado.');
+    if (!isEligibleOrder(order)) throw new Error('Este pedido não possui dossiê de confirmação de entrega.');
+
+    return {
+      exportedAt: now().toISOString(),
+      order: {
+        id: order.id,
+        customerName: String(order.customerName || ''),
+        phone: String(order.phone || ''),
+        deliveryType: order.deliveryType || null,
+        status: order.status || null,
+        createdAt: order.createdAt || null,
+        paidAt: order.paidAt || null,
+        items: Array.isArray(order.items)
+          ? order.items.map((item) => {
+              const itemNumber = catalogItemNumber(item, state);
+              return {
+                id: itemNumber ? `#${itemNumber}` : '#—',
+                productId: String(item?.productId || ''),
+                quantity: Number(item?.quantity || 0),
+              };
+            })
+          : [],
+        address: order.address && typeof order.address === 'object' ? structuredClone(order.address) : null,
+      },
+      journey: order.deliveryJourney && typeof order.deliveryJourney === 'object'
+        ? structuredClone(order.deliveryJourney)
+        : {},
+      confirmation: order.deliveryConfirmation && typeof order.deliveryConfirmation === 'object'
+        ? structuredClone(order.deliveryConfirmation)
+        : {},
+    };
+  }
+
   return {
     issueLink,
     markLinkSent,
@@ -301,6 +338,7 @@ export function createDeliveryConfirmationService({
     confirmDelivery,
     recordRideLink,
     markHandoff,
+    exportDossier,
     isEligibleOrder,
   };
 }
