@@ -19,6 +19,8 @@ test('dashboard KPI values stay dynamic while artwork is reduced to static icon 
   assert.doesNotMatch(app, /dashboard-kpi-art/);
   assert.match(app, /dashboard-kpi-icon/);
   assert.match(app, /dashboard-kpi-signal/);
+  assert.match(app, /\/assets\/metric-orders-cart\.svg/);
+  assert.match(app, /\/assets\/metric-signal\.svg/);
   assert.match(app, /dashboardKpi\('cart'/);
   assert.match(app, /String\(paidMonth\.length\)/);
 });
