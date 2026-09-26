@@ -276,3 +276,76 @@ test('debug report API returns recent sanitized terminal logs', async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+
+test('dashboard state redacts technical delivery evidence while keeping it persisted', async () => {
+  await withServer(async ({ baseUrl, store }) => {
+    store.updateState((state) => {
+      state.orders.push({
+        id: 'PS-PRIVATE-1',
+        customerName: 'Cliente',
+        status: 'DELIVERED',
+        deliveryType: 'local_delivery',
+        items: [],
+        deliveryConfirmation: {
+          confirmedAt: '2026-09-25T22:50:00.000Z',
+          recipientName: 'Cliente',
+          confirmationIp: '10.0.0.8',
+          confirmationUserAgent: 'secret-agent',
+          evidenceHash: 'abc123',
+          lastOpenedIp: '10.0.0.7',
+          lastOpenedUserAgent: 'open-agent',
+        },
+      });
+      return state;
+    });
+
+    const response = await fetch(`${baseUrl}/api/state`);
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    const order = payload.orders.find((item) => item.id === 'PS-PRIVATE-1');
+    assert.equal(order.deliveryConfirmation.recipientName, 'Cliente');
+    assert.equal('confirmationIp' in order.deliveryConfirmation, false);
+    assert.equal('confirmationUserAgent' in order.deliveryConfirmation, false);
+    assert.equal('evidenceHash' in order.deliveryConfirmation, false);
+    assert.equal('lastOpenedIp' in order.deliveryConfirmation, false);
+    assert.equal('lastOpenedUserAgent' in order.deliveryConfirmation, false);
+
+    const persisted = store.load().orders.find((item) => item.id === 'PS-PRIVATE-1');
+    assert.equal(persisted.deliveryConfirmation.confirmationIp, '10.0.0.8');
+    assert.equal(persisted.deliveryConfirmation.evidenceHash, 'abc123');
+  });
+});
+
+test('per-order delivery export downloads the full technical dossier', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismastore-delivery-export-api-'));
+  const store = createStateStore({ dbPath: join(dir, 'prismastore.db'), seedState: fixture() });
+  const deliveryConfirmationService = {
+    exportDossier: (orderId) => ({
+      exportedAt: '2026-09-25T23:00:00.000Z',
+      order: { id: orderId, items: [{ id: '#4', quantity: 1 }] },
+      confirmation: {
+        confirmationIp: '10.0.0.9',
+        confirmationUserAgent: 'test-agent',
+        evidenceHash: 'hash-value',
+      },
+    }),
+  };
+  const server = createAppServer({ stateStore: store, staticDir: process.cwd(), deliveryConfirmationService });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const response = await fetch(`${baseUrl}/api/orders/PS-EXPORT-1/delivery-confirmation/export`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /application\/json/);
+    assert.match(response.headers.get('content-disposition'), /prismastore-confirmacao-PS-EXPORT-1\.json/);
+    const dossier = await response.json();
+    assert.equal(dossier.order.items[0].id, '#4');
+    assert.equal(dossier.confirmation.confirmationIp, '10.0.0.9');
+    assert.equal(dossier.confirmation.evidenceHash, 'hash-value');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
