@@ -90,31 +90,6 @@ function formatPhoneDisplay(value='') {
   if(digits.length===10) return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
   return String(value??'').trim();
 }
-function compactIpEvidence(value='') {
-  const ip=String(value??'').trim();
-  if(!ip) return '';
-  if(/^\d{1,3}(?:\.\d{1,3}){3}$/.test(ip)) {
-    const parts=ip.split('.');
-    return `${parts[0]}.${parts[1]}.***.${parts[3]}`;
-  }
-  if(ip.includes(':')) {
-    const parts=ip.split(':').filter(Boolean);
-    return parts.length>1 ? `${parts[0]}:${parts[1] || ''}:…:${parts.at(-1)}` : ip;
-  }
-  return ip.length>24 ? `${ip.slice(0,12)}…${ip.slice(-6)}` : ip;
-}
-function compactEvidenceHash(value='') {
-  const hash=String(value??'').trim();
-  if(!hash) return '';
-  return hash.length>20 ? `${hash.slice(0,10)}…${hash.slice(-8)}` : hash;
-}
-function deviceEvidenceLabel(value='') {
-  const ua=String(value??'');
-  if(!ua) return '';
-  const device=/iPhone/i.test(ua)?'iPhone':/iPad/i.test(ua)?'iPad':/Android/i.test(ua)?'Android':/Windows/i.test(ua)?'Windows':/Macintosh|Mac OS X/i.test(ua)?'Mac':'Dispositivo';
-  const browser=/CriOS|Chrome/i.test(ua)?'Chrome':/FxiOS|Firefox/i.test(ua)?'Firefox':/EdgiOS|Edg/i.test(ua)?'Edge':/Safari/i.test(ua)?'Safari':'Navegador';
-  return `${device} · ${browser}`;
-}
 function latestAddress(customer) { return customer?.addresses?.[customer.addresses.length-1]; }
 function cleanAddressText(value='') {
   const text=String(value??'').trim().replace(/\s+/g,' ');
@@ -730,9 +705,6 @@ function deliveryDossier(order) {
     </div>
     ${rideLink ? `<div class="delivery-evidence-row"><span>Link da corrida</span><a href="${esc(rideLink)}" target="_blank" rel="noopener noreferrer">Abrir corrida</a></div>` : '<div class="delivery-evidence-row muted"><span>Link da corrida</span><strong>Não registrado</strong></div>'}
     ${confirmation.recipientName ? `<div class="delivery-evidence-row"><span>Recebedor</span><strong>${esc(confirmation.recipientName)}</strong></div>` : ''}
-    ${confirmation.confirmationIp ? `<div class="delivery-evidence-row"><span>Origem registrada</span><code>${esc(compactIpEvidence(confirmation.confirmationIp))}</code></div>` : ''}
-    ${confirmation.confirmationUserAgent ? `<div class="delivery-evidence-row"><span>Dispositivo</span><strong>${esc(deviceEvidenceLabel(confirmation.confirmationUserAgent))}</strong></div>` : ''}
-    ${confirmation.evidenceHash ? `<div class="delivery-evidence-row"><span>Integridade</span><code>${esc(compactEvidenceHash(confirmation.evidenceHash))}</code></div>` : ''}
     ${confirmation.notes ? `<div class="delivery-evidence-note"><span>Observação</span><p>${esc(confirmation.notes)}</p></div>` : ''}
     ${confirmation.photoDataUrl ? `<div class="delivery-evidence-media"><span>Foto da entrega</span><img src="${confirmation.photoDataUrl}" alt="Foto registrada na confirmação de entrega" /></div>` : ''}
     ${confirmation.signatureDataUrl ? `<div class="delivery-evidence-media signature"><span>Assinatura</span><img src="${confirmation.signatureDataUrl}" alt="Assinatura de quem confirmou o recebimento" /></div>` : ''}
@@ -743,6 +715,7 @@ function deliveryDossier(order) {
           : `<button class="btn primary" type="button" data-generate-delivery-link="${esc(order.id)}">Gerar link novamente</button>`}
       </div>
     ` : ''}
+    ${confirmed ? `<div class="delivery-dossier-actions"><a class="btn" href="/api/orders/${encodeURIComponent(order.id)}/delivery-confirmation/export" download>Exportar dossiê</a></div>` : ''}
     ${confirmation.linkSentAt ? `<div class="delivery-evidence-row"><span>Link enviado</span><strong>${evidenceDate(confirmation.linkSentAt)} · ${esc(confirmation.linkSentChannel || 'WhatsApp')}</strong></div>` : ''}
   </div>`;
 }
