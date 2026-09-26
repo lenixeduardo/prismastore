@@ -874,8 +874,33 @@ async function bootstrapOperationalRuntime() {
   render();
 }
 
+let externalStateRefreshRunning = false;
+
+async function refreshOperationalStateWithoutReset() {
+  if (externalStateRefreshRunning) return false;
+  externalStateRefreshRunning = true;
+  const activeView = state.view;
+  const selectedOrder = state.selectedOrder;
+  try {
+    const loaded = await loadOperationalState();
+    if (!loaded) return false;
+    state.view = activeView;
+    state.selectedOrder = selectedOrder && state.orders.some((order) => order.id === selectedOrder)
+      ? selectedOrder
+      : null;
+    render();
+    window.dispatchEvent(new CustomEvent('prismastore:state-updated', {
+      detail: { source: 'live-sync' },
+    }));
+    return true;
+  } finally {
+    externalStateRefreshRunning = false;
+  }
+}
+
 render();
 window.addEventListener('prismastore:dashboard-opened', bootstrapOperationalRuntime, { once: true });
+window.addEventListener('prismastore:external-state-changed', refreshOperationalStateWithoutReset);
 window.addEventListener('prismastore:auth-restored', () => {
   if (state.view === 'settings') refreshSettingsHealth();
 });
