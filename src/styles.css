@@ -875,3 +875,48 @@ tr:hover td { background:rgba(255,255,255,.018); }
   .mobile-whatsapp-status { width:40px; justify-content:center; padding:0; }
   .card.padded.dashboard-kpi { min-height:116px; }
 }
+
+
+/* Brand mark + compact phone refinements */
+.brand-logo-mark {
+  width:28px;
+  height:28px;
+  display:block;
+  flex:0 0 28px;
+}
+.mobile-brand {
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.mobile-brand-mark {
+  width:28px;
+  height:28px;
+  display:block;
+  flex:0 0 28px;
+}
+.mobile-brand-word {
+  color:var(--text);
+}
+.mobile-brand-word > span {
+  color:var(--emerald-2);
+}
+
+@media (max-width:390px) {
+  .dashboard-hero h1 {
+    max-width:none;
+    font-size:27px;
+  }
+  .dashboard-hero .subtitle {
+    max-width:none;
+  }
+  .card.padded.dashboard-kpi {
+    min-height:116px;
+    grid-template-columns:36px minmax(0,1fr);
+    padding:12px;
+  }
+  .dashboard-kpi-signal {
+    grid-column:2;
+    margin-top:-26px;
+  }
+}
