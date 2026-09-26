@@ -158,7 +158,7 @@ function shell(content) {
     <header class="mobile-topbar">
       <div class="mobile-brand" aria-label="PrismaStore">Prisma<span>Store</span></div>
       <div class="mobile-top-actions">
-        <button class="mobile-theme-button" type="button" data-theme-toggle aria-label="Alternar tema claro e escuro">
+        <button class="mobile-theme-button" type="button" role="switch" aria-checked="false" data-theme-toggle aria-label="Alternar tema claro e escuro">
           <span aria-hidden="true">◐</span>
         </button>
         <button class="mobile-whatsapp-status ${state.whatsapp.status==='connected'?'connected':''}" type="button" data-view="settings" aria-label="WhatsApp: ${whatsappStatusLabel()}">
