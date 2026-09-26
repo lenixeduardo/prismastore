@@ -137,7 +137,7 @@ function shell(content) {
   return `
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><div class="brand-mark"><img src="/assets/prismastore-prism-logo.png?v=20260923-logo-fix-1" alt="" aria-hidden="true" /></div><div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div></div>
+      <div class="brand"><div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div></div>
       <div class="nav-group">
         <div class="nav-label">Operação</div>
         ${views.map(([id,label,icon])=>`<button class="nav-btn ${state.view===id?'active':''}" data-view="${id}"><span class="nav-icon">${icon}</span>${label}</button>`).join('')}
@@ -193,7 +193,6 @@ function dashboardView() {
           <h1>Central de Operações</h1>
           <div class="subtitle">Tudo o que importa para o seu pós-pagamento, em uma única visão.</div>
         </div>
-        <img class="dashboard-prism" src="/assets/dashboard-prism-holographic.webp" alt="" aria-hidden="true" />
       </section>
 
       <div class="dashboard-kpis">
