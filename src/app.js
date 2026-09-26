@@ -137,7 +137,10 @@ function shell(content) {
   return `
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div></div>
+      <div class="brand">
+        <img class="brand-logo-mark" src="/assets/prismastore-prism-mark.svg" alt="" aria-hidden="true" />
+        <div class="brand-copy"><strong>PrismaStore</strong><span>Operations</span></div>
+      </div>
       <div class="nav-group">
         <div class="nav-label">Operação</div>
         ${views.map(([id,label,icon])=>`<button class="nav-btn ${state.view===id?'active':''}" data-view="${id}"><span class="nav-icon">${icon}</span>${label}</button>`).join('')}
@@ -155,6 +158,21 @@ function shell(content) {
         <div class="status-row"><span>WhatsApp</span><span style="display:flex;gap:8px;align-items:center"><i class="status-dot ${state.whatsapp.status==='connected'?'':'offline'}"></i>${whatsappStatusLabel()}</span></div>
       </div>
     </aside>
+    <header class="mobile-topbar">
+      <div class="mobile-brand" aria-label="PrismaStore">
+        <img class="mobile-brand-mark" src="/assets/prismastore-prism-mark.svg" alt="" aria-hidden="true" />
+        <span class="mobile-brand-word">Prisma<span>Store</span></span>
+      </div>
+      <div class="mobile-top-actions">
+        <button class="mobile-theme-button" type="button" role="switch" aria-checked="false" data-theme-toggle aria-label="Alternar tema claro e escuro">
+          <span aria-hidden="true">◐</span>
+        </button>
+        <button class="mobile-whatsapp-status ${state.whatsapp.status==='connected'?'connected':''}" type="button" data-view="settings" aria-label="WhatsApp: ${whatsappStatusLabel()}">
+          <i class="status-dot ${state.whatsapp.status==='connected'?'':'offline'}"></i>
+          <span>WhatsApp</span>
+        </button>
+      </div>
+    </header>
     <main class="main">${content}</main>
     <nav class="mobile-bottom">${mobileViews.map(([id,label,icon])=>`<button class="${state.view===id?'active':''}" data-view="${id}"><span class="mob-icon">${icon}</span>${label}</button>`).join('')}<button type="button" data-pwa-more><span class="mob-icon">•••</span>Mais</button></nav>
     ${state.selectedOrder ? orderDrawer(state.selectedOrder) : ''}
@@ -189,9 +207,8 @@ function dashboardView() {
     <div class="dashboard-screen">
       <section class="dashboard-hero">
         <div>
-          <div class="eyebrow">PRISMASTORE</div>
-          <h1>Central de Operações</h1>
-          <div class="subtitle">Tudo o que importa para o seu pós-pagamento, em uma única visão.</div>
+          <h1>Bem-vindo, <span class="dashboard-greeting-name">Eduardo</span></h1>
+          <div class="subtitle">Aqui está o panorama da sua operação hoje.</div>
         </div>
       </section>
 
@@ -248,22 +265,18 @@ function dashboardView() {
     </div>`);
 }
 
-const DASHBOARD_KPI_ASSETS = {
-  money: '/assets/kpi-revenue.webp',
-  cart: '/assets/kpi-paid-orders.webp',
-  box: '/assets/kpi-packing.webp',
-  alert: '/assets/kpi-critical-stock.svg',
-};
-
 function dashboardKpi(icon,label,value,meta,klass='') {
-  const asset = DASHBOARD_KPI_ASSETS[icon];
+  const iconMarkup = icon === 'cart'
+    ? '<img class="kpi-static-icon" src="/assets/metric-orders-cart.svg" alt="" />'
+    : `<span data-kpi-icon="${icon}"></span>`;
   return `<div class="card padded dashboard-kpi ${klass}">
+    <span class="dashboard-kpi-icon" aria-hidden="true">${iconMarkup}</span>
     <div class="dashboard-kpi-copy">
       <div class="kpi-label">${label}</div>
       <div class="kpi-value mono">${value}</div>
       <div class="kpi-meta">${meta}</div>
     </div>
-    <img class="dashboard-kpi-art" src="${asset}" alt="" aria-hidden="true" />
+    <img class="dashboard-kpi-signal" src="/assets/metric-signal.svg" alt="" aria-hidden="true" />
   </div>`;
 }
 

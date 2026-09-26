@@ -1,23 +1,23 @@
 :root {
-  --bg: #07100c;
-  --panel: #0d1813;
-  --panel-2: #111f18;
-  --panel-3: #16271f;
-  --border: #22372d;
+  --bg: #080c0c;
+  --panel: #121616;
+  --panel-2: #171c1b;
+  --panel-3: #1c2220;
+  --border: #1f2622;
   --border-soft: rgba(255,255,255,.07);
-  --text: #f4f6f2;
-  --muted: #8ea096;
-  --muted-2: #66766d;
-  --emerald: #29d980;
-  --emerald-2: #0cae61;
-  --emerald-dim: rgba(41,217,128,.12);
+  --text: #f4f1e7;
+  --muted: #9aa3a0;
+  --muted-2: #66706c;
+  --emerald: #19b86c;
+  --emerald-2: #22c97a;
+  --emerald-dim: rgba(25,184,108,.08);
   --gold: #d7b56d;
   --gold-dim: rgba(215,181,109,.12);
   --danger: #ff6b6b;
   --danger-dim: rgba(255,107,107,.12);
   --warning: #f2b84b;
   --warning-dim: rgba(242,184,75,.12);
-  --radius: 12px;
+  --radius: 14px;
   --shadow: 0 20px 60px rgba(0,0,0,.24);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -568,4 +568,355 @@ tr:hover td { background:rgba(255,255,255,.012); }
 }
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after { scroll-behavior:auto !important; transition:none !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; }
+}
+
+
+/* 2026-09-26 — finance-inspired visual refresh */
+body::before { display:none; }
+
+.mobile-topbar {
+  display:none;
+}
+
+.dashboard-screen {
+  max-width:1180px;
+}
+
+.dashboard-screen::before {
+  display:none;
+}
+
+.dashboard-hero {
+  min-height:auto;
+  padding:4px 0 8px;
+  margin:0 0 18px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  overflow:visible;
+}
+.dashboard-hero::before { display:none; }
+.dashboard-hero > div { max-width:none; }
+.dashboard-hero h1 {
+  margin:0 0 6px;
+  font-size:clamp(28px,3vw,38px);
+  line-height:1.05;
+  letter-spacing:-.04em;
+  font-weight:600;
+}
+.dashboard-greeting-name { color:var(--emerald-2); }
+.dashboard-hero .subtitle {
+  max-width:none;
+  color:var(--muted);
+  font-size:14px;
+}
+
+.dashboard-kpis {
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:18px;
+}
+.card.padded.dashboard-kpi {
+  min-height:128px;
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) 28px;
+  gap:14px;
+  align-items:start;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:#121616;
+  box-shadow:none;
+}
+.dashboard-kpi::after { display:none; }
+.dashboard-kpi-copy {
+  position:relative;
+  z-index:1;
+  min-width:0;
+}
+.dashboard-kpi-icon {
+  width:40px;
+  height:40px;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  background:rgba(25,184,108,.08);
+  color:var(--emerald-2);
+}
+.dashboard-kpi-icon .admin-icon-svg {
+  width:21px;
+  height:21px;
+}
+.dashboard-kpi-icon .kpi-static-icon {
+  width:21px;
+  height:21px;
+  display:block;
+}
+.dashboard-kpi-signal {
+  width:28px;
+  height:28px;
+  display:block;
+  align-self:end;
+  justify-self:end;
+  opacity:.78;
+}
+.dashboard-kpi .kpi-label {
+  color:var(--muted);
+  font-size:12px;
+}
+.dashboard-kpi .kpi-value {
+  margin:5px 0 3px;
+  font-size:25px;
+  line-height:1.05;
+  font-weight:600;
+}
+.dashboard-kpi .kpi-meta {
+  color:var(--muted-2);
+  font-size:11px;
+}
+.dashboard-kpi.warning .dashboard-kpi-icon { color:var(--warning); background:rgba(242,184,75,.08); }
+.dashboard-kpi.danger .dashboard-kpi-icon { color:var(--danger); background:rgba(255,107,107,.08); }
+
+.dashboard-section,
+.whatsapp-home-card {
+  border-color:var(--border);
+  background:#0d1111;
+  box-shadow:none;
+}
+.dashboard-section .section-title,
+.whatsapp-home-card .section-title {
+  font-size:16px;
+  font-weight:600;
+}
+.dashboard-section .btn.ghost,
+.whatsapp-home-card .btn.ghost {
+  color:var(--emerald-2);
+  background:transparent;
+  border-color:transparent;
+}
+.dashboard-order-row {
+  background:#121616;
+  border-color:var(--border);
+  box-shadow:none;
+}
+.dashboard-order-row:hover {
+  background:#171c1b;
+  border-color:#29312d;
+}
+.dashboard-stock-list .item-row {
+  border-color:var(--border-soft);
+}
+
+.card {
+  background:#121616;
+  border-color:var(--border);
+  box-shadow:none;
+}
+.btn {
+  background:#171c1b;
+  border-color:var(--border);
+}
+.btn:hover {
+  border-color:#29312d;
+  background:#1c2220;
+}
+.btn.primary {
+  background:var(--emerald);
+  border-color:var(--emerald);
+}
+.table-wrap {
+  border-color:var(--border);
+  background:#0d1111;
+}
+table { background:#0d1111; }
+tr:hover td { background:rgba(255,255,255,.018); }
+
+.mobile-bottom button.active {
+  color:var(--emerald-2);
+  background:rgba(25,184,108,.08);
+}
+
+@media (max-width:820px) {
+  .app-shell {
+    min-height:100dvh;
+    display:block;
+  }
+
+  .mobile-topbar {
+    position:sticky;
+    top:0;
+    z-index:35;
+    min-height:64px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:max(10px,env(safe-area-inset-top)) 16px 10px;
+    border-bottom:1px solid rgba(255,255,255,.055);
+    background:rgba(8,12,12,.94);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+  }
+  .mobile-brand {
+    color:var(--text);
+    font-size:20px;
+    font-weight:650;
+    letter-spacing:-.035em;
+  }
+  .mobile-brand span { color:var(--emerald-2); }
+  .mobile-top-actions {
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .mobile-theme-button,
+  .mobile-whatsapp-status {
+    min-height:40px;
+    border:1px solid var(--border);
+    background:#0d1111;
+    color:var(--muted);
+    border-radius:12px;
+  }
+  .mobile-theme-button {
+    width:40px;
+    display:grid;
+    place-items:center;
+    padding:0;
+    font-size:18px;
+  }
+  .mobile-whatsapp-status {
+    display:flex;
+    align-items:center;
+    gap:7px;
+    padding:0 10px;
+    font-size:11px;
+    font-weight:600;
+  }
+  .mobile-whatsapp-status.connected {
+    color:#dfe9e4;
+    border-color:rgba(25,184,108,.20);
+  }
+
+  .main {
+    padding:20px 16px 92px;
+  }
+
+  .dashboard-hero {
+    margin-bottom:16px;
+    padding:0;
+  }
+  .dashboard-hero h1 {
+    font-size:28px;
+  }
+
+  .dashboard-kpis {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .card.padded.dashboard-kpi {
+    min-height:122px;
+    grid-template-columns:38px minmax(0,1fr);
+    gap:10px;
+    padding:14px;
+  }
+  .dashboard-kpi-icon {
+    width:36px;
+    height:36px;
+    border-radius:10px;
+  }
+  .dashboard-kpi-signal {
+    grid-column:2;
+    margin-top:-28px;
+  }
+  .dashboard-kpi .kpi-value {
+    font-size:21px;
+  }
+  .dashboard-kpi .kpi-meta {
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .dashboard-section {
+    margin-top:12px;
+    padding:14px;
+    border-radius:14px;
+  }
+
+  .mobile-bottom {
+    left:10px;
+    right:10px;
+    bottom:max(8px,env(safe-area-inset-bottom));
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:5px;
+    background:rgba(13,17,17,.96);
+    box-shadow:0 14px 36px rgba(0,0,0,.32);
+  }
+  .mobile-bottom button {
+    min-height:54px;
+    min-width:0;
+    flex:1;
+    border-radius:12px;
+    font-size:9px;
+    padding:6px 4px;
+  }
+  .mobile-bottom .mob-icon .admin-icon-svg {
+    width:19px;
+    height:19px;
+  }
+}
+
+@media (max-width:390px) {
+  .main { padding-inline:12px; }
+  .mobile-topbar { padding-inline:12px; }
+  .mobile-whatsapp-status span { display:none; }
+  .mobile-whatsapp-status { width:40px; justify-content:center; padding:0; }
+  .card.padded.dashboard-kpi { min-height:116px; }
+}
+
+
+/* Brand mark + compact phone refinements */
+.brand-logo-mark {
+  width:28px;
+  height:28px;
+  display:block;
+  flex:0 0 28px;
+}
+.mobile-brand {
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.mobile-brand-mark {
+  width:28px;
+  height:28px;
+  display:block;
+  flex:0 0 28px;
+}
+.mobile-brand-word {
+  color:var(--text);
+}
+.mobile-brand-word > span {
+  color:var(--emerald-2);
+}
+
+@media (max-width:390px) {
+  .dashboard-hero h1 {
+    max-width:none;
+    font-size:27px;
+  }
+  .dashboard-hero .subtitle {
+    max-width:none;
+  }
+  .card.padded.dashboard-kpi {
+    min-height:116px;
+    grid-template-columns:36px minmax(0,1fr);
+    padding:12px;
+  }
+  .dashboard-kpi-signal {
+    grid-column:2;
+    margin-top:-26px;
+  }
 }

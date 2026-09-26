@@ -34,7 +34,7 @@
     document.documentElement.style.colorScheme = next;
 
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', next === 'light' ? '#f4f8f5' : '#07140f');
+    if (meta) meta.setAttribute('content', next === 'light' ? '#f4f8f5' : '#080c0c');
 
     if (persist) {
       try {
