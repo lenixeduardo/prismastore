@@ -315,7 +315,6 @@ export function createDeliveryConfirmationService({
               const itemNumber = catalogItemNumber(item, state);
               return {
                 id: itemNumber ? `#${itemNumber}` : '#—',
-                productId: String(item?.productId || ''),
                 quantity: Number(item?.quantity || 0),
               };
             })
