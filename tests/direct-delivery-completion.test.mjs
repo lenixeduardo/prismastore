@@ -86,4 +86,9 @@ test('courier handoff issues and sends the confirmation link in the same status 
   assert.equal(issuedOrderId, 'PS-LINK-1');
   assert.equal(markedSentOrderId, 'PS-LINK-1');
   assert.equal(sent.some((message) => message.text.includes('https://prisma.test/confirmar/abc')), true);
+
+  const sentAfterFirstAdvance = sent.length;
+  const second = await service.advanceOrder({ orderId: 'PS-LINK-1', expectedStatus: 'PACKING' });
+  assert.equal(second.stale, true);
+  assert.equal(sent.length, sentAfterFirstAdvance);
 });
