@@ -6,12 +6,14 @@ const app = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8');
 const sw = readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
 const pwa = readFileSync(new URL('../src/pwa.js', import.meta.url), 'utf8');
+const auth = readFileSync(new URL('../src/auth-ui.js', import.meta.url), 'utf8');
+const deliveryConfirmation = readFileSync(new URL('../delivery-confirmation.html', import.meta.url), 'utf8');
 
-test('admin shell uses the PrismaStore logo asset in the sidebar brand', () => {
-  assert.match(app, /\/icons\/prismastore-logo\.png/);
-  assert.match(styles, /\.brand-mark img/);
-  assert.doesNotMatch(styles, /\.brand-mark::after/);
-  assert.match(sw, /\/icons\/prismastore-logo\.png/);
+test('visible PrismaStore surfaces do not render the triangular prism icon', () => {
+  assert.doesNotMatch(app, /prismastore-prism-logo|dashboard-prism-holographic|class="dashboard-prism"|class="brand-mark"/);
+  assert.doesNotMatch(auth, /prismastore-prism-logo|icon-512\.svg|<img[^>]+auth-brand/);
+  assert.doesNotMatch(deliveryConfirmation, /prismastore-prism-logo|<img[^>]+delivery-brand/);
+  assert.doesNotMatch(styles, /\.dashboard-prism\s*\{|\.brand-mark img/);
 });
 
 test('dashboard initial screen has no MVP label or quick action buttons', () => {
@@ -41,24 +43,20 @@ test('PWA does not render the server online status badge', () => {
 });
 
 
-test('dashboard uses the generated holographic prism and four KPI assets', () => {
-  assert.match(app, /\/assets\/dashboard-prism-holographic\.webp/);
+test('dashboard keeps the four KPI assets without the holographic prism artwork', () => {
+  assert.doesNotMatch(app, /\/assets\/dashboard-prism-holographic\.webp/);
   assert.match(app, /\/assets\/kpi-revenue\.webp/);
   assert.match(app, /\/assets\/kpi-paid-orders\.webp/);
   assert.match(app, /\/assets\/kpi-packing\.webp/);
   assert.match(app, /\/assets\/kpi-critical-stock\.svg/);
   assert.match(styles, /\.dashboard-kpi-art/);
-  assert.match(sw, /\/assets\/dashboard-prism-holographic\.webp/);
-  assert.match(sw, /\/assets\/kpi-revenue\.webp/);
-  assert.match(sw, /\/assets\/kpi-paid-orders\.webp/);
-  assert.match(sw, /\/assets\/kpi-packing\.webp/);
-  assert.match(sw, /\/assets\/kpi-critical-stock\.svg/);
+  assert.doesNotMatch(sw, /\/assets\/dashboard-prism-holographic\.webp/);
 });
 
 
 test('dashboard KPI art stays secondary to text on desktop and mobile', () => {
   assert.match(styles, /\.dashboard-hero\s*\{[\s\S]*?min-height:\s*220px/);
-  assert.match(styles, /\.dashboard-prism\s*\{[\s\S]*?width:\s*340px[\s\S]*?opacity:\s*\.96/);
+  assert.doesNotMatch(styles, /\.dashboard-prism\s*\{/);
   assert.match(styles, /\.card\.padded\.dashboard-kpi\s*\{[\s\S]*?padding:\s*22px 36% 22px 20px/);
   assert.match(styles, /\.dashboard-kpi-art\s*\{[\s\S]*?width:\s*35%[\s\S]*?max-width:\s*142px[\s\S]*?opacity:\s*\.48/);
   assert.doesNotMatch(styles, /\.dashboard-kpi-art\s*\{[\s\S]*?transform:\s*scale\(1\.18\)/);
