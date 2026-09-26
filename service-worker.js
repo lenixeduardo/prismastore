@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prismastore-shell-v0.9.2-no-triangle-20260925-6';
+const CACHE_NAME = 'prismastore-shell-v0.9.2-finance-ui-20260926-1';
 const CACHE_PREFIX = 'prismastore-shell-';
 const APP_SHELL = [
   '/', '/index.html', '/manifest.webmanifest',
@@ -7,7 +7,7 @@ const APP_SHELL = [
   '/src/order-lifecycle-ui.js', '/src/reports-ui.js', '/src/backup-ui.js', '/src/pwa.js',
   '/src/admin-extensions.js', '/src/product-editor.js', '/src/chatbot-settings.js', '/src/chat-simulator.js', '/src/admin-icons.js', '/src/orders-board.js',
   '/assets/mobile-dashboard-bg.svg', '/assets/empty-stock-ok.svg',
-  '/assets/kpi-revenue.webp', '/assets/kpi-paid-orders.webp', '/assets/kpi-packing.webp', '/assets/kpi-critical-stock.svg',
+  '/assets/metric-orders-cart.svg', '/assets/metric-signal.svg', '/assets/kpi-critical-stock.svg',
   '/icons/favicon-16.png', '/icons/favicon-32.png', '/icons/apple-touch-icon.png',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-192.svg', '/icons/icon-512.svg', '/icons/prismastore-logo.png'
 ];
