@@ -648,15 +648,18 @@ body::before { display:none; }
   width:21px;
   height:21px;
 }
+.dashboard-kpi-icon .kpi-static-icon {
+  width:21px;
+  height:21px;
+  display:block;
+}
 .dashboard-kpi-signal {
+  width:28px;
+  height:28px;
+  display:block;
   align-self:end;
   justify-self:end;
-  color:#71807a;
   opacity:.78;
-}
-.dashboard-kpi-signal .admin-icon-svg {
-  width:26px;
-  height:26px;
 }
 .dashboard-kpi .kpi-label {
   color:var(--muted);
