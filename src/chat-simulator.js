@@ -193,9 +193,18 @@ async function loadDemoPix() {
 async function persistPaidDemoOrder() {
   const current = await fetchOperationalState();
   const totals = cartTotals();
+  const activeCatalog = current.products.filter((product) => product.active !== false && availableStock(product) > 0);
   const items = Object.entries(simulator.cart).filter(([, quantity]) => quantity > 0).map(([productId, quantity]) => {
     const product = current.products.find((item) => item.id === productId);
-    return { productId, name: product?.name || productId, quantity, unitPrice: Number(product?.price || 0) };
+    const activeIndex = activeCatalog.findIndex((item) => item.id === productId);
+    const fallbackIndex = current.products.findIndex((item) => item.id === productId);
+    return {
+      productId,
+      name: product?.name || productId,
+      catalogItemNumber: (activeIndex >= 0 ? activeIndex : fallbackIndex) + 1,
+      quantity,
+      unitPrice: Number(product?.price || 0),
+    };
   });
   const order = {
     id: `PS-${1050 + current.orders.length}`,

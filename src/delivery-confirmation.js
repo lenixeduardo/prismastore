@@ -127,7 +127,7 @@ async function load() {
   const address = addressText(payload.address);
   summary.innerHTML = `
     <strong>Itens recebidos</strong>
-    <ul>${items.map((item) => `<li>${Number(item.quantity || 0)}× ${esc(item.name)}</li>`).join('')}</ul>
+    <ul>${items.map((item) => `<li>${Number(item.quantity || 0)}× ${esc(item.id || '#—')}</li>`).join('')}</ul>
     ${address ? `<p>${esc(address)}</p>` : ''}
   `;
   loading.hidden = true;

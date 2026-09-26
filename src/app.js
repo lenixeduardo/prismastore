@@ -82,6 +82,39 @@ async function persist() {
 function el(html) { const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstElementChild; }
 function esc(s='') { return String(s).replace(/[&<>'"]/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[m])); }
 function formatDate(iso) { return new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(iso)); }
+function formatPhoneDisplay(value='') {
+  let digits=String(value??'').replace(/\D/g,'');
+  if(digits.length===13 && digits.startsWith('55')) digits=digits.slice(2);
+  if(digits.length===12 && digits.startsWith('55')) digits=digits.slice(2);
+  if(digits.length===11) return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+  if(digits.length===10) return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+  return String(value??'').trim();
+}
+function compactIpEvidence(value='') {
+  const ip=String(value??'').trim();
+  if(!ip) return '';
+  if(/^\d{1,3}(?:\.\d{1,3}){3}$/.test(ip)) {
+    const parts=ip.split('.');
+    return `${parts[0]}.${parts[1]}.***.${parts[3]}`;
+  }
+  if(ip.includes(':')) {
+    const parts=ip.split(':').filter(Boolean);
+    return parts.length>1 ? `${parts[0]}:${parts[1] || ''}:…:${parts.at(-1)}` : ip;
+  }
+  return ip.length>24 ? `${ip.slice(0,12)}…${ip.slice(-6)}` : ip;
+}
+function compactEvidenceHash(value='') {
+  const hash=String(value??'').trim();
+  if(!hash) return '';
+  return hash.length>20 ? `${hash.slice(0,10)}…${hash.slice(-8)}` : hash;
+}
+function deviceEvidenceLabel(value='') {
+  const ua=String(value??'');
+  if(!ua) return '';
+  const device=/iPhone/i.test(ua)?'iPhone':/iPad/i.test(ua)?'iPad':/Android/i.test(ua)?'Android':/Windows/i.test(ua)?'Windows':/Macintosh|Mac OS X/i.test(ua)?'Mac':'Dispositivo';
+  const browser=/CriOS|Chrome/i.test(ua)?'Chrome':/FxiOS|Firefox/i.test(ua)?'Firefox':/EdgiOS|Edg/i.test(ua)?'Edge':/Safari/i.test(ua)?'Safari':'Navegador';
+  return `${device} · ${browser}`;
+}
 function latestAddress(customer) { return customer?.addresses?.[customer.addresses.length-1]; }
 function cleanAddressText(value='') {
   const text=String(value??'').trim().replace(/\s+/g,' ');
@@ -232,7 +265,7 @@ function dashboardView() {
       <section class="card padded dashboard-section recent-orders-card">
         <div class="section-head recent-orders-head">
           <div class="section-title recent-orders-title">Últimos pedidos</div>
-          <button class="btn sm ghost view-all-btn" data-view="orders">Ver todos ›</button>
+          <button class="btn sm ghost view-all-btn" data-view="orders" data-orders-history="true">Ver todos ›</button>
         </div>
         <div class="dashboard-order-list compact">
           ${visibleOrders().slice(0,5).map(orderCompact).join('') || '<div class="empty dashboard-empty">Nenhum pedido registrado.</div>'}
@@ -293,12 +326,12 @@ function ordersView() {
     </div>
     ${ordersTable(orders,'Fila de pedidos')}`);
 }
-function ordersTable(orders,title) { return `<div class="section-head"><div class="section-title">${title}</div><div class="section-note">${orders.length} registro(s)</div></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Cliente</th><th>Modalidade</th><th>Status</th><th>Endereço</th><th>Total</th><th></th></tr></thead><tbody>${orders.map(o=>`<tr><td><div class="category">${formatDate(o.createdAt)}</div></td><td><div class="customer-name">${esc(o.customerName)}</div><div class="category">${esc(o.phone)}</div></td><td>${o.deliveryType==='shipping'?'Envio':'Entrega'} </td><td>${statusBadge(o.status)}</td><td><div class="address">${o.newAddress?'<span class="badge gold" style="margin-right:5px">NOVO ENDEREÇO</span>':''}${esc(addressText(o.address,''))}</div></td><td class="mono"><strong>${formatCurrencyBRL(o.total)}</strong></td><td><button class="btn sm" data-open-order="${o.id}">Detalhes</button></td></tr>`).join('')}</tbody></table></div>`; }
+function ordersTable(orders,title) { return `<div class="section-head"><div class="section-title">${title}</div><div class="section-note">${orders.length} registro(s)</div></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Cliente</th><th>Modalidade</th><th>Status</th><th>Endereço</th><th>Total</th><th></th></tr></thead><tbody>${orders.map(o=>`<tr><td><div class="category">${formatDate(o.createdAt)}</div></td><td><div class="customer-name">${esc(o.customerName)}</div><div class="category">${esc(formatPhoneDisplay(o.phone))}</div></td><td>${o.deliveryType==='shipping'?'Envio':'Entrega'} </td><td>${statusBadge(o.status)}</td><td><div class="address">${o.newAddress?'<span class="badge gold" style="margin-right:5px">NOVO ENDEREÇO</span>':''}${esc(addressText(o.address,''))}</div></td><td class="mono"><strong>${formatCurrencyBRL(o.total)}</strong></td><td><button class="btn sm" data-open-order="${o.id}">Detalhes</button></td></tr>`).join('')}</tbody></table></div>`; }
 
 function customersView() {
   return shell(`${header('Clientes','Cadastro unificado pelo número do WhatsApp, histórico de endereço e pedidos anteriores.')}
     <div class="toolbar"><label class="searchbar"><span>⌕</span><input id="customer-search" placeholder="Buscar nome ou celular" /></label></div>
-    <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Endereço atual</th><th>Monitoramento</th><th>Pedidos</th><th>Total gasto</th><th>Última compra</th></tr></thead><tbody>${visibleCustomers().map(c=>`<tr><td><div class="customer-name">${esc(c.name)}</div><div class="category">${esc(c.phone)}</div></td><td><div class="address">${esc(addressText(latestAddress(c)))}</div></td><td>${c.addressChanged?'<span class="badge gold">NOVO ENDEREÇO</span>':'<span class="badge gray">Sem alteração</span>'}</td><td class="mono">${c.orderCount}</td><td class="mono"><strong>${formatCurrencyBRL(c.totalSpent)}</strong></td><td>${formatDate(c.lastOrderAt)}</td></tr>`).join('')}</tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Endereço atual</th><th>Monitoramento</th><th>Pedidos</th><th>Total gasto</th><th>Última compra</th></tr></thead><tbody>${visibleCustomers().map(c=>`<tr><td><div class="customer-name">${esc(c.name)}</div><div class="category">${esc(formatPhoneDisplay(c.phone))}</div></td><td><div class="address">${esc(addressText(latestAddress(c)))}</div></td><td>${c.addressChanged?'<span class="badge gold">NOVO ENDEREÇO</span>':'<span class="badge gray">Sem alteração</span>'}</td><td class="mono">${c.orderCount}</td><td class="mono"><strong>${formatCurrencyBRL(c.totalSpent)}</strong></td><td>${formatDate(c.lastOrderAt)}</td></tr>`).join('')}</tbody></table></div>
     <div class="grid cols-2 section"><div class="card padded"><div class="section-title">Regra de monitoramento</div><p class="subtitle">Ao receber um endereço diferente de todos os endereços históricos do cliente, o pedido recebe o badge <strong style="color:var(--gold)">NOVO ENDEREÇO</strong>. O pedido guarda o snapshot usado naquela compra.</p></div><div class="card padded"><div class="section-title">Identidade do cliente</div><p class="subtitle">O celular/WhatsApp é o identificador inicial. Nome, endereços e histórico evoluem sem sobrescrever pedidos antigos.</p></div></div>`);
 }
 
@@ -697,16 +730,17 @@ function deliveryDossier(order) {
     </div>
     ${rideLink ? `<div class="delivery-evidence-row"><span>Link da corrida</span><a href="${esc(rideLink)}" target="_blank" rel="noopener noreferrer">Abrir corrida</a></div>` : '<div class="delivery-evidence-row muted"><span>Link da corrida</span><strong>Não registrado</strong></div>'}
     ${confirmation.recipientName ? `<div class="delivery-evidence-row"><span>Recebedor</span><strong>${esc(confirmation.recipientName)}</strong></div>` : ''}
-    ${confirmation.confirmationIp ? `<div class="delivery-evidence-row"><span>IP da confirmação</span><code>${esc(confirmation.confirmationIp)}</code></div>` : ''}
-    ${confirmation.confirmationUserAgent ? `<div class="delivery-evidence-row"><span>Dispositivo</span><small>${esc(confirmation.confirmationUserAgent)}</small></div>` : ''}
-    ${confirmation.evidenceHash ? `<div class="delivery-evidence-row"><span>Hash de integridade</span><code>${esc(confirmation.evidenceHash)}</code></div>` : ''}
+    ${confirmation.confirmationIp ? `<div class="delivery-evidence-row"><span>Origem registrada</span><code>${esc(compactIpEvidence(confirmation.confirmationIp))}</code></div>` : ''}
+    ${confirmation.confirmationUserAgent ? `<div class="delivery-evidence-row"><span>Dispositivo</span><strong>${esc(deviceEvidenceLabel(confirmation.confirmationUserAgent))}</strong></div>` : ''}
+    ${confirmation.evidenceHash ? `<div class="delivery-evidence-row"><span>Integridade</span><code>${esc(compactEvidenceHash(confirmation.evidenceHash))}</code></div>` : ''}
     ${confirmation.notes ? `<div class="delivery-evidence-note"><span>Observação</span><p>${esc(confirmation.notes)}</p></div>` : ''}
     ${confirmation.photoDataUrl ? `<div class="delivery-evidence-media"><span>Foto da entrega</span><img src="${confirmation.photoDataUrl}" alt="Foto registrada na confirmação de entrega" /></div>` : ''}
     ${confirmation.signatureDataUrl ? `<div class="delivery-evidence-media signature"><span>Assinatura</span><img src="${confirmation.signatureDataUrl}" alt="Assinatura de quem confirmou o recebimento" /></div>` : ''}
     ${!confirmed && order.status === 'DELIVERED' ? `
       <div class="delivery-dossier-actions">
-        <button class="btn primary" type="button" data-generate-delivery-link="${esc(order.id)}">${publicLink ? 'Atualizar link de confirmação' : 'Gerar link de confirmação'}</button>
-        ${publicLink ? `<button class="btn" type="button" data-copy-delivery-link="${esc(publicLink)}">Copiar link</button><a class="btn" href="${esc(publicLink)}" target="_blank" rel="noopener noreferrer">Abrir</a>` : ''}
+        ${publicLink
+          ? `<button class="btn" type="button" data-copy-delivery-link="${esc(publicLink)}">Copiar link</button><a class="btn" href="${esc(publicLink)}" target="_blank" rel="noopener noreferrer">Abrir</a>`
+          : `<button class="btn primary" type="button" data-generate-delivery-link="${esc(order.id)}">Gerar link novamente</button>`}
       </div>
     ` : ''}
     ${confirmation.linkSentAt ? `<div class="delivery-evidence-row"><span>Link enviado</span><strong>${evidenceDate(confirmation.linkSentAt)} · ${esc(confirmation.linkSentChannel || 'WhatsApp')}</strong></div>` : ''}
@@ -720,7 +754,7 @@ function orderDrawer(orderId) {
   const label=next==='DELIVERED' && o.deliveryType==='local_delivery' ? 'Entregue ao motoboy · Concluir' : ({PACKING:'Marcar como produto embalado',SHIPPED:'Marcar como enviado',DELIVERED:'Concluir pedido'}[next]||'Atualizar');
   return `<div class="drawer-backdrop" data-close-drawer><aside class="drawer" onclick="event.stopPropagation()"><div class="drawer-head"><div><div class="eyebrow">Pedido</div><h2>Detalhes do pedido</h2><div class="subtitle">${formatDate(o.createdAt)} · ${esc(o.customerName)}</div></div><button class="btn" data-close-drawer>${icons.close}</button></div>
     <div>${statusBadge(o.status)} ${o.newAddress?'<span class="badge gold">NOVO ENDEREÇO</span>':''}</div>
-    <div class="detail-block"><div class="detail-label">Cliente</div><div class="customer-name">${esc(o.customerName)}</div><div class="category">${esc(o.phone)}</div></div>
+    <div class="detail-block"><div class="detail-label">Cliente</div><div class="customer-name">${esc(o.customerName)}</div><div class="category">${esc(formatPhoneDisplay(o.phone))}</div></div>
     <div class="detail-block"><div class="detail-label">Endereço do pedido</div><div class="subtitle">${esc(addressText(o.address))}</div></div>
     <div class="detail-block"><div class="detail-label">Itens</div>${o.items.map(i=>`<div class="item-row"><span>${i.quantity}× ${esc(i.name)}</span><strong>${formatCurrencyBRL(i.quantity*i.unitPrice)}</strong></div>`).join('')}<div class="item-row"><span>${o.deliveryType==='shipping'?'Frete':'Entrega'}</span><strong>${formatCurrencyBRL(o.deliveryFee||0)}</strong></div><div class="item-row" style="border-top:1px solid var(--border-soft);padding-top:12px"><strong>Total</strong><strong>${formatCurrencyBRL(o.total)}</strong></div></div>
     <div class="detail-block"><div class="detail-label">Pagamento</div><div class="subtitle">${o.paidAt?`Confirmado em ${formatDate(o.paidAt)} · ${esc(receivingAccounts.find(a=>a.id===o.receivingAccountId)?.name||o.receivingAccountId)}`:'Aguardando confirmação'}</div></div>
@@ -757,7 +791,11 @@ window.PrismastoreApp = {
 };
 
 function bind() {
-  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>openView(b.dataset.view)));
+  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
+    const openHistory=b.dataset.ordersHistory==='true';
+    openView(b.dataset.view);
+    if(openHistory) window.dispatchEvent(new CustomEvent('prismastore:orders-history-requested'));
+  }));
   document.querySelector('[data-back-view]')?.addEventListener('click',()=>openView(state.previousView || 'dashboard'));
   document.querySelectorAll('[data-order-filter]').forEach(b=>b.addEventListener('click',()=>{state.orderFilter=b.dataset.orderFilter;render();}));
   document.querySelector('#order-search')?.addEventListener('input',(e)=>{state.search=e.target.value; render(); requestAnimationFrame(()=>{const input=document.querySelector('#order-search');input?.focus();input?.setSelectionRange(state.search.length,state.search.length);});});
@@ -854,7 +892,8 @@ async function chatAction(action){
   if(action==='confirm-payment'){
     const t=calculateCart(state.products,state.chatbot.cart);const fee=state.chatbot.deliveryType==='shipping'?24.9:18;
     const id=`PS-${1050+state.orders.length}`;
-    const items=Object.entries(state.chatbot.cart).filter(([,q])=>q>0).map(([pid,q])=>{const p=state.products.find(x=>x.id===pid);return{productId:pid,name:p.name,quantity:q,unitPrice:p.price}});
+    const activeCatalog=state.products.filter(p=>p.active!==false&&availableStock(p)>0);
+    const items=Object.entries(state.chatbot.cart).filter(([,q])=>q>0).map(([pid,q])=>{const p=state.products.find(x=>x.id===pid);const activeIndex=activeCatalog.findIndex(x=>x.id===pid);const fallbackIndex=state.products.findIndex(x=>x.id===pid);return{productId:pid,name:p.name,catalogItemNumber:(activeIndex>=0?activeIndex:fallbackIndex)+1,quantity:q,unitPrice:p.price}});
     state.orders.unshift({id,customerId:'c1',customerName:'Lucas Almeida',phone:'+55 11 98888-1204',status:'PAID',deliveryType:state.chatbot.deliveryType,total:t.subtotal+fee,createdAt:new Date().toISOString(),paidAt:new Date().toISOString(),receivingAccountId:'pix-local',items,address:chatAddress(),newAddress:state.chatbot.addressMode==='new',deliveryFee:fee});
     state.chatbot.step='paid';state.chatbot.paymentConfirmed=true;
     await persist();

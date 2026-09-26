@@ -42,7 +42,7 @@ export function createOrderLifecycleService({
   deliveryConfirmationService = null,
   now = () => new Date(),
 }) {
-  async function notifyOrderStatus(order) {
+  async function notifyOrderStatus(order, { confirmationLink = null } = {}) {
     if (!messenger) return { notified: false, reason: 'messenger-unavailable' };
     if (order.status === 'DELIVERED' && finalArtworkPath && messenger.sendMedia) {
       await messenger.sendMedia(order.phone, finalArtworkPath);
@@ -50,13 +50,12 @@ export function createOrderLifecycleService({
     if (messenger.sendText) {
       const state = stateStore.load();
       await messenger.sendText(order.phone, `${statusIntro(state, order)}\n\n${buildOrderTracker(order)}`);
-      if (order.status === 'DELIVERED' && deliveryConfirmationService?.isEligibleOrder?.(order)) {
-        const issued = deliveryConfirmationService.issueLink(order.id);
+      if (order.status === 'DELIVERED' && confirmationLink) {
         await messenger.sendText(
           order.phone,
-          `✅ Para registrar o recebimento, abra o link e confirme somente após estar com os itens em mãos:\n${issued.link}`,
+          `✅ Para registrar o recebimento, abra o link e confirme somente após estar com os itens em mãos:\n${confirmationLink}`,
         );
-        deliveryConfirmationService.markLinkSent(order.id, 'whatsapp');
+        deliveryConfirmationService?.markLinkSent?.(order.id, 'whatsapp');
       }
     }
     return { notified: true };
@@ -89,23 +88,35 @@ export function createOrderLifecycleService({
       return state;
     });
 
+    let confirmationLink = null;
+    let confirmationError = null;
+
     if (changed) {
       if (updatedOrder?.status === 'DELIVERED') {
         deliveryConfirmationService?.markHandoff?.(updatedOrder.id, updatedOrder.updatedAt);
+        if (deliveryConfirmationService?.isEligibleOrder?.(updatedOrder)) {
+          try {
+            confirmationLink = deliveryConfirmationService.issueLink(updatedOrder.id)?.link || null;
+          } catch (error) {
+            confirmationError = error instanceof Error ? error.message : 'Falha ao gerar link de confirmação';
+          }
+        }
       }
       try {
-        await notifyOrderStatus(updatedOrder);
+        await notifyOrderStatus(updatedOrder, { confirmationLink });
       } catch (error) {
         return {
           changed: true,
           stale: false,
           order: updatedOrder,
+          confirmationLink,
+          confirmationError,
           notificationError: error instanceof Error ? error.message : 'Falha ao notificar WhatsApp',
         };
       }
     }
 
-    return { changed, stale, order: updatedOrder };
+    return { changed, stale, order: updatedOrder, confirmationLink, confirmationError };
   }
 
   return { advanceOrder, notifyOrderStatus };

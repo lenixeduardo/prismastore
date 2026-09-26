@@ -89,6 +89,8 @@ test('board markup exposes the reference lane titles and operational actions', a
   assert.match(html, /Informar a ordem na fila/);
   assert.match(html, /WhatsApp conectado/);
   assert.match(html, /data-board-view="chatbot"/);
+  assert.match(html, /Todos os pedidos/);
+  assert.match(html, /data-all-orders/);
 });
 
 test('orders views never render undefined when address data is absent or invalid', async () => {
@@ -141,4 +143,26 @@ test('Cliente Métrica orders are hidden from every operational lane', async () 
   const html = renderOrdersBoard({ orders, now: new Date('2026-09-16T18:05:00.000Z') });
   assert.doesNotMatch(html, /Cliente Métrica|Item métrica|METRIC/);
   assert.match(html, /Cliente Real/);
+});
+
+
+test('complete history includes concluded orders and hides metric customers', async () => {
+  const { allOrdersMarkup } = await loadBoardModule();
+  assert.equal(typeof allOrdersMarkup, 'function');
+  const html = allOrdersMarkup([
+    { id: 'DONE', customerName: 'Cliente Real', phone: '+5511987654321', status: 'DELIVERED', total: 150, createdAt: '2026-09-25T20:00:00.000Z', items: [{ name: 'Item', quantity: 1 }] },
+    { id: 'ACTIVE', customerName: 'Cliente Ativo', phone: '+5511912345678', status: 'PAID', total: 80, createdAt: '2026-09-25T21:00:00.000Z', items: [{ name: 'Outro', quantity: 1 }] },
+    { id: 'METRIC', customerName: 'Cliente Métrica', phone: '+5511900000000', status: 'DELIVERED', total: 1, createdAt: '2026-09-25T22:00:00.000Z', items: [{ name: 'Métrica', quantity: 1 }] },
+  ]);
+  assert.match(html, /Todos os pedidos/);
+  assert.match(html, /Cliente Real/);
+  assert.match(html, /Cliente Ativo/);
+  assert.match(html, /Concluído/);
+  assert.match(html, /\(11\) 98765-4321/);
+  assert.doesNotMatch(html, /Cliente Métrica|METRIC/);
+});
+
+test('dashboard recent orders routes directly to complete order history', () => {
+  assert.match(appSource, /data-orders-history="true"/);
+  assert.match(appSource, /prismastore:orders-history-requested/);
 });

@@ -333,3 +333,125 @@
     grid-column: auto;
   }
 }
+
+
+.orders-history {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(60, 143, 94, .45);
+  border-radius: 7px;
+  background: rgba(7, 28, 19, .9);
+  scroll-margin-top: 18px;
+}
+
+.orders-history-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.orders-history-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: #77e696;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.orders-history-head h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.orders-history-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.orders-history-count {
+  white-space: nowrap;
+  color: #dce9e1;
+  font-size: 12px;
+}
+
+.orders-history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.orders-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 13px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 6px;
+  background: rgba(9, 33, 23, .72);
+}
+
+.orders-history-main,
+.orders-history-meta {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.orders-history-main span,
+.orders-history-main small,
+.orders-history-meta small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.orders-history-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orders-history-meta {
+  justify-items: end;
+  text-align: right;
+}
+
+.orders-history-status {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: #77e696;
+}
+
+.orders-history-status[data-status="CANCELLED"] {
+  color: #ff6b6b;
+}
+
+.orders-history-status[data-status="PAYMENT_PENDING"] {
+  color: #f2d53f;
+}
+
+@media (max-width: 720px) {
+  .orders-history {
+    padding: 12px;
+  }
+
+  .orders-history-head,
+  .orders-history-row {
+    grid-template-columns: 1fr;
+  }
+
+  .orders-history-head {
+    flex-direction: column;
+  }
+
+  .orders-history-meta {
+    justify-items: start;
+    text-align: left;
+  }
+}

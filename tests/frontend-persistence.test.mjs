@@ -34,3 +34,13 @@ test('orders view exposes a payment-pending filter for newly confirmed WhatsApp 
   assert.match(liveSync, /Aguardando Pix/);
   assert.match(liveSync, /livePending/);
 });
+
+
+test('delivery dossier keeps technical evidence compact instead of rendering raw values', () => {
+  assert.match(source, /formatPhoneDisplay/);
+  assert.match(source, /compactIpEvidence/);
+  assert.match(source, /compactEvidenceHash/);
+  assert.match(source, /deviceEvidenceLabel/);
+  assert.doesNotMatch(source, /IP da confirmação/);
+  assert.doesNotMatch(source, /Hash de integridade/);
+});

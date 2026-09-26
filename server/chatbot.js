@@ -315,9 +315,18 @@ function createPendingOrder(stateStore, phone, session, now) {
     const customer = state.customers.find((candidate) => customerPhoneMatches(candidate, phone));
     if (!customer) throw new Error('Cliente não encontrado para criar o pedido.');
     assertCartProductsAvailable(state, session.cart);
+    const catalogAtCheckout = state.products.filter((product) => product.active !== false && availableStock(product) > 0);
     const items = Object.entries(session.cart).filter(([, quantity]) => Number(quantity) > 0).map(([productId, quantity]) => {
       const product = state.products.find((candidate) => candidate.id === productId);
-      return { productId, name: product.name, quantity: Number(quantity), unitPrice: unitPriceForQuantity(product, quantity) };
+      const activeIndex = catalogAtCheckout.findIndex((candidate) => candidate.id === productId);
+      const fallbackIndex = state.products.findIndex((candidate) => candidate.id === productId);
+      return {
+        productId,
+        name: product.name,
+        catalogItemNumber: (activeIndex >= 0 ? activeIndex : fallbackIndex) + 1,
+        quantity: Number(quantity),
+        unitPrice: unitPriceForQuantity(product, quantity),
+      };
     });
     if (!items.length) throw new Error('Carrinho vazio.');
     const totals = calculateCart(state.products, session.cart);

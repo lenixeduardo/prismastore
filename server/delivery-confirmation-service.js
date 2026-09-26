@@ -43,15 +43,29 @@ function isEligibleOrder(order) {
     && order.items.some((item) => item?.productId === DELIVERY_CONFIRMATION_PILOT_PRODUCT_ID);
 }
 
-function publicOrder(order) {
+function catalogItemNumber(item, state) {
+  const explicit = Number(item?.catalogItemNumber);
+  if (Number.isInteger(explicit) && explicit > 0) return explicit;
+
+  const products = Array.isArray(state?.products) ? state.products : [];
+  const index = products.findIndex((product) => product?.id === item?.productId);
+  if (index >= 0) return index + 1;
+  if (item?.productId === DELIVERY_CONFIRMATION_PILOT_PRODUCT_ID) return 1;
+  return null;
+}
+
+function publicOrder(order, state) {
   return {
     customerName: String(order?.customerName || 'Cliente'),
     deliveryType: order?.deliveryType || null,
     items: Array.isArray(order?.items)
-      ? order.items.map((item) => ({
-          name: String(item?.name || 'Item'),
-          quantity: Number(item?.quantity || 0),
-        }))
+      ? order.items.map((item) => {
+          const itemNumber = catalogItemNumber(item, state);
+          return {
+            id: itemNumber ? `#${itemNumber}` : '#—',
+            quantity: Number(item?.quantity || 0),
+          };
+        })
       : [],
     address: order?.address && typeof order.address === 'object' ? {
       street: String(order.address.street || ''),
@@ -169,7 +183,7 @@ export function createDeliveryConfirmationService({
         lastOpenedIp: cleanText(requestMeta.ip, 120) || null,
         lastOpenedUserAgent: cleanText(requestMeta.userAgent, 500) || null,
       };
-      snapshot = publicOrder(order);
+      snapshot = publicOrder(order, state);
       return state;
     });
     return snapshot;
@@ -198,7 +212,7 @@ export function createDeliveryConfirmationService({
       if (!order) throw new Error('Pedido não encontrado.');
       const current = order.deliveryConfirmation || {};
       if (current.confirmedAt) {
-        result = { alreadyConfirmed: true, confirmation: structuredClone(current), order: publicOrder(order) };
+        result = { alreadyConfirmed: true, confirmation: structuredClone(current), order: publicOrder(order, state) };
         return state;
       }
 
@@ -237,7 +251,7 @@ export function createDeliveryConfirmationService({
       result = {
         alreadyConfirmed: false,
         confirmation: structuredClone(order.deliveryConfirmation),
-        order: publicOrder(order),
+        order: publicOrder(order, state),
       };
       return state;
     });
