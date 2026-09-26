@@ -328,7 +328,8 @@ export function createAppServer({
       if (req.method === 'PUT' && url.pathname === '/api/state') {
         const current = stateStore.load();
         const incoming = await readJson(req);
-        return sendJson(res, 200, stateStore.save(preserveDeliveryEvidence(incoming, current)));
+        const saved = stateStore.save(preserveDeliveryEvidence(incoming, current));
+        return sendJson(res, 200, stateForAdmin(saved));
       }
 
       if (req.method === 'GET' && url.pathname === '/api/whatsapp/status') {
@@ -409,7 +410,10 @@ export function createAppServer({
         if (!deliveryConfirmationService) return sendJson(res, 503, { error: 'Confirmação de entrega não configurada.' });
         try {
           const result = deliveryConfirmationService.issueLink(decodeURIComponent(deliveryLinkMatch[1]));
-          return sendJson(res, 200, { link: result.link, confirmation: result.order?.deliveryConfirmation || null });
+          return sendJson(res, 200, {
+            link: result.link,
+            confirmation: deliveryConfirmationForDashboard(result.order?.deliveryConfirmation || null),
+          });
         } catch (error) {
           return sendJson(res, 422, { error: error instanceof Error ? error.message : 'Não foi possível gerar o link.' });
         }
