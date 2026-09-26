@@ -7,7 +7,7 @@ const APP_SHELL = [
   '/src/order-lifecycle-ui.js', '/src/reports-ui.js', '/src/backup-ui.js', '/src/pwa.js',
   '/src/admin-extensions.js', '/src/product-editor.js', '/src/chatbot-settings.js', '/src/chat-simulator.js', '/src/admin-icons.js', '/src/orders-board.js',
   '/assets/mobile-dashboard-bg.svg', '/assets/empty-stock-ok.svg',
-  '/assets/metric-orders-cart.svg', '/assets/metric-signal.svg', '/assets/kpi-critical-stock.svg',
+  '/assets/prismastore-prism-mark.svg', '/assets/metric-orders-cart.svg', '/assets/metric-signal.svg', '/assets/kpi-critical-stock.svg',
   '/icons/favicon-16.png', '/icons/favicon-32.png', '/icons/apple-touch-icon.png',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-192.svg', '/icons/icon-512.svg', '/icons/prismastore-logo.png'
 ];
