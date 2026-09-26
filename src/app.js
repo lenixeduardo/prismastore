@@ -260,14 +260,17 @@ function dashboardView() {
 }
 
 function dashboardKpi(icon,label,value,meta,klass='') {
+  const iconMarkup = icon === 'cart'
+    ? '<img class="kpi-static-icon" src="/assets/metric-orders-cart.svg" alt="" />'
+    : `<span data-kpi-icon="${icon}"></span>`;
   return `<div class="card padded dashboard-kpi ${klass}">
-    <span class="dashboard-kpi-icon" data-kpi-icon="${icon}" aria-hidden="true"></span>
+    <span class="dashboard-kpi-icon" aria-hidden="true">${iconMarkup}</span>
     <div class="dashboard-kpi-copy">
       <div class="kpi-label">${label}</div>
       <div class="kpi-value mono">${value}</div>
       <div class="kpi-meta">${meta}</div>
     </div>
-    <span class="dashboard-kpi-signal" data-kpi-signal aria-hidden="true"></span>
+    <img class="dashboard-kpi-signal" src="/assets/metric-signal.svg" alt="" aria-hidden="true" />
   </div>`;
 }
 
