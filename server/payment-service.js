@@ -66,23 +66,29 @@ export function createPaymentService({
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       throw new Error('Valor do Pix de demonstração inválido.');
     }
+    if (!localPixConfigured) {
+      throw new Error('Pix Oscar não configurado.');
+    }
 
+    const accountId = pixConfig.accountId || 'pix-local';
     const payload = buildPixPayload({
-      key: '00000000-0000-0000-0000-000000000000',
-      recipientName: 'PRISMASTORE DEMO',
-      recipientCity: 'SAO PAULO',
+      key: pixConfig.key,
+      recipientName: pixConfig.recipientName,
+      recipientCity: pixConfig.recipientCity,
       amount: numericAmount,
-      txid: 'PRISMASTOREDEMO',
+      txid: '***',
     });
     const encodedImage = qrEncoder ? await qrEncoder(payload) : null;
 
     return {
-      paymentId: 'demo:pix',
+      paymentId: `demo:${accountId}`,
       encodedImage,
       payload,
       expirationDate: null,
       amount: numericAmount,
       demo: true,
+      accountId,
+      recipientName: pixConfig.recipientName,
     };
   }
 

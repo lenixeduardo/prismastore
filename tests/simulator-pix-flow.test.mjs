@@ -16,10 +16,16 @@ test('simulador usa mensagens configuradas e não exige confirmação de maiorid
   assert.doesNotMatch(indexSource, /chatbot-simulator-fixes\.js/);
 });
 
-test('Pix de demonstração usa BR Code real e encoder de QR', async () => {
+test('Pix do simulador usa a configuração real da conta Pix Oscar', async () => {
   let encodedPayload = null;
   const service = createPaymentService({
     stateStore: {},
+    pixConfig: {
+      key: 'oscar@example.com',
+      recipientName: 'OSCAR FILIPE SILVA DOS SANTOS',
+      recipientCity: 'SAO PAULO',
+      accountId: 'pix-local',
+    },
     qrEncoder: async (payload) => {
       encodedPayload = payload;
       return 'BASE64-DEMO-QR';
@@ -30,8 +36,12 @@ test('Pix de demonstração usa BR Code real e encoder de QR', async () => {
   assert.equal(result.encodedImage, 'BASE64-DEMO-QR');
   assert.equal(encodedPayload, result.payload);
   assert.equal(result.demo, true);
+  assert.equal(result.accountId, 'pix-local');
+  assert.equal(result.recipientName, 'OSCAR FILIPE SILVA DOS SANTOS');
   assert.match(result.payload, /^000201/);
   assert.match(result.payload, /0014BR\.GOV\.BCB\.PIX/);
+  assert.match(result.payload, /oscar@example\.com/);
+  assert.doesNotMatch(result.payload, /00000000-0000-0000-0000-000000000000/);
   assert.match(result.payload, /5303986/);
   assert.match(result.payload, /5406174\.90/);
   assert.match(result.payload, /5802BR/);
@@ -67,5 +77,8 @@ test('API entrega QR Pix de demonstração para o simulador', async () => {
 test('simulador renderiza imagem do QR real e não usa placeholder quadriculado', () => {
   assert.match(simulatorSource, /\/api\/payments\/demo-pix/);
   assert.match(simulatorSource, /data:image\/png;base64/);
+  assert.match(simulatorSource, /conta Pix Oscar/);
+  assert.match(simulatorSource, /receivingAccountId: 'pix-local'/);
+  assert.doesNotMatch(simulatorSource, /sem chave de cobrança real/);
   assert.doesNotMatch(simulatorSource, /QR_SVG|<div class=\"qr-demo\"><\/div>/);
 });

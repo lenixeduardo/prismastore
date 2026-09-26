@@ -42,8 +42,11 @@ async function checkForServerChanges() {
       return true;
     }
     if (signature !== lastSignature) {
-      window.location.reload();
-      return false;
+      const previousSignature = lastSignature;
+      lastSignature = signature;
+      window.dispatchEvent(new CustomEvent('prismastore:external-state-changed', {
+        detail: { source: 'live-sync', previousSignature, signature },
+      }));
     }
     return true;
   } catch {
