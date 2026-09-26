@@ -738,8 +738,9 @@ function deliveryDossier(order) {
     ${confirmation.signatureDataUrl ? `<div class="delivery-evidence-media signature"><span>Assinatura</span><img src="${confirmation.signatureDataUrl}" alt="Assinatura de quem confirmou o recebimento" /></div>` : ''}
     ${!confirmed && order.status === 'DELIVERED' ? `
       <div class="delivery-dossier-actions">
-        <button class="btn primary" type="button" data-generate-delivery-link="${esc(order.id)}">${publicLink ? 'Atualizar link de confirmação' : 'Gerar link de confirmação'}</button>
-        ${publicLink ? `<button class="btn" type="button" data-copy-delivery-link="${esc(publicLink)}">Copiar link</button><a class="btn" href="${esc(publicLink)}" target="_blank" rel="noopener noreferrer">Abrir</a>` : ''}
+        ${publicLink
+          ? `<button class="btn" type="button" data-copy-delivery-link="${esc(publicLink)}">Copiar link</button><a class="btn" href="${esc(publicLink)}" target="_blank" rel="noopener noreferrer">Abrir</a>`
+          : `<button class="btn primary" type="button" data-generate-delivery-link="${esc(order.id)}">Gerar link novamente</button>`}
       </div>
     ` : ''}
     ${confirmation.linkSentAt ? `<div class="delivery-evidence-row"><span>Link enviado</span><strong>${evidenceDate(confirmation.linkSentAt)} · ${esc(confirmation.linkSentChannel || 'WhatsApp')}</strong></div>` : ''}
