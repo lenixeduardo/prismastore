@@ -43,7 +43,9 @@ document.addEventListener('click', async (event) => {
         stale: Boolean(result.stale),
       },
     }));
-    window.location.reload();
+    window.dispatchEvent(new CustomEvent('prismastore:external-state-changed', {
+      detail: { source: 'order-lifecycle-ui', orderId: button.dataset.advanceOrder },
+    }));
   } catch (error) {
     console.error(error);
     button.disabled = false;
