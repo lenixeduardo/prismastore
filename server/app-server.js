@@ -52,6 +52,19 @@ function sendJsonDownload(res, filename, value) {
   res.end(JSON.stringify(value, null, 2));
 }
 
+function deliveryConfirmationForDashboard(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const {
+    confirmationIp: _confirmationIp,
+    confirmationUserAgent: _confirmationUserAgent,
+    evidenceHash: _evidenceHash,
+    lastOpenedIp: _lastOpenedIp,
+    lastOpenedUserAgent: _lastOpenedUserAgent,
+    ...safeConfirmation
+  } = value;
+  return safeConfirmation;
+}
+
 function stateForAdmin(state = {}) {
   return {
     ...state,
@@ -61,6 +74,7 @@ function stateForAdmin(state = {}) {
           address: order?.address && typeof order.address === 'object' && !Array.isArray(order.address)
             ? order.address
             : {},
+          deliveryConfirmation: deliveryConfirmationForDashboard(order?.deliveryConfirmation),
         }))
       : [],
   };
