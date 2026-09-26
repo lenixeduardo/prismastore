@@ -265,7 +265,7 @@ function dashboardView() {
       <section class="card padded dashboard-section recent-orders-card">
         <div class="section-head recent-orders-head">
           <div class="section-title recent-orders-title">Últimos pedidos</div>
-          <button class="btn sm ghost view-all-btn" data-view="orders">Ver todos ›</button>
+          <button class="btn sm ghost view-all-btn" data-view="orders" data-orders-history="true">Ver todos ›</button>
         </div>
         <div class="dashboard-order-list compact">
           ${visibleOrders().slice(0,5).map(orderCompact).join('') || '<div class="empty dashboard-empty">Nenhum pedido registrado.</div>'}
@@ -790,7 +790,11 @@ window.PrismastoreApp = {
 };
 
 function bind() {
-  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>openView(b.dataset.view)));
+  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
+    const openHistory=b.dataset.ordersHistory==='true';
+    openView(b.dataset.view);
+    if(openHistory) window.dispatchEvent(new CustomEvent('prismastore:orders-history-requested'));
+  }));
   document.querySelector('[data-back-view]')?.addEventListener('click',()=>openView(state.previousView || 'dashboard'));
   document.querySelectorAll('[data-order-filter]').forEach(b=>b.addEventListener('click',()=>{state.orderFilter=b.dataset.orderFilter;render();}));
   document.querySelector('#order-search')?.addEventListener('input',(e)=>{state.search=e.target.value; render(); requestAnimationFrame(()=>{const input=document.querySelector('#order-search');input?.focus();input?.setSelectionRange(state.search.length,state.search.length);});});
