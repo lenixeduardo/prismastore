@@ -39,12 +39,6 @@ button, input, textarea { font: inherit; }
   border-bottom: 1px solid #edf1ef;
 }
 
-.delivery-brand img {
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
-}
-
 .delivery-brand strong {
   font-size: 18px;
   letter-spacing: -.02em;
