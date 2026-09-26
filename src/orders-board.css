@@ -455,3 +455,18 @@
     text-align: left;
   }
 }
+
+/* UX/UI audit polish */
+.orders-board-lane { border-radius: 14px; }
+.order-board-card,.order-board-empty,.orders-history,.orders-history-row { border-radius: 12px; }
+.orders-board-whatsapp,.order-board-action,.order-board-message { min-height: 44px; border-radius: 10px; }
+.order-board-action:focus-visible,.order-board-message:focus-visible,.orders-board-chatbot:focus-visible {
+  outline: 3px solid rgba(94,224,222,.28);
+  outline-offset: 2px;
+}
+.order-board-address { overflow-wrap:anywhere; }
+@media (max-width:720px){
+  .orders-board-top-actions { display:grid; grid-template-columns:1fr; width:100%; }
+  .orders-board-whatsapp,.orders-board-chatbot { width:100%; justify-content:center; }
+  .orders-board-lane { padding:12px; }
+}
