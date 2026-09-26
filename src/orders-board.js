@@ -23,6 +23,41 @@ function sortByPaymentTime(orders = []) {
   return [...orders].sort((a, b) => paidTimestamp(a) - paidTimestamp(b));
 }
 
+function sortByRecent(orders = []) {
+  return [...orders].sort((a, b) => paidTimestamp(b) - paidTimestamp(a));
+}
+
+function formatPhone(value = '') {
+  let phone = String(value || '').replace(/\D/g, '');
+  if (phone.length >= 12 && phone.startsWith('55')) phone = phone.slice(2);
+  if (phone.length === 11) return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`;
+  if (phone.length === 10) return `(${phone.slice(0, 2)}) ${phone.slice(2, 6)}-${phone.slice(6)}`;
+  return String(value || '').trim();
+}
+
+function formatOrderDate(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
+  }).format(date);
+}
+
+function formatMoney(value) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
+}
+
+function orderStatusLabel(status) {
+  return ({
+    PAYMENT_PENDING: 'Aguardando Pix',
+    PAID: 'Pago',
+    PACKING: 'Produto embalado',
+    SHIPPED: 'Enviado',
+    DELIVERED: 'Concluído',
+    CANCELLED: 'Cancelado',
+  })[status] || String(status || '—');
+}
+
 export function groupOperationalOrders(orders = []) {
   const sorted = sortByPaymentTime(orders.filter((order) => !isMetricCustomer(order)));
   return {
@@ -146,6 +181,41 @@ function laneMarkup({ title, subtitle, iconName, orders, type, now }) {
   </section>`;
 }
 
+function historyItemSummary(order) {
+  const items = Array.isArray(order?.items) ? order.items : [];
+  if (!items.length) return 'Itens não informados';
+  const shown = items.slice(0, 2).map((item) => `${Number(item.quantity || 0)}× ${item.name || 'Item'}`).join(' · ');
+  return items.length > 2 ? `${shown} · +${items.length - 2}` : shown;
+}
+
+export function allOrdersMarkup(orders = []) {
+  const allOrders = sortByRecent(orders.filter((order) => !isMetricCustomer(order)));
+  return `<section class="orders-history" id="all-orders" data-all-orders>
+    <div class="orders-history-head">
+      <div>
+        <span class="orders-history-kicker">Histórico</span>
+        <h2>Todos os pedidos</h2>
+        <p>Todos os pedidos já realizados, incluindo em andamento e concluídos.</p>
+      </div>
+      <strong class="orders-history-count">${allOrders.length} pedido(s)</strong>
+    </div>
+    <div class="orders-history-list">
+      ${allOrders.length ? allOrders.map((order) => `<article class="orders-history-row">
+        <div class="orders-history-main">
+          <strong>${esc(order.customerName || 'Cliente')}</strong>
+          <span>${esc(formatPhone(order.phone))}</span>
+          <small>${esc(historyItemSummary(order))}</small>
+        </div>
+        <div class="orders-history-meta">
+          <span class="orders-history-status" data-status="${esc(order.status || '')}">${esc(orderStatusLabel(order.status))}</span>
+          <strong>${esc(formatMoney(order.total))}</strong>
+          <small>${esc(formatOrderDate(order.paidAt || order.createdAt))}</small>
+        </div>
+      </article>`).join('') : '<div class="order-board-empty">Nenhum pedido registrado.</div>'}
+    </div>
+  </section>`;
+}
+
 export function renderOrdersBoard({ orders = [], whatsappStatus = 'disconnected', now = new Date() } = {}) {
   const grouped = groupOperationalOrders(orders);
   const whatsappConnected = whatsappStatus === 'connected';
@@ -165,6 +235,7 @@ export function renderOrdersBoard({ orders = [], whatsappStatus = 'disconnected'
       ${laneMarkup({ title: 'Pedidos pagos — entregas', subtitle: 'Pagos e aguardando saída para entrega', iconName: 'package', orders: grouped.delivery, type: 'delivery', now })}
       ${laneMarkup({ title: 'Em atendimento', subtitle: 'Clientes pagando ou pedidos em atendimento pela equipe', iconName: 'headset', orders: grouped.attending, type: 'attending', now })}
     </div>
+    ${allOrdersMarkup(orders)}
   </div>`;
 }
 
@@ -319,6 +390,10 @@ if (typeof document !== 'undefined' && typeof window !== 'undefined') {
   }
 
   window.addEventListener('prismastore:dashboard-opened', () => queueMicrotask(() => enhanceOrdersView()));
+  window.addEventListener('prismastore:orders-history-requested', async () => {
+    await enhanceOrdersView({ force: true });
+    document.querySelector('#all-orders')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   window.addEventListener('prismastore:state-updated', () => queueMicrotask(() => enhanceOrdersView({ force: true })));
   window.addEventListener('prismastore:orders-updated', () => queueMicrotask(() => enhanceOrdersView({ force: true })));
   window.setInterval(() => {
