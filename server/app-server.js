@@ -43,6 +43,28 @@ function sendCsv(res, filename, csv) {
   res.end(csv);
 }
 
+function sendJsonDownload(res, filename, value) {
+  res.writeHead(200, {
+    'content-type': 'application/json; charset=utf-8',
+    'content-disposition': `attachment; filename="${filename}"`,
+    'cache-control': 'no-store',
+  });
+  res.end(JSON.stringify(value, null, 2));
+}
+
+function deliveryConfirmationForDashboard(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const {
+    confirmationIp: _confirmationIp,
+    confirmationUserAgent: _confirmationUserAgent,
+    evidenceHash: _evidenceHash,
+    lastOpenedIp: _lastOpenedIp,
+    lastOpenedUserAgent: _lastOpenedUserAgent,
+    ...safeConfirmation
+  } = value;
+  return safeConfirmation;
+}
+
 function stateForAdmin(state = {}) {
   return {
     ...state,
@@ -52,6 +74,7 @@ function stateForAdmin(state = {}) {
           address: order?.address && typeof order.address === 'object' && !Array.isArray(order.address)
             ? order.address
             : {},
+          deliveryConfirmation: deliveryConfirmationForDashboard(order?.deliveryConfirmation),
         }))
       : [],
   };
@@ -364,6 +387,21 @@ export function createAppServer({
         const body = await readJson(req);
         const result = await orderLifecycleService.advanceOrder({ orderId: decodeURIComponent(advanceMatch[1]), expectedStatus: body.expectedStatus || null });
         return sendJson(res, 200, result);
+      }
+
+      const deliveryExportMatch = url.pathname.match(/^\/api\/orders\/([^/]+)\/delivery-confirmation\/export$/);
+      if (req.method === 'GET' && deliveryExportMatch) {
+        if (!deliveryConfirmationService?.exportDossier) {
+          return sendJson(res, 503, { error: 'Exportação da confirmação de entrega não configurada.' });
+        }
+        try {
+          const orderId = decodeURIComponent(deliveryExportMatch[1]);
+          const dossier = deliveryConfirmationService.exportDossier(orderId);
+          const safeId = String(orderId).replace(/[^a-zA-Z0-9_-]+/g, '-');
+          return sendJsonDownload(res, `prismastore-confirmacao-${safeId}.json`, dossier);
+        } catch (error) {
+          return sendJson(res, 422, { error: error instanceof Error ? error.message : 'Não foi possível exportar o dossiê.' });
+        }
       }
 
       const deliveryLinkMatch = url.pathname.match(/^\/api\/orders\/([^/]+)\/delivery-confirmation\/link$/);
