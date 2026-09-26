@@ -88,12 +88,10 @@
   min-width: 0;
   min-height: 690px;
   padding: 13px;
-  border: 1px solid rgba(60, 143, 94, .55);
-  border-radius: 7px;
-  background:
-    radial-gradient(circle at 90% 12%, rgba(31, 120, 78, .09), transparent 34%),
-    linear-gradient(180deg, rgba(9, 32, 21, .94), rgba(6, 26, 18, .92));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #121616;
+  box-shadow: none;
 }
 
 .orders-board-lane-head {
@@ -132,10 +130,10 @@
 
 .order-board-card {
   padding: 12px;
-  border: 1px solid rgba(64, 137, 93, .55);
-  border-radius: 6px;
-  background: linear-gradient(180deg, rgba(10, 38, 26, .96), rgba(7, 30, 21, .96));
-  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #0d1111;
+  box-shadow: none;
 }
 
 .order-board-card.attending {
@@ -144,7 +142,7 @@
 
 .order-board-card.awaiting-payment {
   border-color: rgba(242, 213, 63, .62);
-  background: linear-gradient(180deg, rgba(38, 34, 16, .86), rgba(22, 28, 18, .94));
+  background: #14130e;
 }
 
 .order-board-payment-state {
@@ -469,4 +467,87 @@
   .orders-board-top-actions { display:grid; grid-template-columns:1fr; width:100%; }
   .orders-board-whatsapp,.orders-board-chatbot { width:100%; justify-content:center; }
   .orders-board-lane { padding:12px; }
+}
+
+
+/* 2026-09-26 — neutral mobile order board */
+.orders-board-topbar h1 {
+  font-weight:600;
+}
+.orders-board-topbar p {
+  color:var(--muted);
+}
+.orders-board-whatsapp {
+  background:#0d1111;
+  border-color:var(--border);
+  border-radius:12px;
+}
+.orders-board-whatsapp.connected {
+  border-color:rgba(25,184,108,.22);
+}
+.orders-board-whatsapp.connected .orders-board-status-dot {
+  background:var(--emerald-2);
+  box-shadow:none;
+}
+.orders-board-lane-head h2 {
+  font-weight:600;
+}
+.orders-board-lane-head p {
+  color:var(--muted);
+}
+.order-board-card.attending {
+  border-color:rgba(25,184,108,.28);
+}
+.order-board-action,
+.order-board-message {
+  background:#171c1b;
+  border-color:var(--border);
+  border-radius:10px;
+}
+.order-board-action:hover,
+.order-board-message:hover {
+  border-color:#29312d;
+  background:#1c2220;
+}
+.order-board-message {
+  color:var(--emerald-2);
+  border-color:rgba(25,184,108,.22);
+}
+.orders-history {
+  border-color:var(--border);
+  background:#0d1111;
+}
+.orders-history-row {
+  border-color:var(--border);
+  background:#121616;
+}
+
+@media (max-width:720px) {
+  .orders-board-page {
+    padding-bottom:16px;
+  }
+  .orders-board-topbar {
+    gap:12px;
+    margin-bottom:14px;
+  }
+  .orders-board-topbar h1 {
+    font-size:28px;
+  }
+  .orders-board-top-actions {
+    grid-template-columns:1fr;
+  }
+  .orders-board-grid {
+    gap:10px;
+  }
+  .orders-board-lane,
+  .orders-board-lane:last-child {
+    min-height:0;
+    padding:12px;
+  }
+  .orders-board-lane-head {
+    margin-bottom:10px;
+  }
+  .order-board-card {
+    padding:12px;
+  }
 }
