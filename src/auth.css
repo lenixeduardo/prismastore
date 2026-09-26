@@ -250,3 +250,16 @@
   .wa-pairing-form, .wa-pairing-code-row { align-items: stretch; flex-direction: column; }
   .wa-pairing-code { justify-content: center; }
 }
+
+/* UX/UI audit polish */
+.auth-field input:focus-visible { outline: none; }
+.auth-glass-button:focus-visible {
+  outline: 3px solid rgba(85,255,195,.28);
+  outline-offset: 3px;
+}
+.auth-error:empty { min-height: 0; }
+@media (max-width:640px){
+  .auth-shell { padding-bottom: 24px; }
+  .auth-brand { margin-bottom: 44px; }
+  .auth-heading h1 { font-size: clamp(38px, 12vw, 52px); }
+}

@@ -217,3 +217,18 @@ input:focus, textarea:focus {
     box-shadow: none;
   }
 }
+
+/* UX/UI audit polish */
+button { min-height: 44px; }
+.primary-button,.link-button { border-radius: 10px; }
+.primary-button:focus-visible,.link-button:focus-visible,input:focus-visible,textarea:focus-visible {
+  outline: 3px solid rgba(25,166,95,.18);
+  outline-offset: 2px;
+}
+.delivery-consent { cursor:pointer; }
+.delivery-consent input { min-width:20px; min-height:20px; }
+.delivery-summary li + li { margin-top: 6px; }
+@media (max-width:520px){
+  .delivery-card { padding-bottom:max(30px, env(safe-area-inset-bottom)); }
+  .primary-button { min-height:56px; }
+}
