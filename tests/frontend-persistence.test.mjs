@@ -22,6 +22,14 @@ test('admin sincroniza o estado somente depois que o runtime do painel está ati
   assert.doesNotMatch(liveSync, /setInterval\(checkForServerChanges/);
 });
 
+test('sincronização de pedidos preserva a tela e não recarrega a conversa do simulador', () => {
+  assert.match(liveSync, /prismastore:external-state-changed/);
+  assert.doesNotMatch(liveSync, /window\.location\.reload\(\)/);
+  assert.match(source, /prismastore:external-state-changed/);
+  assert.match(source, /const activeView = state\.view/);
+  assert.match(source, /state\.view = activeView/);
+});
+
 test('orders view exposes a payment-pending filter for newly confirmed WhatsApp orders', () => {
   assert.match(liveSync, /Aguardando Pix/);
   assert.match(liveSync, /livePending/);
