@@ -70,6 +70,30 @@ test('routes receipt images through OCR and forwards only extracted text and fin
   assert.equal(Object.hasOwn(incoming, 'imageBuffer'), false);
 });
 
+test('unwraps ephemeral and view-once text so the catalog flow can start', async () => {
+  const incoming = [];
+  const adapter = createWhatsAppChatAdapter({
+    chatbot: { handleIncoming: async (args) => { incoming.push(args); return { handled: true }; } },
+  });
+  const socket = { sendMessage: async () => {} };
+  await adapter.handleMessage({
+    message: {
+      key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe: false, id: 'E1' },
+      message: { ephemeralMessage: { message: { conversation: 'Oi' } } },
+    },
+    socket,
+  });
+  await adapter.handleMessage({
+    message: {
+      key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe: false, id: 'E2' },
+      message: { viewOnceMessageV2: { message: { extendedTextMessage: { text: '1' } } } },
+    },
+    socket,
+  });
+  assert.equal(incoming[0].text, 'Oi');
+  assert.equal(incoming[1].text, '1');
+});
+
 test('supports extended text and Base64 Pix media', async () => {
   const sent = [];
   const socket = { sendMessage: async (jid, payload) => sent.push({ jid, payload }) };

@@ -74,7 +74,6 @@ test('estado awaiting_payment informa que não precisa comprovante', async () =>
   assert.match(h.sent.at(-1), /não precisa enviar comprovante/i);
 });
 
-
 test('mensagens de pagamento não expõem o ID interno do pedido', async () => {
   const h = harness({ needsDocument: false });
   await h.incoming('1');
@@ -83,4 +82,41 @@ test('mensagens de pagamento não expõem o ID interno do pedido', async () => {
   h.sessions.set('5511999999999', { step: 'awaiting_payment', orderId: 'PS-1001' });
   await h.incoming('oi');
   assert.equal(h.sent.some((message) => /PS-1001/.test(message)), false);
+});
+
+test('Pix local gera QR e Copia e Cola imediatamente após confirmar o pedido no JID Baileys', async () => {
+  const sessions = new Map();
+  const sent = [];
+  const media = [];
+  sessions.set('5511999999999', { step: 'confirm', orderId: null, cart: { p1: 1 } });
+  const stateStore = {
+    getChatSession: (phone) => structuredClone(sessions.get(phone) ?? null),
+    saveChatSession: (phone, session) => sessions.set(phone, structuredClone(session)),
+  };
+  const baseChatbot = {
+    async handleIncoming() {
+      sessions.set('5511999999999', { step: 'confirmed', orderId: 'PS-1001' });
+      return { handled: true, step: 'confirmed', orderId: 'PS-1001' };
+    },
+  };
+  const paymentService = {
+    getStatus: () => ({ provider: 'pix-local', environment: 'local', configured: true }),
+    needsPayerDocument: () => false,
+    async generatePixForOrder() {
+      return { paymentId: 'local:PS-1001', encodedImage: 'BASE64PNG', payload: '000201PIXLOCAL' };
+    },
+  };
+  const chatbot = createPaymentChatbot({ baseChatbot, stateStore, paymentService });
+  const result = await chatbot.handleIncoming({
+    chatId: '5511999999999@s.whatsapp.net',
+    text: '1',
+    sendText: async (value) => sent.push(value),
+    sendMedia: async (value) => media.push(value),
+  });
+  assert.equal(result.step, 'awaiting_payment');
+  assert.equal(result.paymentId, 'local:PS-1001');
+  assert.equal(media[0].base64, 'BASE64PNG');
+  assert.match(sent.at(-1), /000201PIXLOCAL/);
+  assert.match(sent.at(-1), /imagem do comprovante/i);
+  assert.equal(sent.some((message) => /PS-1001/.test(message)), false);
 });

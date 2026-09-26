@@ -1,16 +1,30 @@
 import { classifyInboundJid, phoneFromJid } from './whatsapp-jid.js';
 import { fingerprintReceipt } from './pix-receipt.js';
 
+function unwrapMessageContent(message) {
+  let content = message?.message;
+  for (let depth = 0; depth < 4 && content; depth += 1) {
+    const nested = content.ephemeralMessage?.message
+      ?? content.viewOnceMessage?.message
+      ?? content.viewOnceMessageV2?.message
+      ?? content.viewOnceMessageV2Extension?.message
+      ?? content.documentWithCaptionMessage?.message;
+    if (!nested) break;
+    content = nested;
+  }
+  return content ?? null;
+}
+
 function extractText(message) {
-  return message?.message?.conversation ?? message?.message?.extendedTextMessage?.text ?? '';
+  const content = unwrapMessageContent(message);
+  return content?.conversation
+    ?? content?.extendedTextMessage?.text
+    ?? content?.imageMessage?.caption
+    ?? '';
 }
 
 function extractImageMessage(message) {
-  return message?.message?.imageMessage
-    ?? message?.message?.ephemeralMessage?.message?.imageMessage
-    ?? message?.message?.viewOnceMessage?.message?.imageMessage
-    ?? message?.message?.viewOnceMessageV2?.message?.imageMessage
-    ?? null;
+  return unwrapMessageContent(message)?.imageMessage ?? null;
 }
 
 function contactPhones(message) {
