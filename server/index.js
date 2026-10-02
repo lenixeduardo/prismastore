@@ -16,6 +16,7 @@ import { createChatbotEngine } from './chatbot.js';
 import { createWhatsAppChatAdapter } from './whatsapp-chat-adapter.js';
 import { createWhatsAppManager } from './whatsapp-manager.js';
 import { createAppServer } from './app-server.js';
+import { preparePublicDirectory } from './public-directory.js';
 import { createPaymentService } from './payment-service.js';
 import { createPaymentChatbot } from './payment-chatbot.js';
 import { createReceiptOcr } from './receipt-ocr.js';
@@ -241,7 +242,7 @@ if (driveConfigured) {
 
 const server = createAppServer({
   stateStore,
-  staticDir: root,
+  staticDir: preparePublicDirectory(root),
   whatsappManager,
   paymentService,
   orderLifecycleService,
@@ -259,7 +260,7 @@ server.listen(port, host, () => {
   console.log(`PrismaStore interno em http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
   if (publicUrl) console.log(`PrismaStore produção: ${publicUrl}`);
   console.log(paymentService.getStatus().configured ? 'Pix Oscar: CONFIGURADO' : 'Pix Oscar: PENDENTE DE CONFIGURAÇÃO');
-  console.log(authService ? `Admin protegido: ${adminUser}` : 'Admin: sem senha; acesso restrito ao próprio dispositivo (127.0.0.1)');
+  console.log(authService ? `Admin protegido: ${adminUser}` : 'Admin bloqueado: configure PRISMASTORE_ADMIN_PASSWORD no .env');
   console.log(driveConfigured ? `Backup Google Drive: AUTOMÁTICO · retenção ${driveRetentionCount}` : 'Backup Google Drive: PENDENTE DE CONFIGURAÇÃO');
   if (devWhatsappOnly) console.log('WhatsApp DEV: allowlist exclusiva ATIVA');
 });

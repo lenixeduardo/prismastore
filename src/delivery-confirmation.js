@@ -21,14 +21,6 @@ function esc(value = '') {
   })[char]);
 }
 
-function addressText(address) {
-  if (!address) return '';
-  const first = [address.street, address.number].filter(Boolean).join(', ');
-  return [first, address.complement, address.neighborhood, [address.city, address.state].filter(Boolean).join('/'), address.zip]
-    .filter(Boolean)
-    .join(' · ');
-}
-
 function resizeCanvasForDisplay() {
   const ratio = Math.max(1, window.devicePixelRatio || 1);
   const rect = canvas.getBoundingClientRect();
@@ -122,13 +114,10 @@ async function load() {
     return;
   }
 
-  recipientInput.value = payload.customerName || '';
   const items = Array.isArray(payload.items) ? payload.items : [];
-  const address = addressText(payload.address);
   summary.innerHTML = `
     <strong>Itens recebidos</strong>
     <ul>${items.map((item) => `<li>${Number(item.quantity || 0)}× ${esc(item.id || '#—')}</li>`).join('')}</ul>
-    ${address ? `<p>${esc(address)}</p>` : ''}
   `;
   loading.hidden = true;
   content.hidden = false;

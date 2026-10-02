@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createAppServer } from '../server/app-server.js';
+import { createAppServer, fetch } from './authenticated-server-helper.mjs';
 import { createPaymentService } from '../server/payment-service.js';
 
 const simulatorSource = readFileSync(new URL('../src/chat-simulator.js', import.meta.url), 'utf8');

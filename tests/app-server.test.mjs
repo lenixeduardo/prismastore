@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createStateStore } from '../server/state-store.js';
-import { createAppServer } from '../server/app-server.js';
+import { createAppServer, fetch } from './authenticated-server-helper.mjs';
 import { DEFAULT_CHATBOT_MESSAGES } from '../server/chatbot-messages.js';
 
 function fixture() {

@@ -20,7 +20,7 @@ test('manifest has installable identity and 192/512 icons', () => {
 
 test('service worker caches only static shell and bypasses API', () => {
   const sw = read('service-worker.js');
-  assert.match(sw, /prismastore-shell-v0\.9\.2-pwa-install/);
+  assert.match(sw, /prismastore-shell-v0\.9\.3-security-20261002-1/);
   assert.match(sw, /url\.pathname\.startsWith\('\/api\/'\)/);
   const shell = sw.match(/const APP_SHELL = \[[\s\S]*?\n\];/)?.[0] || '';
   assert.doesNotMatch(shell, /['"]\/api\//);

@@ -230,3 +230,9 @@ npm test
 ```
 
 > Baileys é uma integração não oficial com o WhatsApp. Valide as políticas comerciais aplicáveis antes do uso em produção.
+
+## Correção de segurança — 02/10/2026
+
+O HTTP serve somente `public/`, reconstruída no startup com HTML, CSS, módulos da interface e imagens. Dados iniciais operacionais são removidos do módulo distribuído ao navegador. `.env`, banco, sessão WhatsApp, backups e código do servidor permanecem fora dessa pasta. Sem `PRISMASTORE_ADMIN_PASSWORD`, as APIs administrativas retornam 503 e o painel não concede acesso.
+
+Antes de publicar, aplique os bloqueios do Nginx e siga [SECURITY_DEPLOY.md](docs/SECURITY_DEPLOY.md). A publicação no GitHub não atualiza automaticamente a VM. Links de confirmação antigos devem ser reemitidos; os novos expiram em sete dias e não expõem nome/endereço na consulta pública.

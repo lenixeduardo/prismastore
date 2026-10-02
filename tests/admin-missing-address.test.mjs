@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAppServer } from '../server/app-server.js';
+import { createAppServer, fetch } from './authenticated-server-helper.mjs';
 
 test('GET /api/state protege o painel de pedidos antigos sem address sem alterar o estado persistido', async () => {
   const persisted = {

@@ -8,3 +8,5 @@ data/whatsapp-auth/
 .env
 backups/
 data/prismastore-order-finished.png
+
+public/
