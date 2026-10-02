@@ -54,7 +54,8 @@ test('pilot order gets a signed public link and confirmation dossier', () => {
     assert.match(issued.link, /^https:\/\/prisma\.test\/delivery-confirmation\.html\?token=/);
 
     const opened = service.getPublicConfirmation(issued.token, { ip: '10.0.0.1', userAgent: 'test-agent' });
-    assert.equal(opened.customerName, 'Eduardo');
+    assert.equal('customerName' in opened, false);
+    assert.equal('address' in opened, false);
     assert.equal(opened.status, 'pending');
     assert.deepEqual(opened.items, [{ id: '#1', quantity: 1 }]);
     assert.equal('name' in opened.items[0], false);

@@ -48,7 +48,7 @@ test('manifest installs the approved prism artwork as scalable PWA icons', () =>
 
 test('service worker cache is bumped and includes both raster fallbacks and prism SVG icons', () => {
   const source = readFileSync(resolve(root, 'service-worker.js'), 'utf8');
-  assert.match(source, /prismastore-shell-v0\.9\.2/);
+  assert.match(source, /prismastore-shell-v0\.9\.3-security-20261002-1/);
   assert.match(source, /\/icons\/icon-192\.png/);
   assert.match(source, /\/icons\/icon-512\.png/);
   assert.match(source, /\/icons\/icon-192\.svg/);

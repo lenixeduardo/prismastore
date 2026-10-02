@@ -22,7 +22,7 @@ test('mobile bottom navigation keeps Configurações direct and Mais only expose
 });
 
 test('service worker cache revision changes with the mobile navigation release', () => {
-  assert.match(sw, /prismastore-shell-v0\.9\.2-[^'"]+/);
+  assert.match(sw, /prismastore-shell-v0\.9\.3-security-20261002-1/);
 });
 
 test('WhatsApp pairing uses a canonical Baileys browser identity', () => {

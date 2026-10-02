@@ -1,7 +1,7 @@
 import { createBackupService } from './backup-service.js';
 import { createServer } from 'node:http';
-import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
-import { extname, join, normalize, resolve, sep } from 'node:path';
+import { createReadStream, existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { extname, join, resolve, sep } from 'node:path';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -167,11 +167,65 @@ function sessionCookie({ authService, token, secure = false, clear = false }) {
   return parts.join('; ');
 }
 
+const PUBLIC_ENTRY_FILES = new Set(['/index.html', '/delivery-confirmation.html', '/manifest.webmanifest', '/service-worker.js']);
+
+const PUBLIC_FRONTEND_FILES = new Set([
+  '/src/admin-extensions.css',
+  '/src/admin-extensions.js',
+  '/src/admin-icons.js',
+  '/src/admin-shell-fixes.css',
+  '/src/app.js',
+  '/src/auth-ui.js',
+  '/src/auth.css',
+  '/src/backup-ui.js',
+  '/src/backup.css',
+  '/src/bug-report.js',
+  '/src/chat-simulator.js',
+  '/src/chatbot-settings.js',
+  '/src/data.js',
+  '/src/delivery-confirmation.css',
+  '/src/delivery-confirmation.js',
+  '/src/domain.js',
+  '/src/error-messages.js',
+  '/src/hero.css',
+  '/src/hero.js',
+  '/src/live-sync.js',
+  '/src/order-lifecycle-ui.js',
+  '/src/orders-board.css',
+  '/src/orders-board.js',
+  '/src/payment-status.js',
+  '/src/product-editor.js',
+  '/src/pwa.css',
+  '/src/pwa.js',
+  '/src/reports-ui.js',
+  '/src/reports.css',
+  '/src/styles.css',
+  '/src/theme.css',
+  '/src/theme.js',
+  '/src/whatsapp-onboarding.js',
+]);
+
+function publicStaticPath(pathname) {
+  if (PUBLIC_ENTRY_FILES.has(pathname)) return true;
+  // Frontend modules/styles and image assets are the only public file families.
+  return PUBLIC_FRONTEND_FILES.has(pathname)
+    || /^\/(?:assets|icons)\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(?:png|jpg|jpeg|webp|svg|ico)$/.test(pathname);
+}
+
+function confinedFile(rootDir, relativePath) {
+  const root = realpathSync(rootDir);
+  const filePath = resolve(root, relativePath);
+  if (!filePath.startsWith(`${root}${sep}`) || !existsSync(filePath)) return null;
+  // Reject symlinks, including links to private files within the public root.
+  if (realpathSync(filePath) !== filePath || !statSync(filePath).isFile()) return null;
+  return filePath;
+}
+
 function serveGeneratedIcon(staticDir, pathname, method, res) {
   const source = BRAND_ICON_SOURCES[pathname];
   if (!source) return false;
-  const sourcePath = resolve(join(staticDir, source));
-  if (!existsSync(sourcePath)) {
+  const sourcePath = confinedFile(staticDir, source);
+  if (!sourcePath) {
     sendJson(res, 404, { error: 'Ícone da marca não encontrado' });
     return true;
   }
@@ -186,15 +240,13 @@ function serveGeneratedIcon(staticDir, pathname, method, res) {
 }
 
 function serveStatic(staticDir, pathname, res) {
-  const root = resolve(staticDir);
-  const requested = pathname === '/' ? '/index.html' : pathname;
-  const cleanPath = normalize(decodeURIComponent(requested)).replace(/^([/\\])+/, '');
-  const filePath = resolve(join(root, cleanPath));
-  if (filePath !== root && !filePath.startsWith(`${root}${sep}`)) {
-    sendJson(res, 403, { error: 'Caminho inválido' });
+  const requested = pathname === '/' ? '/index.html' : decodeURIComponent(pathname);
+  if (!publicStaticPath(requested)) {
+    sendJson(res, 404, { error: 'Não encontrado' });
     return;
   }
-  if (!existsSync(filePath) || !statSync(filePath).isFile()) {
+  const filePath = confinedFile(staticDir, requested.slice(1));
+  if (!filePath) {
     sendJson(res, 404, { error: 'Não encontrado' });
     return;
   }
@@ -228,18 +280,20 @@ export function createAppServer({
   });
 
   return createServer(async (req, res) => {
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     try {
       const url = new URL(req.url, 'http://localhost');
 
       if (req.method === 'GET' && url.pathname === '/api/auth/status') {
-        if (!authService) return sendJson(res, 200, { configured: false, authenticated: true, username: null });
+        if (!authService) return sendJson(res, 200, { configured: false, authenticated: false, username: null });
         const status = authService.getStatus(sessionToken(req, authService));
         sendJson(res, 200, { configured: true, ...status });
         return;
       }
 
       if (req.method === 'POST' && url.pathname === '/api/auth/login') {
-        if (!authService) return sendJson(res, 200, { configured: false, authenticated: true });
+        if (!authService) return sendJson(res, 503, { configured: false, authenticated: false, error: 'Autenticação administrativa não configurada.', code: 'AUTH_NOT_CONFIGURED' });
         const body = await readJson(req);
         const result = authService.login({
           username: body.username,
@@ -307,7 +361,8 @@ export function createAppServer({
         }
       }
 
-      if (url.pathname.startsWith('/api/') && authService) {
+      if (url.pathname.startsWith('/api/')) {
+        if (!authService) return sendJson(res, 503, { error: 'Autenticação administrativa não configurada.', code: 'AUTH_NOT_CONFIGURED' });
         const auth = authService.validateSession(sessionToken(req, authService));
         if (!auth.authenticated) {
           sendJson(res, 401, { error: 'Autenticação necessária.', code: 'AUTH_REQUIRED' });

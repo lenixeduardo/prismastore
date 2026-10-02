@@ -1,4 +1,6 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+
+const TOKEN_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const DELIVERY_CONFIRMATION_PILOT_PRODUCT_ID = 'catalog-eduardo-teste';
 
@@ -56,8 +58,6 @@ function catalogItemNumber(item, state) {
 
 function publicOrder(order, state) {
   return {
-    customerName: String(order?.customerName || 'Cliente'),
-    deliveryType: order?.deliveryType || null,
     items: Array.isArray(order?.items)
       ? order.items.map((item) => {
           const itemNumber = catalogItemNumber(item, state);
@@ -67,22 +67,12 @@ function publicOrder(order, state) {
           };
         })
       : [],
-    address: order?.address && typeof order.address === 'object' ? {
-      street: String(order.address.street || ''),
-      number: String(order.address.number || ''),
-      complement: String(order.address.complement || ''),
-      neighborhood: String(order.address.neighborhood || ''),
-      city: String(order.address.city || ''),
-      state: String(order.address.state || ''),
-      zip: String(order.address.zip || ''),
-    } : null,
     status: order?.deliveryConfirmation?.confirmedAt ? 'confirmed' : 'pending',
-    confirmedAt: order?.deliveryConfirmation?.confirmedAt || null,
   };
 }
 
-function makeToken({ orderId, issuedAt, secret }) {
-  const payloadPart = base64url(JSON.stringify({ orderId, issuedAt }));
+function makeToken({ orderId, issuedAt, tokenId, secret }) {
+  const payloadPart = base64url(JSON.stringify({ orderId, issuedAt, tokenId }));
   return `${payloadPart}.${tokenSignature(payloadPart, secret)}`;
 }
 
@@ -124,8 +114,9 @@ export function createDeliveryConfirmationService({
       const current = order.deliveryConfirmation && typeof order.deliveryConfirmation === 'object'
         ? order.deliveryConfirmation
         : {};
-      const issuedAt = current.issuedAt || now().toISOString();
-      const token = makeToken({ orderId: order.id, issuedAt, secret: signingSecret });
+      const issuedAt = now().toISOString();
+      const tokenId = randomBytes(32).toString('base64url');
+      const token = makeToken({ orderId: order.id, issuedAt, tokenId, secret: signingSecret });
       const relativeLink = `/delivery-confirmation.html?token=${encodeURIComponent(token)}`;
       const link = baseUrl ? `${baseUrl}${relativeLink}` : relativeLink;
 
@@ -133,6 +124,8 @@ export function createDeliveryConfirmationService({
         ...current,
         pilot: true,
         issuedAt,
+        tokenId,
+        expiresAt: new Date(Date.parse(issuedAt) + TOKEN_LIFETIME_MS).toISOString(),
         lastGeneratedAt: now().toISOString(),
         link,
         confirmedAt: current.confirmedAt || null,
@@ -164,7 +157,16 @@ export function createDeliveryConfirmationService({
     const state = stateStore.load();
     const order = state.orders.find((candidate) => candidate.id === payload.orderId);
     if (!order || !isEligibleOrder(order)) throw new Error('Link de confirmação inválido.');
-    if (order.deliveryConfirmation?.issuedAt !== payload.issuedAt) throw new Error('Link de confirmação expirado.');
+    const issuedTime = Date.parse(payload.issuedAt);
+    const currentTime = now().getTime();
+    if (!payload.tokenId
+      || order.deliveryConfirmation?.tokenId !== payload.tokenId
+      || order.deliveryConfirmation?.issuedAt !== payload.issuedAt
+      || !Number.isFinite(issuedTime)
+      || currentTime < issuedTime
+      || currentTime >= issuedTime + TOKEN_LIFETIME_MS) {
+      throw new Error('Link de confirmação expirado. Solicite um novo link à loja.');
+    }
     return { payload, order };
   }
 
