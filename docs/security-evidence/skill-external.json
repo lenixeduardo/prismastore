@@ -1,0 +1,43 @@
+{
+  "at": "2026-10-02T13:32:28.225179+00:00",
+  "method": "HEAD",
+  "target": "http://163.176.60.192",
+  "results": [
+    {
+      "path": "/.env",
+      "error": "TimeoutError"
+    },
+    {
+      "path": "/data/prismastore.db",
+      "status": 404,
+      "cache_control": "no-store",
+      "location": null,
+      "referrer_policy": "no-referrer"
+    },
+    {
+      "path": "/server/index.js",
+      "status": 404,
+      "cache_control": "no-store",
+      "location": null,
+      "referrer_policy": "no-referrer"
+    },
+    {
+      "path": "/api/state",
+      "error": "TimeoutError"
+    },
+    {
+      "path": "/api/backups",
+      "status": 401,
+      "cache_control": "no-store",
+      "location": null,
+      "referrer_policy": "no-referrer"
+    },
+    {
+      "path": "/api/reports/monthly",
+      "status": 401,
+      "cache_control": "no-store",
+      "location": null,
+      "referrer_policy": "no-referrer"
+    }
+  ]
+}

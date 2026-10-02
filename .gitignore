@@ -10,3 +10,6 @@ backups/
 data/prismastore-order-finished.png
 
 public/
+
+security-private/
+.env-rotation-*.tmp

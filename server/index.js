@@ -1,4 +1,5 @@
 import { rmSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import makeWASocket, {
@@ -17,6 +18,7 @@ import { createWhatsAppChatAdapter } from './whatsapp-chat-adapter.js';
 import { createWhatsAppManager } from './whatsapp-manager.js';
 import { createAppServer } from './app-server.js';
 import { preparePublicDirectory } from './public-directory.js';
+import { securityRuntimeConfig } from './security-runtime-config.js';
 import { createPaymentService } from './payment-service.js';
 import { createPaymentChatbot } from './payment-chatbot.js';
 import { createReceiptOcr } from './receipt-ocr.js';
@@ -46,10 +48,10 @@ const adminPassword = String(process.env.PRISMASTORE_ADMIN_PASSWORD || '');
 const requestedHost = process.env.HOST || '127.0.0.1';
 const host = adminPassword ? requestedHost : '127.0.0.1';
 const publicUrl = String(process.env.PRISMASTORE_PUBLIC_URL || '').trim();
+const securityConfig = securityRuntimeConfig(process.env);
 const deliveryConfirmationSecret = String(
   process.env.PRISMASTORE_DELIVERY_SECRET
-  || adminPassword
-  || 'prismastore-local-delivery-secret-2026'
+  || randomBytes(32).toString('base64url')
 ).trim();
 const useDemoData = process.env.PRISMASTORE_DEMO_DATA === 'true';
 const devWhatsappOnly = process.env.PRISMASTORE_DEV_WHATSAPP_ONLY === 'true';
@@ -252,6 +254,9 @@ const server = createAppServer({
   whatsappAuthPath: authPath,
   whatsappAuthProvider: 'baileys',
   authService,
+  trustedProxyIps: securityConfig.trustedProxyAddresses,
+  requireHttps: securityConfig.requireHttps,
+  secureCookies: securityConfig.secureCookies,
   runtimeLogProvider: runtimeLog,
   appVersion: '0.9.2',
 });
