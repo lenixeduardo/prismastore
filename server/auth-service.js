@@ -17,6 +17,9 @@ export function createAuthService({
   sessionDurationMs = 12 * 60 * 60 * 1000,
   maxAttempts = 5,
   lockoutMs = 15 * 60 * 1000,
+  globalMaxAttempts = 20,
+  globalWindowMs = 15 * 60 * 1000,
+  globalLockoutMs = 15 * 60 * 1000,
   tokenGenerator = defaultTokenGenerator,
   cookieName = 'prismastore_session',
 } = {}) {
@@ -24,6 +27,7 @@ export function createAuthService({
   const salt = randomBytes(16);
   const sessions = new Map();
   const attempts = new Map();
+  let globalAttempts = { failures: 0, windowStartedAt: Number(now()), lockedUntil: 0 };
 
   function cleanupSessions() {
     const current = Number(now());
@@ -34,6 +38,12 @@ export function createAuthService({
 
   function login({ username: candidateUsername = '', password: candidatePassword = '', key = 'global' } = {}) {
     const current = Number(now());
+    if (globalAttempts.lockedUntil > current) {
+      return { ok: false, reason: 'locked', retryAfterMs: globalAttempts.lockedUntil - current };
+    }
+    if (globalAttempts.lockedUntil || current - globalAttempts.windowStartedAt >= globalWindowMs) {
+      globalAttempts = { failures: 0, windowStartedAt: current, lockedUntil: 0 };
+    }
     const attemptKey = String(key || 'global');
     const record = attempts.get(attemptKey);
     if (record?.lockedUntil > current) {
@@ -44,6 +54,11 @@ export function createAuthService({
     const usernameMatches = String(candidateUsername) === String(username);
     const passwordMatches = constantTimePasswordMatch(candidatePassword, password, salt);
     if (!usernameMatches || !passwordMatches) {
+      globalAttempts.failures += 1;
+      if (globalAttempts.failures >= globalMaxAttempts) {
+        globalAttempts.lockedUntil = current + globalLockoutMs;
+        return { ok: false, reason: 'locked', retryAfterMs: globalLockoutMs };
+      }
       const failures = (attempts.get(attemptKey)?.failures || 0) + 1;
       if (failures >= maxAttempts) {
         attempts.set(attemptKey, { failures, lockedUntil: current + lockoutMs });

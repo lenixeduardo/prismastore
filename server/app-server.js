@@ -1,5 +1,6 @@
 import { createBackupService } from './backup-service.js';
 import { createServer } from 'node:http';
+import { isIP } from 'node:net';
 import { createReadStream, existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { extname, join, resolve, sep } from 'node:path';
 
@@ -131,14 +132,31 @@ function sessionToken(req, authService) {
   return parseCookies(req.headers.cookie || '')[authService.cookieName] || null;
 }
 
-function clientKey(req) {
-  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return forwarded || req.socket?.remoteAddress || 'unknown';
+function normalizedIp(value) {
+  const address = String(value || '').trim();
+  if (address.startsWith('::ffff:') && isIP(address.slice(7)) === 4) return address.slice(7);
+  return isIP(address) ? address.toLowerCase() : null;
 }
 
-function secureRequest(req, forceSecureCookies) {
-  if (forceSecureCookies) return true;
-  return String(req.headers['x-forwarded-proto'] || '').toLowerCase() === 'https';
+function trustedProxy(req, trustedProxyIps) {
+  const peer = normalizedIp(req.socket?.remoteAddress);
+  return peer !== null && trustedProxyIps.has(peer);
+}
+
+function clientKey(req, trustedProxyIps) {
+  if (trustedProxy(req, trustedProxyIps)) {
+    // A trusted edge must overwrite XFF or append the observed client as its final entry.
+    const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').at(-1);
+    const address = normalizedIp(forwarded);
+    if (address) return address;
+  }
+  return normalizedIp(req.socket?.remoteAddress) || 'unknown';
+}
+
+function secureRequest(req, trustedProxyIps) {
+  if (req.socket?.encrypted === true) return true;
+  return trustedProxy(req, trustedProxyIps)
+    && String(req.headers['x-forwarded-proto'] || '').trim().toLowerCase() === 'https';
 }
 
 function whatsappFailurePayload(whatsappManager, error, code) {
@@ -267,9 +285,12 @@ export function createAppServer({
   whatsappAuthProvider = 'baileys',
   authService = null,
   secureCookies = false,
+  trustedProxyIps = [],
+  requireHttps = false,
   runtimeLogProvider = null,
   appVersion = '0.9.2',
 }) {
+  const trustedProxyAddresses = new Set(trustedProxyIps.map(normalizedIp).filter(Boolean));
   const resolvedBackupService = backupService ?? createBackupService({
     stateStore,
     whatsappManager,
@@ -284,10 +305,18 @@ export function createAppServer({
     res.setHeader('X-Content-Type-Options', 'nosniff');
     try {
       const url = new URL(req.url, 'http://localhost');
+      const secure = secureRequest(req, trustedProxyAddresses);
+      if (requireHttps && !secure
+        && ((url.pathname.startsWith('/api/') && url.pathname !== '/api/auth/status')
+          || url.pathname === '/delivery-confirmation.html')) {
+        return sendJson(res, 426, { error: 'HTTPS é obrigatório para esta ação.', code: 'HTTPS_REQUIRED' });
+      }
 
       if (req.method === 'GET' && url.pathname === '/api/auth/status') {
         if (!authService) return sendJson(res, 200, { configured: false, authenticated: false, username: null });
-        const status = authService.getStatus(sessionToken(req, authService));
+        const status = requireHttps && !secure
+          ? { authenticated: false }
+          : authService.getStatus(sessionToken(req, authService));
         sendJson(res, 200, { configured: true, ...status });
         return;
       }
@@ -298,7 +327,7 @@ export function createAppServer({
         const result = authService.login({
           username: body.username,
           password: body.password,
-          key: clientKey(req),
+          key: clientKey(req, trustedProxyAddresses),
         });
         if (!result.ok) {
           const locked = result.reason === 'locked';
@@ -311,7 +340,7 @@ export function createAppServer({
           );
         }
         sendJson(res, 200, { configured: true, authenticated: true, username: result.username, expiresAt: result.expiresAt }, {
-          'set-cookie': sessionCookie({ authService, token: result.token, secure: secureRequest(req, secureCookies) }),
+          'set-cookie': sessionCookie({ authService, token: result.token, secure: secureCookies || secure }),
         });
         return;
       }
@@ -320,7 +349,7 @@ export function createAppServer({
         if (!authService) return sendJson(res, 200, { authenticated: false });
         authService.logout(sessionToken(req, authService));
         sendJson(res, 200, { authenticated: false }, {
-          'set-cookie': sessionCookie({ authService, clear: true, secure: secureRequest(req, secureCookies) }),
+          'set-cookie': sessionCookie({ authService, clear: true, secure: secureCookies || secure }),
         });
         return;
       }
@@ -332,7 +361,7 @@ export function createAppServer({
         }
         const token = decodeURIComponent(publicDeliveryMatch[1]);
         const requestMeta = {
-          ip: clientKey(req),
+          ip: clientKey(req, trustedProxyAddresses),
           userAgent: String(req.headers['user-agent'] || ''),
         };
         try {
